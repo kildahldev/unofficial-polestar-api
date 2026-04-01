@@ -1,0 +1,6 @@
+.venv/
+.pytest_cache/
+site/
+__pycache__/
+*.pyc
+.idea/
