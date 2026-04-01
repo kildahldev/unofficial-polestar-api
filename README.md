@@ -14,18 +14,16 @@ All API interactions are based on reverse-engineered, undocumented interfaces. T
 
 
 ## Supported Cars
-
-This library communicates via Polestar's C3 (Connected Car Cloud) gRPC backend, which is shared with newer Volvo models.
-
 | Car | Status |
 |---|---|
-| Polestar 2 (2024+, updated infotainment) | Should work |
-| Polestar 3 | Should work |
-| Polestar 4 | Primary development target |
-| Polestar 5 | Expected to work |
-| Polestar 2 (pre-2024, Android Automotive) | May work partially — older models used a different backend (PCCS/VOCMO) |
+| Polestar 4 | ✅ Primary development target |
+| Polestar 3 | ✅ Should work |
+| Polestar 2 (2024+, updated infotainment) | ✅ Should work |
+| Polestar 2 (pre-2024) | ❌ Not supported — uses a legacy backend |
 
 > Not all features may be available on all models. Feature availability depends on the car's hardware and software version.
+>
+> Pre-2024 Polestar 2 models use Polestar's legacy PCCS/VOCMO backend (`api.pccs-prod.plstr.io`), which this library does not implement. The 2024 infotainment update moved the PS2 to the C3 backend.
 
 
 ## Quick Start
