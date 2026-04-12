@@ -16,9 +16,11 @@ If you use this library (or the HA integration) please report back what works an
 
 Contributions and testing from owners of other models are welcome and encouraged
 
-| Model | Backend | Verified         |
-|---|---|------------------|
-| Polestar 4 | C3 | ✅ Mostly working |
+| Model      | Backend | Verified         |
+|------------|---------|------------------|
+| Polestar 4 | C3      | ✅ Mostly working |
+| Polestar 2 | ?       | Unknown          |
+| Polestar 3 | ?       | Unknown          |
 
 | Backend | Status |
 |---|---|
@@ -28,7 +30,6 @@ Contributions and testing from owners of other models are welcome and encouraged
 | HuanFu | ❌ Not implemented |
 
 Not all features are available on all models.
-
 
 ## Usage
 
