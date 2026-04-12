@@ -31,11 +31,8 @@ from polestar_api.models.locks import (
     CarLockResponse,
     CarUnlockRequest,
     CarUnlockResponse,
-    LockAlarmLevel,
-    LockFeedback,
-    TrunkUnlockRequest,
-    TrunkUnlockResponse,
-    UnlockFeedback,
+    LockType,
+    UnlockType,
 )
 from polestar_api.models.availability import Availability, AvailabilityStatus, UnavailableReason, UsageMode
 from polestar_api.models.charging import (
@@ -52,14 +49,12 @@ from polestar_api.models.charging import (
     StopResumeChargingRequest,
     TargetSocResponse,
 )
-from polestar_api.models.climate_timer import ClimateTimerObject, TimerState, DayStatus
 from polestar_api.models.climatization import (
     ClimatizationResponse,
     ClimatizationStartRequest,
     HeatingIntensity,
-    InvocationResponse,
-    InvocationStatus,
 )
+from polestar_api.models.invocation import InvocationResponse, InvocationStatus
 from polestar_api.models.health import (
     Health,
     ServiceWarning,
@@ -103,7 +98,7 @@ from polestar_api.models.charge_location import (
 class TestExteriorStatus:
     def test_defaults(self):
         ext = ExteriorStatus()
-        assert ext.is_locked is False
+        assert ext.is_locked is None
         assert ext.any_door_open is False
 
     def test_round_trip_nested(self):
@@ -222,18 +217,21 @@ class TestDashboardStatus:
 
 class TestHonkAndFlash:
     def test_request_round_trip(self):
-        req = HonkAndFlashRequest(action=HonkFlashAction.HONK_AND_FLASH)
+        req = HonkAndFlashRequest(honk_flash_type=HonkFlashAction.HONK_AND_FLASH)
         data = req.to_bytes()
         restored = HonkAndFlashRequest.from_bytes(data)
-        assert restored.action == HonkFlashAction.HONK_AND_FLASH
+        assert restored.honk_flash_type == HonkFlashAction.HONK_AND_FLASH
 
     def test_response_round_trip(self):
         resp = HonkAndFlashResponse(
-            response_status=ResponseStatus(status_code=0),
+            response=InvocationResponse(
+                vin="YV4H60AB1R1000001",
+                status=InvocationStatus.SUCCESS,
+            ),
         )
         data = resp.to_bytes()
         restored = HonkAndFlashResponse.from_bytes(data)
-        assert restored.response_status.status_code == 0
+        assert restored.response.status == InvocationStatus.SUCCESS
 
 
 # -- Locks --
@@ -241,26 +239,28 @@ class TestHonkAndFlash:
 
 class TestLocks:
     def test_lock_request_round_trip(self):
-        req = CarLockRequest(
-            feedback=LockFeedback.NORMAL,
-            alarm_level=LockAlarmLevel.NORMAL,
-        )
+        req = CarLockRequest(lock_type=LockType.LOCK)
         data = req.to_bytes()
         restored = CarLockRequest.from_bytes(data)
-        assert restored.feedback == LockFeedback.NORMAL
-        assert restored.alarm_level == LockAlarmLevel.NORMAL
+        assert restored.lock_type == LockType.LOCK
+
+    def test_lock_reduced_guard(self):
+        req = CarLockRequest(lock_type=LockType.LOCK_REDUCED_GUARD)
+        data = req.to_bytes()
+        restored = CarLockRequest.from_bytes(data)
+        assert restored.lock_type == LockType.LOCK_REDUCED_GUARD
 
     def test_unlock_request_round_trip(self):
-        req = CarUnlockRequest(feedback=UnlockFeedback.NORMAL)
+        req = CarUnlockRequest(unlock_type=UnlockType.UNLOCK_TYPE_UNSPECIFIED)
         data = req.to_bytes()
         restored = CarUnlockRequest.from_bytes(data)
-        assert restored.feedback == UnlockFeedback.NORMAL
+        assert restored.unlock_type == UnlockType.UNLOCK_TYPE_UNSPECIFIED
 
-    def test_trunk_unlock_round_trip(self):
-        req = TrunkUnlockRequest(uuid="abc-123")
+    def test_trunk_unlock_request(self):
+        req = CarUnlockRequest(unlock_type=UnlockType.UNLOCK_TYPE_TRUNK_ONLY)
         data = req.to_bytes()
-        restored = TrunkUnlockRequest.from_bytes(data)
-        assert restored.uuid == "abc-123"
+        restored = CarUnlockRequest.from_bytes(data)
+        assert restored.unlock_type == UnlockType.UNLOCK_TYPE_TRUNK_ONLY
 
 
 # -- Odometer --
@@ -272,9 +272,10 @@ class TestOdometerStatus:
         assert odo.odometer_km == 0.0
 
     def test_round_trip(self):
-        odo = OdometerStatus(odometer_km=54321.0)
+        odo = OdometerStatus(odometer_meters=54321000)
         data = odo.to_bytes()
         restored = OdometerStatus.from_bytes(data)
+        assert restored.odometer_meters == 54321000
         assert restored.odometer_km == 54321.0
 
 
@@ -389,26 +390,6 @@ class TestStopResumeCharging:
         data = req.to_bytes()
         restored = StopResumeChargingRequest.from_bytes(data)
         assert restored.command == StopResumeChargingCommand.STOP_CHARGING
-
-
-# -- Climate Timer --
-
-
-class TestClimateTimer:
-    def test_round_trip(self):
-        obj = ClimateTimerObject(
-            timer_state=TimerState.ON,
-            completion_time=420,
-            day_0=DayStatus.YES,
-            day_4=DayStatus.YES,
-        )
-        data = obj.to_bytes()
-        restored = ClimateTimerObject.from_bytes(data)
-        assert restored.timer_state == TimerState.ON
-        assert restored.completion_time == 420
-        assert restored.day_0 == DayStatus.YES
-        assert restored.day_4 == DayStatus.YES
-        assert restored.day_1 == DayStatus.NO
 
 
 # -- Health --

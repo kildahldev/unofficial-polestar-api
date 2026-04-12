@@ -3,5 +3,10 @@
 site/
 __pycache__/
 *.pyc
+*.egg-info/
+dist/
+build/
 .idea/
+.env
 get_token.py
+debug_grpc.py

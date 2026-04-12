@@ -4,10 +4,9 @@ from polestar_api.models.battery import (
     ChargerPowerStatus,
     ChargingStatus,
     ChargingType,
-    GetBatteryRequest,
     GetBatteryResponse,
 )
-from polestar_api.models.common import Timestamp
+from polestar_api.models.common import Timestamp, VehicleRequest
 
 
 class TestTimestamp:
@@ -118,11 +117,11 @@ class TestBattery:
         assert restored.timestamp.seconds == 100
 
 
-class TestGetBatteryRequest:
+class TestVehicleRequest:
     def test_encode(self):
-        req = GetBatteryRequest(vin="YV4TEST000T0000001")
+        req = VehicleRequest(vin="YV4TEST000T0000001")
         data = req.to_bytes()
-        restored = GetBatteryRequest.from_bytes(data)
+        restored = VehicleRequest.from_bytes(data)
         assert restored.vin == "YV4TEST000T0000001"
 
 

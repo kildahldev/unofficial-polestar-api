@@ -23,14 +23,16 @@ def mock_oidc_config():
 def mock_vehicles_response():
     return {
         "data": {
-            "getConsumerCarsV2": [
-                {
-                    "vin": "YV4TEST000T0000001",
-                    "internalVehicleIdentifier": "abc-123",
-                    "registrationNo": "AB12345",
-                    "modelYear": 2026,
-                    "content": {"model": {"name": "Polestar 4"}},
-                },
-            ]
+            "vdms": {
+                "getVehiclesInformation": [
+                    {
+                        "vin": "YV4TEST000T0000001",
+                        "internalVehicleIdentifier": "abc-123",
+                        "registrationNo": "AB12345",
+                        "modelYear": 2026,
+                        "content": {"model": {"name": "Polestar 4"}},
+                    },
+                ]
+            }
         }
     }
