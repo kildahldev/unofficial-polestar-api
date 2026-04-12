@@ -1,0 +1,23 @@
+name: Release HA Integration
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Zip custom_components
+        run: |
+          cd ha_integration
+          zip -r ../polestar.zip custom_components/polestar/ -x '*__pycache__*'
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: polestar.zip

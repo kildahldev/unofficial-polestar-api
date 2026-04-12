@@ -1,0 +1,211 @@
+start_climate:
+  target:
+    entity:
+      integration: polestar
+  fields:
+    vin:
+      required: false
+      example: YSM12345678901234
+      selector:
+        text:
+    entity_id:
+      required: false
+      selector:
+        entity:
+          integration: polestar
+    temperature:
+      selector:
+        number:
+          min: 0
+          max: 30
+          step: 0.5
+          unit_of_measurement: C
+    front_left_seat:
+      selector:
+        select:
+          options:
+            - unspecified
+            - off
+            - level1
+            - level2
+            - level3
+    front_right_seat:
+      selector:
+        select:
+          options:
+            - unspecified
+            - off
+            - level1
+            - level2
+            - level3
+    rear_left_seat:
+      selector:
+        select:
+          options:
+            - unspecified
+            - off
+            - level1
+            - level2
+            - level3
+    rear_right_seat:
+      selector:
+        select:
+          options:
+            - unspecified
+            - off
+            - level1
+            - level2
+            - level3
+    steering_wheel:
+      selector:
+        select:
+          options:
+            - unspecified
+            - off
+            - level1
+            - level2
+            - level3
+
+set_charge_timer:
+  fields:
+    vin:
+      selector:
+        text:
+    entity_id:
+      selector:
+        entity:
+          integration: polestar
+    start_time:
+      selector:
+        time:
+    stop_time:
+      selector:
+        time:
+    enabled:
+      selector:
+        boolean:
+
+clear_charge_timer:
+  fields:
+    vin:
+      selector:
+        text:
+    entity_id:
+      selector:
+        entity:
+          integration: polestar
+
+create_charge_location:
+  fields:
+    vin:
+      selector:
+        text:
+    entity_id:
+      selector:
+        entity:
+          integration: polestar
+    alias:
+      required: true
+      selector:
+        text:
+    amp_limit:
+      selector:
+        number:
+          min: 0
+          max: 32
+          step: 1
+    minimum_soc:
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          unit_of_measurement: "%"
+    optimised_charging:
+      selector:
+        boolean:
+
+update_charge_location:
+  fields:
+    vin:
+      selector:
+        text:
+    entity_id:
+      selector:
+        entity:
+          integration: polestar
+    location_id:
+      required: true
+      selector:
+        text:
+    alias:
+      selector:
+        text:
+    amp_limit:
+      selector:
+        number:
+          min: 0
+          max: 32
+          step: 1
+    minimum_soc:
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          unit_of_measurement: "%"
+    optimised_charging:
+      selector:
+        boolean:
+
+delete_charge_location:
+  fields:
+    vin:
+      selector:
+        text:
+    entity_id:
+      selector:
+        entity:
+          integration: polestar
+    location_id:
+      required: true
+      selector:
+        text:
+
+schedule_ota:
+  fields:
+    vin:
+      selector:
+        text:
+    entity_id:
+      selector:
+        entity:
+          integration: polestar
+    delay_minutes:
+      selector:
+        number:
+          min: 0
+          step: 1
+
+cancel_ota:
+  fields:
+    vin:
+      selector:
+        text:
+    entity_id:
+      selector:
+        entity:
+          integration: polestar
+
+delete_climate_timer:
+  fields:
+    vin:
+      selector:
+        text:
+    entity_id:
+      selector:
+        entity:
+          integration: polestar
+    timer_id:
+      selector:
+        text:

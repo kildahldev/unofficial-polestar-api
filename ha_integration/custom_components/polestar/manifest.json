@@ -1,0 +1,11 @@
+{
+  "domain": "polestar",
+  "name": "Unofficial Polestar",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/morten/ha-polestar",
+  "iot_class": "cloud_polling",
+  "requirements": ["unofficial-polestar-api==0.1.0"],
+  "version": "0.2.0"
+}

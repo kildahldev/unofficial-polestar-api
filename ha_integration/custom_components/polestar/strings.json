@@ -1,0 +1,31 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Polestar (Unofficial)",
+        "data": {
+          "email": "Email",
+          "password": "Password",
+          "vin": "VIN (Vehicle Identification Number)",
+          "demo": "Demo mode (fake vehicle, no API connection)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate with Polestar",
+        "description": "Your session has expired. Please enter your password to reconnect.",
+        "data": {
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid email or password",
+      "cannot_connect": "Could not connect to Polestar",
+      "vin_not_found": "VIN not found on this Polestar account"
+    },
+    "abort": {
+      "already_configured": "This vehicle is already configured",
+      "reauth_successful": "Re-authentication successful"
+    }
+  }
+}
