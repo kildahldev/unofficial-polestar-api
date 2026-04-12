@@ -12,6 +12,8 @@ This library for now just implements the **C3** (Volvo Cars Cloud Connectivity) 
 
 The server assigns a backend per vehicle — which cars use which backend is currently unclear, but the Polestar 4 (Which i developed against) - responds to commands through the C3 Backend. 
 
+If you use this library (or the HA integration) please report back what works and what doesn't, for your model.
+
 Contributions and testing from owners of other models are welcome
 
 | Backend | Status |
