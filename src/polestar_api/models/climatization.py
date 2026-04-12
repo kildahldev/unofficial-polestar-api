@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
+from typing import Annotated
 
-from ..wire import ProtoMessage
-from .common import ResponseStatus
+from ..wire import Float32, ProtoMessage
+from .invocation import InvocationRequest, InvocationResponse
 
 
 class HeatingIntensity(IntEnum):
@@ -19,6 +20,7 @@ class HeatingIntensity(IntEnum):
 
 @dataclass(frozen=True)
 class ClimatizationStartRequest(ProtoMessage, schema={
+    1: "request",
     2: "start",
     3: "compartment_temperature_celsius",
     4: "front_right_seat",
@@ -27,8 +29,9 @@ class ClimatizationStartRequest(ProtoMessage, schema={
     7: "rear_left_seat",
     8: "steering_wheel",
 }):
+    request: InvocationRequest | None = None
     start: bool = True
-    compartment_temperature_celsius: float = 0.0
+    compartment_temperature_celsius: Annotated[float, Float32] = 0.0
     front_right_seat: HeatingIntensity = HeatingIntensity.UNSPECIFIED
     front_left_seat: HeatingIntensity = HeatingIntensity.UNSPECIFIED
     rear_right_seat: HeatingIntensity = HeatingIntensity.UNSPECIFIED
@@ -36,26 +39,9 @@ class ClimatizationStartRequest(ProtoMessage, schema={
     steering_wheel: HeatingIntensity = HeatingIntensity.UNSPECIFIED
 
 
-class InvocationStatus(IntEnum):
-    UNSPECIFIED = 0
-    SUCCESS = 1
-    FAILURE = 2
-    TIMEOUT = 3
-
-
 @dataclass(frozen=True)
-class InvocationResponse(ProtoMessage, schema={
-    1: "id",
-    2: "vin",
-    3: "status",
-    4: "message",
-    5: "timestamp",
-}):
-    id: str = ""
-    vin: str = ""
-    status: InvocationStatus = InvocationStatus.UNSPECIFIED
-    message: str = ""
-    timestamp: int = 0
+class ClimatizationStopRequest(ProtoMessage, schema={1: "request"}):
+    request: InvocationRequest | None = None
 
 
 @dataclass(frozen=True)

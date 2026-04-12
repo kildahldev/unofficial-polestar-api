@@ -9,7 +9,7 @@ from .models.availability import Availability
 from .models.battery import Battery
 from .models.charge_location import ChargeLocation
 from .models.ota import CarSoftwareInfo, Scheduler
-from .models.parking_climate_timer import ParkingClimateTimer
+from .models.parking_climate_timer import ParkingClimateTimer, ParkingClimateTimerSettings
 from .models.precleaning import PreCleaningInfo
 from .models.charging import (
     AmpLimitResponse,
@@ -109,6 +109,11 @@ class Vehicle:
         """Door, window, sunroof, hood, tailgate, and alarm status."""
         return await self._exterior.get_latest()
 
+    async def stream_exterior(self) -> AsyncIterator[ExteriorStatus]:
+        """Real-time exterior status updates (doors, locks, windows)."""
+        async for status in self._exterior.stream():
+            yield status
+
     # -- Location --
 
     async def get_location(self) -> Location:
@@ -134,6 +139,11 @@ class Vehicle:
     async def get_climate(self) -> ClimatizationInfo:
         """Climatization running status, request type, and heat/cool action."""
         return await self._climate.get_latest()
+
+    async def stream_climate(self) -> AsyncIterator[ClimatizationInfo]:
+        """Live climatization status updates."""
+        async for status in self._climate.stream():
+            yield status
 
     async def start_climate(
         self,
@@ -185,17 +195,26 @@ class Vehicle:
     # -- Dashboard --
 
     async def get_dashboard(self) -> DashboardStatus:
-        """Trip meters, odometer, and tyre pressure warnings."""
+        """Trip meters, odometer, and tyre pressure warnings.
+
+        Note: This is a legacy PCCS endpoint (``DashboardService``).
+        It is **UNIMPLEMENTED** on Digital Twin vehicles (Polestar 4+).
+        Use :meth:`get_odometer` and :meth:`get_health` instead.
+        """
         return await self._dashboard.get_latest()
 
     async def get_connectivity(self) -> ConnectivityInfo:
-        """Network status, type, and signal strength."""
+        """Network status, type, and signal strength.
+
+        Note: Served by the legacy ``DashboardService``. **UNIMPLEMENTED**
+        on Digital Twin vehicles (Polestar 4+).
+        """
         return await self._dashboard.get_connectivity()
 
     # -- Odometer --
 
     async def get_odometer(self) -> OdometerStatus:
-        """Odometer reading in km."""
+        """Odometer (meters, converted to km via property), trip meters, and timestamp."""
         return await self._odometer.get_latest()
 
     # -- Charging --
@@ -237,7 +256,12 @@ class Vehicle:
     # -- Health --
 
     async def get_health(self) -> Health:
-        """Service warnings, fluid levels, tyre pressures, exterior light warnings, and 12V battery."""
+        """Service warnings, brake fluid, tyre pressures (kPa), and tyre pressure warnings.
+
+        Note: On EVs (Polestar 4), engine coolant, oil level, washer fluid,
+        low-voltage battery, and all exterior light warning fields are not
+        reported by the backend and will be their default (UNSPECIFIED/0).
+        """
         return await self._health.get_latest()
 
     # -- Availability --
@@ -317,7 +341,11 @@ class Vehicle:
     # -- OTA --
 
     async def get_software_info(self) -> CarSoftwareInfo | None:
-        """Current software version and update state."""
+        """Current software version and update state.
+
+        Returns ``None`` when no software info is available from the backend
+        (observed on Polestar 4 when no OTA update is pending).
+        """
         return await self._ota.get_software_info()
 
     async def get_ota_schedule(self) -> Scheduler | None:
@@ -342,14 +370,30 @@ class Vehicle:
         """Get all scheduled parking climate timers."""
         return await self._parking_climate_timer.get_timers()
 
+    async def set_climate_timer(self, timer: ParkingClimateTimer) -> int:
+        """Create or update a scheduled parking climate timer."""
+        return await self._parking_climate_timer.set_timer(timer)
+
     async def delete_climate_timer(self, timer_id: str) -> int:
         """Delete a scheduled parking climate timer."""
         return await self._parking_climate_timer.delete_timer(timer_id)
 
+    async def get_climate_timer_settings(self) -> ParkingClimateTimerSettings:
+        """Get the default climate settings applied when a parking climate timer fires."""
+        return await self._parking_climate_timer.get_timer_settings()
+
+    async def set_climate_timer_settings(self, settings: ParkingClimateTimerSettings) -> int:
+        """Set the default climate settings for parking climate timers."""
+        return await self._parking_climate_timer.set_timer_settings(settings)
+
     # -- Pre-cleaning --
 
     async def get_precleaning(self) -> PreCleaningInfo:
-        """Air quality status, PM2.5 levels, running state, and runtime remaining."""
+        """Air quality status, PM2.5 levels, running state, and runtime remaining.
+
+        Returns ``None`` when pre-cleaning has never run (the backend sends
+        an empty response).
+        """
         return await self._precleaning.get_latest()
 
     async def start_precleaning(self) -> None:

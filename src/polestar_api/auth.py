@@ -13,15 +13,21 @@ from pathlib import Path
 from typing import Protocol
 from urllib.parse import parse_qs, urlparse
 
+import ssl
+
 import httpx
 
 from .exceptions import AuthError, TokenExpiredError
 
+# Pre-build SSL context at import time so httpx never triggers
+# blocking load_verify_locations inside the HA event loop (Python 3.14).
+_HTTPX_SSL_CONTEXT = ssl.create_default_context()
+
 OIDC_PROVIDER = "https://polestarid.eu.polestar.com"
 OIDC_DISCOVERY = f"{OIDC_PROVIDER}/.well-known/openid-configuration"
-CLIENT_ID = "l3oopkc_10"
-REDIRECT_URI = "https://www.polestar.com/sign-in-callback"
-SCOPES = "openid profile email customer:attributes"
+CLIENT_ID = "lp8dyrd_10"
+REDIRECT_URI = "polestar-explore://explore.polestar.com"
+SCOPES = "openid profile email customer:attributes customer:attributes:write"
 
 
 @dataclass
@@ -106,6 +112,11 @@ def _generate_pkce() -> tuple[str, str]:
     return verifier, challenge
 
 
+def _should_follow_callback(location: str) -> bool:
+    """Return whether the callback URL can be fetched over HTTP."""
+    return urlparse(location).scheme in {"http", "https"}
+
+
 class AuthManager:
     """Manages OIDC authentication and token lifecycle."""
 
@@ -114,6 +125,8 @@ class AuthManager:
         self._tokens: TokenData | None = None
         self._auth_endpoint: str | None = None
         self._token_endpoint: str | None = None
+        self._email: str | None = None
+        self._password: str | None = None
 
     @property
     def access_token(self) -> str | None:
@@ -121,6 +134,9 @@ class AuthManager:
 
     async def authenticate(self, email: str, password: str) -> None:
         """Full OIDC/PKCE auth flow. Tries token refresh first if available."""
+        self._email = email
+        self._password = password
+
         # Try loading stored tokens
         self._tokens = await self._token_store.load()
 
@@ -136,19 +152,28 @@ class AuthManager:
         await self._full_auth(email, password)
 
     async def ensure_valid_token(self) -> str:
-        """Return a valid access token, refreshing if needed."""
+        """Return a valid access token, refreshing or re-authenticating if needed."""
         if not self._tokens:
             raise AuthError("Not authenticated")
 
         if self._tokens.is_expired:
-            if not self._tokens.refresh_token:
-                raise TokenExpiredError("Token expired and no refresh token available")
-            await self._refresh()
+            if self._tokens.refresh_token:
+                try:
+                    await self._refresh()
+                    return self._tokens.access_token
+                except (AuthError, httpx.HTTPStatusError):
+                    pass  # Refresh token also expired, fall through
+
+            # Re-authenticate with stored credentials
+            if self._email and self._password:
+                await self._full_auth(self._email, self._password)
+            else:
+                raise TokenExpiredError("Token expired and no credentials available for re-auth")
 
         return self._tokens.access_token
 
     async def _discover_endpoints(self) -> None:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(verify=_HTTPX_SSL_CONTEXT) as client:
             r = await client.get(OIDC_DISCOVERY)
             r.raise_for_status()
             config = r.json()
@@ -176,7 +201,7 @@ class AuthManager:
             "response_mode": "query",
         }
 
-        async with httpx.AsyncClient(follow_redirects=True, timeout=30) as client:
+        async with httpx.AsyncClient(verify=_HTTPX_SSL_CONTEXT, follow_redirects=True, timeout=30) as client:
             # Step 1: GET auth endpoint — lands on login page
             r = await client.get(self._auth_endpoint, params=params)
 
@@ -225,13 +250,15 @@ class AuthManager:
             if code is None:
                 raise AuthError(f"No auth code in redirect: {location}")
 
-            # Step 4: Follow callback to finalize session
-            await client.get(location)
+            # Old web flows used an HTTPS callback we could fetch; the current
+            # mobile-app flow redirects to a custom scheme that is not fetchable.
+            if _should_follow_callback(location):
+                await client.get(location)
 
         return code
 
     async def _exchange_token(self, code: str, code_verifier: str) -> None:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(verify=_HTTPX_SSL_CONTEXT) as client:
             r = await client.post(
                 self._token_endpoint,
                 data={
@@ -260,7 +287,7 @@ class AuthManager:
         if not self._tokens or not self._tokens.refresh_token:
             raise AuthError("No refresh token available")
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(verify=_HTTPX_SSL_CONTEXT) as client:
             r = await client.post(
                 self._token_endpoint,
                 data={

@@ -14,6 +14,7 @@ from ..models.charge_location import (
     LocationType,
     OptimisedChargingType,
 )
+from .chronos import wrap_chronos
 
 if TYPE_CHECKING:
     from ..connection import GrpcConnection
@@ -125,7 +126,7 @@ class ChargeLocationServiceClient:
         self._vin = vin
 
     async def _metadata(self) -> dict:
-        metadata = await self._connection.get_metadata()
+        metadata = await self._connection.get_metadata(self._vin)
         metadata["vin"] = self._vin
         return metadata
 
@@ -135,7 +136,7 @@ class ChargeLocationServiceClient:
         data = await grpc_call.unary_unary(
             self._connection.channel,
             f"{_SVC}/GetChargeLocations",
-            b"",
+            wrap_chronos(self._vin),
             metadata=metadata,
         )
         raw = decode(data, {3: ("locations", "message")})
@@ -155,7 +156,7 @@ class ChargeLocationServiceClient:
         data = await grpc_call.unary_unary(
             self._connection.channel,
             f"{_SVC}/isAtALocation",
-            b"",
+            wrap_chronos(self._vin),
             metadata=metadata,
         )
         raw = decode(data, {
@@ -173,7 +174,8 @@ class ChargeLocationServiceClient:
         optimised_charging: bool = False,
     ) -> ChargeLocation | None:
         """Create a new charge location at the car's current position."""
-        req = encode(
+        # APK: REQUEST=1 (ChronosRequest), ALIAS=2, AMP_LIMIT=3, MIN_SOC=4, OPTIMISED=5
+        payload = encode(
             {
                 "alias": (2, "string"),
                 "amp_limit": (3, "int32"),
@@ -191,7 +193,7 @@ class ChargeLocationServiceClient:
         data = await grpc_call.unary_unary(
             self._connection.channel,
             f"{_SVC}/CreateAtTheCarLocation",
-            req,
+            wrap_chronos(self._vin, payload),
             metadata=metadata,
         )
         raw = decode(data, {
@@ -204,67 +206,72 @@ class ChargeLocationServiceClient:
 
     async def update_alias(self, location_id: str, alias: str) -> int:
         """Update a charge location's alias. Returns status code."""
-        req = encode(
+        payload = encode(
             {"location_id": (2, "string"), "alias": (3, "string")},
             {"location_id": location_id, "alias": alias},
         )
         metadata = await self._metadata()
         data = await grpc_call.unary_unary(
-            self._connection.channel, f"{_SVC}/UpdateAlias", req, metadata=metadata,
+            self._connection.channel, f"{_SVC}/UpdateAlias",
+            wrap_chronos(self._vin, payload), metadata=metadata,
         )
         raw = decode(data, {1: ("status", "int32")})
         return raw.get("status", 0)
 
     async def update_amp_limit(self, location_id: str, amp_limit: int) -> int:
         """Update a charge location's amp limit. Returns status code."""
-        req = encode(
+        payload = encode(
             {"location_id": (2, "string"), "amp_limit": (3, "int32")},
             {"location_id": location_id, "amp_limit": amp_limit},
         )
         metadata = await self._metadata()
         data = await grpc_call.unary_unary(
-            self._connection.channel, f"{_SVC}/UpdateAmpLimit", req, metadata=metadata,
+            self._connection.channel, f"{_SVC}/UpdateAmpLimit",
+            wrap_chronos(self._vin, payload), metadata=metadata,
         )
         raw = decode(data, {1: ("status", "int32")})
         return raw.get("status", 0)
 
     async def update_minimum_soc(self, location_id: str, minimum_soc: int) -> int:
         """Update a charge location's minimum SOC. Returns status code."""
-        req = encode(
+        payload = encode(
             {"location_id": (2, "string"), "minimum_soc": (3, "int32")},
             {"location_id": location_id, "minimum_soc": minimum_soc},
         )
         metadata = await self._metadata()
         data = await grpc_call.unary_unary(
-            self._connection.channel, f"{_SVC}/UpdateMinimumSoc", req, metadata=metadata,
+            self._connection.channel, f"{_SVC}/UpdateMinimumSoc",
+            wrap_chronos(self._vin, payload), metadata=metadata,
         )
         raw = decode(data, {1: ("status", "int32")})
         return raw.get("status", 0)
 
     async def update_optimised_charging(self, location_id: str, enabled: bool) -> int:
         """Enable or disable optimised charging at a location. Returns status code."""
-        req = encode(
+        payload = encode(
             {"location_id": (2, "string"), "enabled": (3, "bool")},
             {"location_id": location_id, "enabled": enabled},
         )
         metadata = await self._metadata()
         data = await grpc_call.unary_unary(
-            self._connection.channel, f"{_SVC}/UpdateOptimizedSetting", req, metadata=metadata,
+            self._connection.channel, f"{_SVC}/UpdateOptimizedSetting",
+            wrap_chronos(self._vin, payload), metadata=metadata,
         )
         raw = decode(data, {1: ("status", "int32")})
         return raw.get("status", 0)
 
     async def delete_location(self, location_id: str) -> int:
         """Delete a saved charge location."""
-        req = encode(
-            {"location_id": (1, "string")},
+        # APK: REQUEST=1 (ChronosRequest), LOCATION_ID=2
+        payload = encode(
+            {"location_id": (2, "string")},
             {"location_id": location_id},
         )
         metadata = await self._metadata()
         data = await grpc_call.unary_unary(
             self._connection.channel,
             f"{_SVC}/DeleteLocation",
-            req,
+            wrap_chronos(self._vin, payload),
             metadata=metadata,
         )
         raw = decode(data, {1: ("status", "int32")})

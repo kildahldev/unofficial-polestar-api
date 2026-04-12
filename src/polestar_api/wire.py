@@ -14,11 +14,14 @@ Wire types are inferred from Python type hints:
 from __future__ import annotations
 
 import types
-from dataclasses import asdict
 from enum import IntEnum
-from typing import get_args, get_origin, get_type_hints
+from typing import Annotated, get_args, get_origin, get_type_hints
 
 from . import codec
+
+
+class Float32:
+    """Marker for 32-bit float fields (protobuf 'float' vs 'double')."""
 
 
 def _unwrap_optional(py_type: type) -> type:
@@ -31,8 +34,18 @@ def _unwrap_optional(py_type: type) -> type:
     return py_type
 
 
+def _is_float32(py_type: type) -> bool:
+    """Check if a type is Annotated[float, Float32]."""
+    if get_origin(py_type) is Annotated:
+        args = get_args(py_type)
+        return len(args) >= 2 and args[0] is float and any(a is Float32 for a in args[1:])
+    return False
+
+
 def _infer_wire_type(py_type: type) -> str:
     py_type = _unwrap_optional(py_type)
+    if _is_float32(py_type):
+        return "float"
     if py_type is float:
         return "double"
     if py_type is int:
@@ -80,7 +93,7 @@ class ProtoMessage:
     def _ensure_maps(cls):
         if cls._decode_map is not None:
             return
-        hints = get_type_hints(cls)
+        hints = get_type_hints(cls, include_extras=True)
         cls._type_hints = hints
         cls._decode_map = {}
         cls._encode_map = {}

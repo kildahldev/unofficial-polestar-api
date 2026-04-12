@@ -1,7 +1,7 @@
 """Typed protobuf-backed models exposed by the Polestar API client."""
 
 from .availability import Availability, AvailabilityStatus, UnavailableReason, UsageMode
-from .battery import Battery, GetBatteryRequest, GetBatteryResponse
+from .battery import Battery, GetBatteryResponse
 from .charging import (
     AmpLimitResponse,
     BatteryChargeTimer,
@@ -18,8 +18,7 @@ from .charging import (
     TargetSocResponse,
 )
 from .climate import ClimatizationInfo
-from .climate_timer import ClimateTimerObject
-from .climatization import ClimatizationResponse, ClimatizationStartRequest, HeatingIntensity, InvocationResponse, InvocationStatus
+from .climatization import ClimatizationResponse, ClimatizationStartRequest, HeatingIntensity
 from .charge_location import (
     ChargeLocation,
     ChargeLocationDepartureTime,
@@ -27,12 +26,13 @@ from .charge_location import (
     LocationType,
     OptimisedChargingType,
 )
-from .common import Coordinate, DailyTime, Location, ResponseStatus, Timestamp, Weekday
+from .common import Coordinate, DailyTime, Location, ResponseStatus, Timestamp, VehicleRequest, Weekday
 from .connectivity import ConnectivityInfo, ConnectivityStatus, NetworkType, SignalStrength
 from .dashboard import CarDashboardData, CarWarningsData, DashboardStatus
 from .exterior import ExteriorStatus
 from .health import Health
 from .honkflash import HonkAndFlashRequest, HonkAndFlashResponse
+from .invocation import InvocationRequest, InvocationResponse, InvocationStatus
 from .location import LocationRequest, LocationResponse, LocationStatusUpdate
 from .locks import CarLockRequest, CarLockResponse, CarUnlockRequest, CarUnlockResponse
 from .odometer import OdometerStatus
@@ -65,7 +65,6 @@ __all__ = [
     "ClimatizationInfo",
     "ClimatizationResponse",
     "ClimatizationStartRequest",
-    "ClimateTimerObject",
     "ConnectivityInfo",
     "ConnectivityStatus",
     "Coordinate",
@@ -74,10 +73,13 @@ __all__ = [
     "ExteriorStatus",
     "Health",
     "HeatingIntensity",
-    "GetBatteryRequest",
+    "VehicleRequest",
     "GetBatteryResponse",
     "HonkAndFlashRequest",
     "HonkAndFlashResponse",
+    "InvocationRequest",
+    "InvocationResponse",
+    "InvocationStatus",
     "Location",
     "LocationType",
     "LocationRequest",

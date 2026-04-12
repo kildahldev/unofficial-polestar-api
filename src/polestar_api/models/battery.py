@@ -9,27 +9,33 @@ from ..wire import ProtoMessage
 from .common import Timestamp
 
 class ChargerConnectionStatus(IntEnum):
+    """C3 Battery.ChargerConnectionStatus."""
     UNSPECIFIED = 0
-    DISCONNECTED = 1
-    CONNECTED = 2
+    CONNECTED = 1
+    DISCONNECTED = 2
     FAULT = 3
 
 
 class ChargingStatus(IntEnum):
+    """C3 Battery.ChargingStatus."""
     UNSPECIFIED = 0
-    DONE = 1
+    CHARGING = 1
     IDLE = 2
-    CHARGING = 3
-    FAULT = 4
-    SCHEDULED = 5
-    DISCHARGING = 6
-    SMART_CHARGING = 7
+    SCHEDULED = 3
+    DISCHARGING = 4
+    ERROR = 5
+    SMART_CHARGING = 6
+    DONE = 7
+    SMART_CHARGING_PAUSED = 8
 
 
 class ChargingType(IntEnum):
+    """C3 Battery.ChargingType."""
     UNSPECIFIED = 0
-    AC = 1
-    DC = 2
+    NONE = 1
+    AC = 2
+    DC = 3
+    WIRELESS = 4
 
 
 class ChargerPowerStatus(IntEnum):
@@ -105,11 +111,6 @@ class Battery(ProtoMessage, schema={
     def is_plugged_in(self) -> bool:
         return self.charger_connection_status == ChargerConnectionStatus.CONNECTED
 
-
-@dataclass(frozen=True)
-class GetBatteryRequest(ProtoMessage, schema={1: "id", 2: "vin"}):
-    id: str = ""
-    vin: str = ""
 
 
 @dataclass(frozen=True)

@@ -5,9 +5,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .. import grpc as grpc_call
-from ..models.common import ResponseStatus
-from ..models.exterior import ExteriorStatus
 from ..models.honkflash import HonkAndFlashRequest, HonkAndFlashResponse, HonkFlashAction
+from ..models.invocation import InvocationRequest
 from ..models.locks import (
     CarLockRequest,
     CarLockResponse,
@@ -15,17 +14,20 @@ from ..models.locks import (
     CarUnlockResponse,
     LockAlarmLevel,
     LockFeedback,
-    TrunkUnlockRequest,
+    LockType,
     TrunkUnlockResponse,
     UnlockFeedback,
+    UnlockType,
 )
 from ..models.climatization import (
     ClimatizationResponse,
     ClimatizationStartRequest,
+    ClimatizationStopRequest,
     HeatingIntensity,
 )
-from ..models.wakeup import WakeUpRequest, WakeUpReason, WakeUpResponse
+from ..models.wakeup import WakeUpReason, WakeUpResponse
 from ..models.window import WindowControlRequest, WindowControlType
+from ..exceptions import ApiError
 
 if TYPE_CHECKING:
     from ..connection import GrpcConnection
@@ -41,37 +43,52 @@ class InvocationServiceClient:
         self._connection = connection
         self._vin = vin
 
+    def _request(self) -> InvocationRequest:
+        return InvocationRequest(vin=self._vin)
+
     async def _call(self, method: str, request_bytes: bytes) -> bytes:
-        metadata = await self._connection.get_metadata()
+        metadata = await self._connection.get_metadata(self._vin)
         metadata["vin"] = self._vin
-        return await grpc_call.unary_unary(
+        response = None
+        async for response in grpc_call.unary_stream(
             self._connection.channel,
             f"{_SVC}/{method}",
             request_bytes,
             metadata=metadata,
-        )
+        ):
+            pass
+        if response is None:
+            raise ApiError(f"{method} returned no invocation response")
+        return response
 
     async def lock(
         self,
         feedback: LockFeedback = LockFeedback.NORMAL,
         alarm_level: LockAlarmLevel = LockAlarmLevel.NORMAL,
     ) -> CarLockResponse:
-        req = CarLockRequest(feedback=feedback, alarm_level=alarm_level)
+        lock_type = LockType.LOCK_REDUCED_GUARD if alarm_level == LockAlarmLevel.REDUCED else LockType.LOCK
+        req = CarLockRequest(request=self._request(), lock_type=lock_type)
         data = await self._call("Lock", req.to_bytes())
         return CarLockResponse.from_bytes(data)
 
     async def unlock(self, feedback: UnlockFeedback = UnlockFeedback.NORMAL) -> CarUnlockResponse:
-        req = CarUnlockRequest(feedback=feedback)
+        req = CarUnlockRequest(
+            request=self._request(),
+            unlock_type=UnlockType.UNLOCK_TYPE_UNSPECIFIED,
+        )
         data = await self._call("Unlock", req.to_bytes())
         return CarUnlockResponse.from_bytes(data)
 
     async def trunk_unlock(self) -> TrunkUnlockResponse:
-        req = TrunkUnlockRequest()
-        data = await self._call("TrunkUnlock", req.to_bytes())
+        req = CarUnlockRequest(
+            request=self._request(),
+            unlock_type=UnlockType.UNLOCK_TYPE_TRUNK_ONLY,
+        )
+        data = await self._call("Unlock", req.to_bytes())
         return TrunkUnlockResponse.from_bytes(data)
 
     async def honk_flash(self, action: HonkFlashAction = HonkFlashAction.FLASH) -> HonkAndFlashResponse:
-        req = HonkAndFlashRequest(action=action)
+        req = HonkAndFlashRequest(request=self._request(), honk_flash_type=action)
         data = await self._call("HonkFlash", req.to_bytes())
         return HonkAndFlashResponse.from_bytes(data)
 
@@ -85,6 +102,7 @@ class InvocationServiceClient:
         steering_wheel: HeatingIntensity = HeatingIntensity.UNSPECIFIED,
     ) -> ClimatizationResponse:
         req = ClimatizationStartRequest(
+            request=self._request(),
             compartment_temperature_celsius=temperature,
             front_left_seat=front_left_seat,
             front_right_seat=front_right_seat,
@@ -96,13 +114,14 @@ class InvocationServiceClient:
         return ClimatizationResponse.from_bytes(data)
 
     async def climatization_stop(self) -> ClimatizationResponse:
-        data = await self._call("ClimatizationStop", b"")
+        req = ClimatizationStopRequest(request=self._request())
+        data = await self._call("ClimatizationStop", req.to_bytes())
         return ClimatizationResponse.from_bytes(data)
 
     async def wakeup(self, reason: WakeUpReason = WakeUpReason.UNDEFINED) -> WakeUpResponse:
-        req = WakeUpRequest(reason=reason)
-        data = await self._call("WakeUp", req.to_bytes())
-        return WakeUpResponse.from_bytes(data)
+        raise ApiError(
+            "WakeUp is not implemented by invocation.InvocationService for the current Polestar backend",
+        )
 
     async def precleaning_start(self) -> bytes:
         """Start pre-cleaning (air quality). Response format TBD."""
@@ -113,6 +132,6 @@ class InvocationServiceClient:
         return await self._call("PreCleaningStop", b"")
 
     async def window_control(self, action: WindowControlType) -> ClimatizationResponse:
-        req = WindowControlRequest(windows_control=action)
+        req = WindowControlRequest(request=self._request(), windows_control=action)
         data = await self._call("WindowControl", req.to_bytes())
         return ClimatizationResponse.from_bytes(data)

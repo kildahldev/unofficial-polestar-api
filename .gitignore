@@ -4,3 +4,4 @@ site/
 __pycache__/
 *.pyc
 .idea/
+get_token.py

@@ -6,13 +6,60 @@ from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
 from .. import grpc as grpc_call
-from ..models.common import Location
+from ..codec import decode, encode
+from ..models.common import Coordinate, Location, Timestamp
 
 if TYPE_CHECKING:
     from ..connection import GrpcConnection
 
 # C3 Digital Twin Layer location service
 _SVC = "/dtlinternet.DtlInternetService"
+
+def _vin_request(vin: str) -> bytes:
+    """Encode a location request (VIN at field 1)."""
+    return encode({"vin": (1, "string")}, {"vin": vin})
+
+
+def _parse_compact_location(data: bytes) -> Location:
+    raw = decode(data)
+    timestamp = raw.get(3)
+    if isinstance(timestamp, bytes):
+        timestamp = Timestamp.from_bytes(timestamp)
+    elif isinstance(timestamp, int):
+        timestamp = Timestamp(seconds=int(timestamp))
+    else:
+        timestamp = None
+
+    return Location(
+        timestamp=timestamp,
+        coordinate=Coordinate(
+            longitude=float(raw.get(1, 0.0) or 0.0),
+            latitude=float(raw.get(2, 0.0) or 0.0),
+        ),
+    )
+
+
+def _parse_location_message(data: bytes) -> Location:
+    raw = decode(data)
+
+    nested_location = raw.get(5)
+    if isinstance(nested_location, bytes):
+        return _parse_compact_location(nested_location)
+
+    nested_location = raw.get(2)
+    if isinstance(nested_location, bytes):
+        return _parse_compact_location(nested_location)
+
+    longitude = raw.get(2)
+    latitude = raw.get(3)
+    timestamp = raw.get(4)
+    if isinstance(longitude, float) and isinstance(latitude, float):
+        return Location(
+            timestamp=Timestamp(seconds=int(timestamp or 0)),
+            coordinate=Coordinate(longitude=longitude, latitude=latitude),
+        )
+
+    return Location()
 
 
 class LocationServiceClient:
@@ -22,59 +69,45 @@ class LocationServiceClient:
         self._connection = connection
         self._vin = vin
 
-    async def _call(self, method: str) -> bytes:
-        from ..models.battery import GetBatteryRequest
-        request = GetBatteryRequest(vin=self._vin)
-        metadata = await self._connection.get_metadata()
-        return await grpc_call.unary_unary(
-            self._connection.channel,
-            f"{_SVC}/{method}",
-            request.to_bytes(),
-            metadata=metadata,
-        )
+    async def _metadata(self) -> dict[str, str]:
+        return await self._connection.get_metadata(self._vin)
 
     async def get_last_known(self) -> Location:
-        from ..codec import decode
-        data = await self._call("GetLastKnownLocation")
-        raw = decode(data, {2: ("location", "message")})
-        if raw.get("location"):
-            return Location.from_bytes(raw["location"])
-        return Location()
+        metadata = await self._metadata()
+        data = await grpc_call.unary_unary(
+            self._connection.channel,
+            f"{_SVC}/GetLastKnownLocation",
+            _vin_request(self._vin),
+            metadata=metadata,
+        )
+        return _parse_location_message(data)
 
     async def get_last_parked(self) -> Location:
-        from ..codec import decode
-        data = await self._call("GetLastParkedLocation")
-        raw = decode(data, {2: ("location", "message")})
-        if raw.get("location"):
-            return Location.from_bytes(raw["location"])
-        return Location()
+        metadata = await self._metadata()
+        data = await grpc_call.unary_unary(
+            self._connection.channel,
+            f"{_SVC}/GetLastParkedLocation",
+            _vin_request(self._vin),
+            metadata=metadata,
+        )
+        return _parse_location_message(data)
 
     async def stream_last_known(self) -> AsyncIterator[Location]:
-        from ..codec import decode
-        from ..models.battery import GetBatteryRequest
-        request = GetBatteryRequest(vin=self._vin)
-        metadata = await self._connection.get_metadata()
+        metadata = await self._metadata()
         async for data in grpc_call.unary_stream(
             self._connection.channel,
             f"{_SVC}/StreamLastKnownLocations",
-            request.to_bytes(),
+            _vin_request(self._vin),
             metadata=metadata,
         ):
-            raw = decode(data, {2: ("location", "message")})
-            if raw.get("location"):
-                yield Location.from_bytes(raw["location"])
+            yield _parse_location_message(data)
 
     async def stream_last_parked(self) -> AsyncIterator[Location]:
-        from ..codec import decode
-        from ..models.battery import GetBatteryRequest
-        request = GetBatteryRequest(vin=self._vin)
-        metadata = await self._connection.get_metadata()
+        metadata = await self._metadata()
         async for data in grpc_call.unary_stream(
             self._connection.channel,
             f"{_SVC}/StreamLastParkedLocations",
-            request.to_bytes(),
+            _vin_request(self._vin),
             metadata=metadata,
         ):
-            raw = decode(data, {2: ("location", "message")})
-            if raw.get("location"):
-                yield Location.from_bytes(raw["location"])
+            yield _parse_location_message(data)

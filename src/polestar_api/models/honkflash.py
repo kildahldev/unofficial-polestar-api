@@ -6,21 +6,21 @@ from dataclasses import dataclass
 from enum import IntEnum
 
 from ..wire import ProtoMessage
-from .common import ResponseStatus
+from .invocation import InvocationRequest, InvocationResponse
 
 
 class HonkFlashAction(IntEnum):
-    UNDEFINED = 0
+    HONK_AND_FLASH = 0
     HONK = 1
     FLASH = 2
-    HONK_AND_FLASH = 3
 
 
 @dataclass(frozen=True)
-class HonkAndFlashRequest(ProtoMessage, schema={1: "action"}):
-    action: HonkFlashAction = HonkFlashAction.UNDEFINED
+class HonkAndFlashRequest(ProtoMessage, schema={1: "request", 2: "honk_flash_type"}):
+    request: InvocationRequest | None = None
+    honk_flash_type: HonkFlashAction = HonkFlashAction.HONK_AND_FLASH
 
 
 @dataclass(frozen=True)
-class HonkAndFlashResponse(ProtoMessage, schema={1: "response_status"}):
-    response_status: ResponseStatus | None = None
+class HonkAndFlashResponse(ProtoMessage, schema={1: "response"}):
+    response: InvocationResponse | None = None

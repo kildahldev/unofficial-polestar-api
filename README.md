@@ -2,7 +2,7 @@
 
 Unofficial async Python client for Polestar vehicle gRPC APIs.
 
-This library does not give you any more control over your car than the official app, but it does expose functions that can be timed, macroed, controlled or displayed in apps like Home Assistant. 
+This library does not give you any more control over your car than the official app, but it does expose functions that can be timed, macroed, controlled or displayed in apps like Home Assistant.
 
 ## Disclaimer
 

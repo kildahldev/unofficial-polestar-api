@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING
 
 from .. import grpc as grpc_call
-from ..models.charging import AmpLimitResponse, SetAmpLimitRequest
+from ..codec import encode
+from ..models.charging import AmpLimitResponse
+from .chronos import wrap_chronos
 
 if TYPE_CHECKING:
     from ..connection import GrpcConnection
 
 _SVC = "/chronos.services.v1.AmpLimitService"
+_STREAM_TIMEOUT = 10.0
 
 
 class AmpLimitServiceClient:
@@ -19,18 +23,29 @@ class AmpLimitServiceClient:
         self._vin = vin
 
     async def get(self) -> AmpLimitResponse:
-        metadata = await self._connection.get_metadata()
+        metadata = await self._connection.get_metadata(self._vin)
         metadata["vin"] = self._vin
-        data = await grpc_call.unary_unary(
-            self._connection.channel, f"{_SVC}/GetAmpLimit", b"", metadata=metadata,
-        )
+        data = None
+        try:
+            async with asyncio.timeout(_STREAM_TIMEOUT):
+                async for data in grpc_call.unary_stream(
+                    self._connection.channel, f"{_SVC}/GetAmpLimit",
+                    wrap_chronos(self._vin), metadata=metadata,
+                ):
+                    break
+        except TimeoutError:
+            pass
+        if data is None:
+            return AmpLimitResponse()
         return AmpLimitResponse.from_bytes(data)
 
     async def set(self, amperage: int) -> AmpLimitResponse:
-        req = SetAmpLimitRequest(amperage_limit=amperage)
-        metadata = await self._connection.get_metadata()
+        # APK: REQUEST=1 (ChronosRequest), AMP_LIMIT=2
+        payload = encode({"amp_limit": (2, "int32")}, {"amp_limit": amperage})
+        metadata = await self._connection.get_metadata(self._vin)
         metadata["vin"] = self._vin
         data = await grpc_call.unary_unary(
-            self._connection.channel, f"{_SVC}/SetAmpLimit", req.to_bytes(), metadata=metadata,
+            self._connection.channel, f"{_SVC}/SetAmpLimit",
+            wrap_chronos(self._vin, payload), metadata=metadata,
         )
         return AmpLimitResponse.from_bytes(data)

@@ -5,7 +5,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .. import grpc as grpc_call
-from ..models.battery import GetBatteryRequest
+from ..codec import decode
+from ..models.common import VehicleRequest
 from ..models.connectivity import ConnectivityInfo
 from ..models.dashboard import DashboardStatus
 
@@ -22,10 +23,9 @@ class DashboardServiceClient:
         self._connection = connection
         self._vin = vin
 
-    async def get_latest(self) -> DashboardStatus:
-        from ..codec import decode
-        request = GetBatteryRequest(vin=self._vin)
-        metadata = await self._connection.get_metadata()
+    async def get_latest(self) -> DashboardStatus | None:
+        request = VehicleRequest(vin=self._vin)
+        metadata = await self._connection.get_metadata(self._vin)
         data = await grpc_call.unary_unary(
             self._connection.channel,
             f"{_SVC}/GetLatestDashboard",
@@ -36,12 +36,11 @@ class DashboardServiceClient:
         raw = decode(data, {2: ("dashboard", "message")})
         if raw.get("dashboard"):
             return DashboardStatus.from_bytes(raw["dashboard"])
-        return DashboardStatus()
+        return None
 
-    async def get_connectivity(self) -> ConnectivityInfo:
-        from ..codec import decode
-        request = GetBatteryRequest(vin=self._vin)
-        metadata = await self._connection.get_metadata()
+    async def get_connectivity(self) -> ConnectivityInfo | None:
+        request = VehicleRequest(vin=self._vin)
+        metadata = await self._connection.get_metadata(self._vin)
         data = await grpc_call.unary_unary(
             self._connection.channel,
             f"{_SVC}/GetLatestDashboard",
@@ -51,4 +50,4 @@ class DashboardServiceClient:
         raw = decode(data, {3: ("connectivity", "message")})
         if raw.get("connectivity"):
             return ConnectivityInfo.from_bytes(raw["connectivity"])
-        return ConnectivityInfo()
+        return None

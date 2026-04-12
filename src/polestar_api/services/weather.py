@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .. import grpc as grpc_call
-from ..codec import decode
+from ..codec import decode, encode
 from ..models.weather import WeatherReport
 
 if TYPE_CHECKING:
@@ -19,17 +19,16 @@ class WeatherServiceClient:
         self._connection = connection
         self._vin = vin
 
-    async def get_report(self) -> WeatherReport:
-        from ..models.battery import GetBatteryRequest
-        request = GetBatteryRequest(vin=self._vin)
-        metadata = await self._connection.get_metadata()
+    async def get_report(self) -> WeatherReport | None:
+        request = encode({"vin": (1, "string")}, {"vin": self._vin})
+        metadata = await self._connection.get_metadata(self._vin)
         data = await grpc_call.unary_unary(
             self._connection.channel,
             f"{_SVC}/GetWeatherReport",
-            request.to_bytes(),
+            request,
             metadata=metadata,
         )
         raw = decode(data, {1: ("report", "message")})
         if raw.get("report"):
             return WeatherReport.from_bytes(raw["report"])
-        return WeatherReport()
+        return None

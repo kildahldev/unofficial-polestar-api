@@ -63,6 +63,13 @@ class DailyTime(ProtoMessage, schema={1: "hour", 2: "minute"}):
 
 
 @dataclass(frozen=True)
+class VehicleRequest(ProtoMessage, schema={1: "id", 2: "vin"}):
+    """Generic vehicle request envelope used by most services."""
+    id: str = ""
+    vin: str = ""
+
+
+@dataclass(frozen=True)
 class Location(ProtoMessage, schema={
     1: "timestamp",
     2: "coordinate",

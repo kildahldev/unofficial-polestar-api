@@ -176,7 +176,7 @@ class Health(ProtoMessage, schema={
     @property
     def any_light_failure(self) -> bool:
         for name in self._schema.values():
-            if name.endswith("_warning") and "light" in name or "beam" in name or "running" in name or "turn" in name:
+            if name.endswith("_warning") and ("light" in name or "beam" in name or "running" in name or "turn" in name):
                 if getattr(self, name) == ExteriorLightWarning.FAILURE:
                     return True
         return False

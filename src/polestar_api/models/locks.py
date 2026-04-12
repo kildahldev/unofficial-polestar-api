@@ -6,8 +6,7 @@ from dataclasses import dataclass
 from enum import IntEnum
 
 from ..wire import ProtoMessage
-from .common import ResponseStatus
-from .exterior import ExteriorStatus
+from .invocation import InvocationRequest, InvocationResponse
 
 
 class LockFeedback(IntEnum):
@@ -24,17 +23,21 @@ class LockAlarmLevel(IntEnum):
     NORMAL = 3
 
 
-@dataclass(frozen=True)
-class CarLockRequest(ProtoMessage, schema={1: "feedback", 2: "alarm_level", 3: "uuid"}):
-    feedback: LockFeedback = LockFeedback.UNSPECIFIED
-    alarm_level: LockAlarmLevel = LockAlarmLevel.UNSPECIFIED
-    uuid: str = ""
+class LockType(IntEnum):
+    LOCK = 0
+    LOCK_REDUCED_GUARD = 1
 
 
 @dataclass(frozen=True)
-class CarLockResponse(ProtoMessage, schema={1: "response_status", 2: "exterior_status"}):
-    response_status: ResponseStatus | None = None
-    exterior_status: ExteriorStatus | None = None
+class CarLockRequest(ProtoMessage, schema={1: "request", 2: "lock_type"}):
+    request: InvocationRequest | None = None
+    lock_type: LockType = LockType.LOCK
+
+
+@dataclass(frozen=True)
+class CarLockResponse(ProtoMessage, schema={1: "response", 2: "lock_error"}):
+    response: InvocationResponse | None = None
+    lock_error: int = 0
 
 
 class UnlockFeedback(IntEnum):
@@ -44,24 +47,24 @@ class UnlockFeedback(IntEnum):
     NORMAL = 3
 
 
-@dataclass(frozen=True)
-class CarUnlockRequest(ProtoMessage, schema={1: "feedback", 2: "uuid"}):
-    feedback: UnlockFeedback = UnlockFeedback.UNSPECIFIED
-    uuid: str = ""
+class UnlockType(IntEnum):
+    UNLOCK_TYPE_UNSPECIFIED = 0
+    UNLOCK_TYPE_TRUNK_ONLY = 1
 
 
 @dataclass(frozen=True)
-class CarUnlockResponse(ProtoMessage, schema={1: "response_status", 2: "exterior_status"}):
-    response_status: ResponseStatus | None = None
-    exterior_status: ExteriorStatus | None = None
+class CarUnlockRequest(ProtoMessage, schema={1: "request", 2: "unlock_type"}):
+    request: InvocationRequest | None = None
+    unlock_type: UnlockType = UnlockType.UNLOCK_TYPE_UNSPECIFIED
 
 
 @dataclass(frozen=True)
-class TrunkUnlockRequest(ProtoMessage, schema={1: "uuid"}):
-    uuid: str = ""
+class CarUnlockResponse(ProtoMessage, schema={1: "response", 2: "ready_to_unlock_until"}):
+    response: InvocationResponse | None = None
+    ready_to_unlock_until: int = 0
 
 
 @dataclass(frozen=True)
-class TrunkUnlockResponse(ProtoMessage, schema={1: "response_status", 2: "exterior_status"}):
-    response_status: ResponseStatus | None = None
-    exterior_status: ExteriorStatus | None = None
+class TrunkUnlockResponse(ProtoMessage, schema={1: "response", 2: "ready_to_unlock_until"}):
+    response: InvocationResponse | None = None
+    ready_to_unlock_until: int = 0

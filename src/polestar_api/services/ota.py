@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
@@ -14,6 +15,7 @@ if TYPE_CHECKING:
 
 _DISCOVERY = "/ota_mobcache.OtaDiscoveryService"
 _SCHEDULER = "/ota_mobcache.SchedulerService"
+_STREAM_TIMEOUT = 10.0
 
 
 class OtaServiceClient:
@@ -25,7 +27,7 @@ class OtaServiceClient:
         return encode({"vin": (1, "string")}, {"vin": self._vin})
 
     async def _metadata(self) -> dict:
-        metadata = await self._connection.get_metadata()
+        metadata = await self._connection.get_metadata(self._vin)
         metadata["vin"] = self._vin
         return metadata
 
@@ -36,29 +38,37 @@ class OtaServiceClient:
             {"vin": self._vin, "locale": "en"},
         )
         metadata = await self._metadata()
-        async for data in grpc_call.unary_stream(
-            self._connection.channel,
-            f"{_DISCOVERY}/GetSoftwareInfo",
-            req,
-            metadata=metadata,
-        ):
-            raw = decode(data, {1: ("info", "message")})
-            if raw.get("info"):
-                return CarSoftwareInfo.from_bytes(raw["info"])
+        try:
+            async with asyncio.timeout(_STREAM_TIMEOUT):
+                async for data in grpc_call.unary_stream(
+                    self._connection.channel,
+                    f"{_DISCOVERY}/GetSoftwareInfo",
+                    req,
+                    metadata=metadata,
+                ):
+                    raw = decode(data, {1: ("info", "message")})
+                    if raw.get("info"):
+                        return CarSoftwareInfo.from_bytes(raw["info"])
+        except TimeoutError:
+            pass
         return None
 
     async def get_schedule(self) -> Scheduler | None:
         """Get current OTA schedule (first result from server stream)."""
         metadata = await self._metadata()
-        async for data in grpc_call.unary_stream(
-            self._connection.channel,
-            f"{_SCHEDULER}/GetSchedule",
-            self._vin_bytes(),
-            metadata=metadata,
-        ):
-            raw = decode(data, {1: ("timer", "message")})
-            if raw.get("timer"):
-                return Scheduler.from_bytes(raw["timer"])
+        try:
+            async with asyncio.timeout(_STREAM_TIMEOUT):
+                async for data in grpc_call.unary_stream(
+                    self._connection.channel,
+                    f"{_SCHEDULER}/GetSchedule",
+                    self._vin_bytes(),
+                    metadata=metadata,
+                ):
+                    raw = decode(data, {1: ("timer", "message")})
+                    if raw.get("timer"):
+                        return Scheduler.from_bytes(raw["timer"])
+        except TimeoutError:
+            pass
         return None
 
     async def schedule(self, software_id: str, relative_time: int = 0) -> Scheduler | None:

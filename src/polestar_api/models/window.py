@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from enum import IntEnum
 
 from ..wire import ProtoMessage
+from .invocation import InvocationRequest
 
 
 class WindowControlType(IntEnum):
@@ -15,5 +16,6 @@ class WindowControlType(IntEnum):
 
 
 @dataclass(frozen=True)
-class WindowControlRequest(ProtoMessage, schema={2: "windows_control"}):
+class WindowControlRequest(ProtoMessage, schema={1: "request", 2: "windows_control"}):
+    request: InvocationRequest | None = None
     windows_control: WindowControlType = WindowControlType.UNSPECIFIED

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from .. import grpc as grpc_call
 from ..codec import decode
 from ..models.availability import Availability
-from ..models.battery import GetBatteryRequest
+from ..models.common import VehicleRequest
 
 if TYPE_CHECKING:
     from ..connection import GrpcConnection
@@ -20,9 +20,9 @@ class AvailabilityServiceClient:
         self._connection = connection
         self._vin = vin
 
-    async def get_latest(self) -> Availability:
-        request = GetBatteryRequest(vin=self._vin)
-        metadata = await self._connection.get_metadata()
+    async def get_latest(self) -> Availability | None:
+        request = VehicleRequest(vin=self._vin)
+        metadata = await self._connection.get_metadata(self._vin)
         data = await grpc_call.unary_unary(
             self._connection.channel,
             f"{_SVC}/GetLatestAvailability",
@@ -32,4 +32,4 @@ class AvailabilityServiceClient:
         raw = decode(data, {3: ("availability", "message")})
         if raw.get("availability"):
             return Availability.from_bytes(raw["availability"])
-        return Availability()
+        return None

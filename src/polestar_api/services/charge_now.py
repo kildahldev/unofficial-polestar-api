@@ -5,7 +5,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .. import grpc as grpc_call
-from ..codec import decode, encode
+from ..codec import decode
+from .chronos import wrap_chronos
 
 if TYPE_CHECKING:
     from ..connection import GrpcConnection
@@ -20,11 +21,11 @@ class ChargeNowServiceClient:
 
     async def _call(self, method: str) -> int:
         """Call a charge now method. Returns response status code."""
-        # ChronosRequest wrapper (field 1) is empty for these — VIN in metadata
-        metadata = await self._connection.get_metadata()
+        metadata = await self._connection.get_metadata(self._vin)
         metadata["vin"] = self._vin
         data = await grpc_call.unary_unary(
-            self._connection.channel, f"{_SVC}/{method}", b"", metadata=metadata,
+            self._connection.channel, f"{_SVC}/{method}",
+            wrap_chronos(self._vin), metadata=metadata,
         )
         raw = decode(data, {1: ("status", "int32")})
         return raw.get("status", 0)

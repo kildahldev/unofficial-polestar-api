@@ -5,7 +5,8 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
-from ..models.battery import Battery, GetBatteryRequest, GetBatteryResponse
+from ..models.battery import Battery, GetBatteryResponse
+from ..models.common import VehicleRequest
 from .. import grpc as grpc_call
 
 if TYPE_CHECKING:
@@ -24,8 +25,8 @@ class BatteryServiceClient:
 
     async def get_latest(self) -> Battery:
         """Get the latest battery status."""
-        request = GetBatteryRequest(vin=self._vin)
-        metadata = await self._connection.get_metadata()
+        request = VehicleRequest(vin=self._vin)
+        metadata = await self._connection.get_metadata(self._vin)
 
         response_data = await grpc_call.unary_unary(
             self._connection.channel,
@@ -38,8 +39,8 @@ class BatteryServiceClient:
 
     async def stream(self) -> AsyncIterator[Battery]:
         """Stream battery status updates."""
-        request = GetBatteryRequest(vin=self._vin)
-        metadata = await self._connection.get_metadata()
+        request = VehicleRequest(vin=self._vin)
+        metadata = await self._connection.get_metadata(self._vin)
 
         async for response_data in grpc_call.unary_stream(
             self._connection.channel,

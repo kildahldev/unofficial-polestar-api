@@ -4,15 +4,22 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import asyncio
+
 from .. import grpc as grpc_call
-from ..codec import decode
-from ..models.battery import GetBatteryRequest
+from ..codec import decode, encode
 from ..models.health import Health
 
 if TYPE_CHECKING:
     from ..connection import GrpcConnection
 
 _SVC = "/services.vehiclestates.health.HealthService"
+_RESPONSE_SCHEMA = {3: ("health", "message")}
+
+
+def _health_request(vin: str) -> bytes:
+    """Encode a health request (VIN at field 2, per DT proto)."""
+    return encode({"vin": (2, "string")}, {"vin": vin})
 
 
 class HealthServiceClient:
@@ -20,16 +27,17 @@ class HealthServiceClient:
         self._connection = connection
         self._vin = vin
 
-    async def get_latest(self) -> Health:
-        request = GetBatteryRequest(vin=self._vin)
-        metadata = await self._connection.get_metadata()
-        data = await grpc_call.unary_unary(
-            self._connection.channel,
-            f"{_SVC}/GetHealth",
-            request.to_bytes(),
-            metadata=metadata,
-        )
-        raw = decode(data, {3: ("health", "message")})
-        if raw.get("health"):
-            return Health.from_bytes(raw["health"])
-        return Health()
+    async def get_latest(self) -> Health | None:
+        metadata = await self._connection.get_metadata(self._vin)
+        async with asyncio.timeout(15):
+            async for data in grpc_call.unary_stream(
+                self._connection.channel,
+                f"{_SVC}/GetHealth",
+                _health_request(self._vin),
+                metadata=metadata,
+            ):
+                raw = decode(data, _RESPONSE_SCHEMA)
+                if raw.get("health"):
+                    return Health.from_bytes(raw["health"])
+                return None
+        return None
