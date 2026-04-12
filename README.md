@@ -1,23 +1,18 @@
+
 # unofficial-polestar-api
 
 Unofficial async Python client for Polestar vehicle gRPC APIs.
 
-This library does not give you any more control over your car than the official app, but it does expose functions that can be timed, macroed, controlled or displayed in apps like Home Assistant.
-
-## Disclaimer
-
-This project is not affiliated with, endorsed by, or in any way officially connected to Polestar, Volvo Cars, or any of their subsidiaries.
-
-This library does not contain any proprietary code, or copyrighted material from Polestar or Volvo. All code is written from scratch by observing the behaviour of the official app.
-
-All API interactions are based on reverse-engineered, undocumented interfaces. These may change or break without notice. Use at your own risk. The authors are not responsible for any consequences of using this software, including but not limited to vehicle malfunctions, warranty implications, or account restrictions.
+This project aims to bring you as much control as possible over your car. It uses the same APIs as the official mobile app and exposes most functionality (Atleast for the PS4 for now)
 
 
 ## Supported Cars
 
-This library implements the **C3** (Volvo Cars Cloud Connectivity) backend. The Polestar app actually supports four backends — C3, PCCS, Vocmo, and HuanFu — and the server assigns one per vehicle via a `remoteControlType` field.
+This library for now just implements the **C3** (Volvo Cars Cloud Connectivity) backend. The Polestar app actually supports four backends — C3, PCCS, Vocmo, and HuanFu — and the server assigns one per vehicle via a `remoteControlType` field.
 
-The server assigns a backend per vehicle — which cars use which backend is unclear. Development and testing is done against a Polestar 4 (C3). Contributions and testing from owners of other models are welcome.
+The server assigns a backend per vehicle — which cars use which backend is currently unclear, but the Polestar 4 (Which i developed against) - responds to commands through the C3 Backend. 
+
+Contributions and testing from owners of other models are welcome
 
 | Backend | Status |
 |---|---|
@@ -66,18 +61,13 @@ async with PolestarApi(email="you@example.com", password="...") as api:
 
 For the full API reference with all methods, models, and enums, see the [docs](docs/).
 
-## Architecture
+## Home Assistant
+For integrating with Home Assistant, I have made an integration here
 
-- **Auth**: OIDC/PKCE flow against Volvo/Polestar PingFederate with automatic token refresh
-- **Discovery**: C3 endpoint resolution via `cnepmob.volvocars.com`, vehicle listing via MyStarV2 GraphQL
-- **Transport**: gRPC over TLS using `grpclib`, no generated protobuf stubs — hand-written dataclasses with a custom wire codec
-- **Token storage**: pluggable `TokenStore` protocol (file-based default, swap in your own for HA config entries)
+## Disclaimer
 
-## Documentation
+This project is not affiliated with, endorsed by, or in any way officially connected to Polestar, Volvo Cars, or any of their subsidiaries.
 
-Generate API reference docs from the codebase:
+This library does not contain any proprietary code, or copyrighted material from Polestar or Volvo. All code is written from scratch by observing the behaviour of the official app.
 
-```bash
-pip install -e '.[docs]'
-mkdocs serve
-```
+All API interactions are based on reverse-engineered, undocumented interfaces. These may change or break without notice. Use at your own risk. The authors are not responsible for any consequences of using this software, including but not limited to vehicle malfunctions, warranty implications, or account restrictions.
