@@ -42,7 +42,7 @@ async with PolestarApi(email="you@example.com", password="...") as api:
 
 ## Features
 
-- **Battery** — charge level, range, charging status, power, temperatures (with real-time streaming)
+- **Battery** — charge level, range, charging status, power (with real-time streaming)
 - **Location** — last known and last parked position (with real-time streaming)
 - **Climate** — start/stop climatization with target temperature, seat and steering wheel heating
 - **Climate timers** — view and manage scheduled parking climate timers
@@ -50,7 +50,6 @@ async with PolestarApi(email="you@example.com", password="...") as api:
 - **Honk & flash** — flash lights or honk+flash
 - **Windows** — open/close all windows
 - **Exterior** — door, window, sunroof, hood, tailgate, and alarm status
-- **Dashboard** — trip meters, odometer, tyre pressure warnings, connectivity status
 - **Charging** — target SOC, amp limit, charge timers, start/stop immediate charging
 - **Charge locations** — full CRUD for saved locations with per-location amp limits, min SOC, timers, departure times, and smart charging
 - **Health** — service warnings, fluid levels, tyre pressures (kPa), all exterior light warnings, 12V battery
