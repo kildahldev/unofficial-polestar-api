@@ -1,7 +1,7 @@
 
 # unofficial-polestar-api
 
-Unofficial async Python client and Home Assistant integration for Polestar vehicle gRPC APIs.
+Unofficial async Python client and Home Assistant integration for Polestar gRPC APIs.
 
 This project aims to bring you as much control as possible over your car. It uses the same APIs as the official mobile app and exposes most functionality (Atleast for the PS4 for now)
 
