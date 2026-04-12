@@ -73,7 +73,7 @@ async with PolestarApi(email="you@example.com", password="...") as api:
 - **OTA** — software update info, scheduling, install now, cancel
 - **Pre-cleaning** — air quality status (PM2.5, AQI) and start/stop cabin pre-cleaning
 
-For the full API reference with all methods, models, and enums, see the [docs](docs/).
+For the full API reference with all methods, models, and enums, see the [docs](https://kildahldev.github.io/unofficial-polestar-api/).
 
 ## Disclaimer
 
