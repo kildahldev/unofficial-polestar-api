@@ -16,7 +16,6 @@ from .chronos import wrap_chronos
 if TYPE_CHECKING:
     from ..connection import GrpcConnection
 
-_SVC = "/chronos.services.v1.TargetSocService"
 _STREAM_TIMEOUT = 10.0  # seconds to wait for first message from subscription
 
 
@@ -24,6 +23,10 @@ class TargetSocServiceClient:
     def __init__(self, connection: GrpcConnection, vin: str) -> None:
         self._connection = connection
         self._vin = vin
+
+    @property
+    def _svc(self) -> str:
+        return self._connection.backend.target_soc_svc
 
     @staticmethod
     def _parse(data: bytes) -> TargetSocResponse:
@@ -41,7 +44,7 @@ class TargetSocServiceClient:
         try:
             async with asyncio.timeout(_STREAM_TIMEOUT):
                 async for data in grpc_call.unary_stream(
-                    self._connection.channel, f"{_SVC}/GetTargetSoc",
+                    self._connection.channel, f"{self._svc}/GetTargetSoc",
                     wrap_chronos(self._vin), metadata=metadata,
                 ):
                     break  # take first message from subscription
@@ -67,7 +70,7 @@ class TargetSocServiceClient:
         try:
             async with asyncio.timeout(_STREAM_TIMEOUT):
                 async for data in grpc_call.unary_stream(
-                    self._connection.channel, f"{_SVC}/SetTargetSoc",
+                    self._connection.channel, f"{self._svc}/SetTargetSoc",
                     wrap_chronos(self._vin, payload), metadata=metadata,
                 ):
                     break  # take first message from subscription

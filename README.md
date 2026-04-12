@@ -14,16 +14,19 @@ All API interactions are based on reverse-engineered, undocumented interfaces. T
 
 
 ## Supported Cars
-| Car | Status |
-|---|---|
-| Polestar 4 | ✅ Primary development target |
-| Polestar 3 | ✅ Should work |
-| Polestar 2 (2024+, updated infotainment) | ✅ Should work |
-| Polestar 2 (pre-2024) | ❌ Not supported — uses a legacy backend |
 
-> Not all features may be available on all models. Feature availability depends on the car's hardware and software version.
->
-> Pre-2024 Polestar 2 models use Polestar's legacy PCCS/VOCMO backend (`api.pccs-prod.plstr.io`), which this library does not implement. The 2024 infotainment update moved the PS2 to the C3 backend.
+This library implements the **C3** (Volvo Cars Cloud Connectivity) backend. The Polestar app actually supports four backends — C3, PCCS, Vocmo, and HuanFu — and the server assigns one per vehicle via a `remoteControlType` field.
+
+The server assigns a backend per vehicle — which cars use which backend is unclear. Development and testing is done against a Polestar 4 (C3). Contributions and testing from owners of other models are welcome.
+
+| Backend | Status |
+|---|---|
+| C3 | ✅ Implemented |
+| PCCS | ❌ Not implemented |
+| Vocmo | ❌ Not implemented |
+| HuanFu | ❌ Not implemented |
+
+Not all features are available on all models.
 
 
 ## Quick Start
@@ -59,7 +62,6 @@ async with PolestarApi(email="you@example.com", password="...") as api:
 - **Availability** — vehicle online status with unavailable reason
 - **Weather** — temperature at car location
 - **OTA** — software update info, scheduling, install now, cancel
-- **Wake-up** — wake the car from sleep
 - **Pre-cleaning** — air quality status (PM2.5, AQI) and start/stop cabin pre-cleaning
 
 For the full API reference with all methods, models, and enums, see the [docs](docs/).

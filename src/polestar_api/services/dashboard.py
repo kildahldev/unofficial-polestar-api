@@ -13,9 +13,6 @@ from ..models.dashboard import DashboardStatus
 if TYPE_CHECKING:
     from ..connection import GrpcConnection
 
-_SVC = "/services.vehiclestates.dashboard.DashboardService"
-
-
 class DashboardServiceClient:
     """Dashboard status service."""
 
@@ -23,12 +20,16 @@ class DashboardServiceClient:
         self._connection = connection
         self._vin = vin
 
+    @property
+    def _svc(self) -> str:
+        return self._connection.backend.dashboard_svc
+
     async def get_latest(self) -> DashboardStatus | None:
         request = VehicleRequest(vin=self._vin)
         metadata = await self._connection.get_metadata(self._vin)
         data = await grpc_call.unary_unary(
             self._connection.channel,
-            f"{_SVC}/GetLatestDashboard",
+            f"{self._svc}/GetLatestDashboard",
             request.to_bytes(),
             metadata=metadata,
         )
@@ -43,7 +44,7 @@ class DashboardServiceClient:
         metadata = await self._connection.get_metadata(self._vin)
         data = await grpc_call.unary_unary(
             self._connection.channel,
-            f"{_SVC}/GetLatestDashboard",
+            f"{self._svc}/GetLatestDashboard",
             request.to_bytes(),
             metadata=metadata,
         )

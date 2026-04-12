@@ -21,7 +21,6 @@ from .chronos import wrap_chronos
 if TYPE_CHECKING:
     from ..connection import GrpcConnection
 
-_SVC = "/chronos.services.v1.ParkingClimateTimerService"
 _SUCCESS_STATUSES = {1, 2, 3, 4, 8}
 _STREAM_TIMEOUT = 10.0
 
@@ -264,6 +263,10 @@ class ParkingClimateTimerServiceClient:
         self._connection = connection
         self._vin = vin
 
+    @property
+    def _svc(self) -> str:
+        return self._connection.backend.parking_climate_timer_svc
+
     async def _metadata(self) -> dict:
         metadata = await self._connection.get_metadata(self._vin)
         metadata["vin"] = self._vin
@@ -276,7 +279,7 @@ class ParkingClimateTimerServiceClient:
             async with asyncio.timeout(_STREAM_TIMEOUT):
                 async for data in grpc_call.unary_stream(
                     self._connection.channel,
-                    f"{_SVC}/GetTimers",
+                    f"{self._svc}/GetTimers",
                     wrap_chronos(self._vin),
                     metadata=metadata,
                 ):
@@ -294,7 +297,7 @@ class ParkingClimateTimerServiceClient:
             async with asyncio.timeout(_STREAM_TIMEOUT):
                 async for data in grpc_call.unary_stream(
                     self._connection.channel,
-                    f"{_SVC}/SetTimers",
+                    f"{self._svc}/SetTimers",
                     wrap_chronos(self._vin, payload),
                     metadata=metadata,
                 ):
@@ -314,7 +317,7 @@ class ParkingClimateTimerServiceClient:
             async with asyncio.timeout(_STREAM_TIMEOUT):
                 async for data in grpc_call.unary_stream(
                     self._connection.channel,
-                    f"{_SVC}/DeleteTimer",
+                    f"{self._svc}/DeleteTimer",
                     wrap_chronos(self._vin, payload),
                     metadata=metadata,
                 ):
@@ -330,7 +333,7 @@ class ParkingClimateTimerServiceClient:
             async with asyncio.timeout(_STREAM_TIMEOUT):
                 async for data in grpc_call.unary_stream(
                     self._connection.channel,
-                    f"{_SVC}/GetTimerSettings",
+                    f"{self._svc}/GetTimerSettings",
                     wrap_chronos(self._vin),
                     metadata=metadata,
                 ):
@@ -345,7 +348,7 @@ class ParkingClimateTimerServiceClient:
         metadata = await self._metadata()
         data = await grpc_call.unary_unary(
             self._connection.channel,
-            f"{_SVC}/SetTimerSettings",
+            f"{self._svc}/SetTimerSettings",
             wrap_chronos(self._vin, payload),
             metadata=metadata,
         )

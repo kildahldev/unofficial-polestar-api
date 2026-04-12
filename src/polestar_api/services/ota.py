@@ -13,8 +13,6 @@ from ..models.ota import CarSoftwareInfo, Scheduler
 if TYPE_CHECKING:
     from ..connection import GrpcConnection
 
-_DISCOVERY = "/ota_mobcache.OtaDiscoveryService"
-_SCHEDULER = "/ota_mobcache.SchedulerService"
 _STREAM_TIMEOUT = 10.0
 
 
@@ -22,6 +20,14 @@ class OtaServiceClient:
     def __init__(self, connection: GrpcConnection, vin: str) -> None:
         self._connection = connection
         self._vin = vin
+
+    @property
+    def _discovery(self) -> str:
+        return self._connection.backend.ota_discovery_svc
+
+    @property
+    def _scheduler(self) -> str:
+        return self._connection.backend.ota_scheduler_svc
 
     def _vin_bytes(self) -> bytes:
         return encode({"vin": (1, "string")}, {"vin": self._vin})
@@ -42,7 +48,7 @@ class OtaServiceClient:
             async with asyncio.timeout(_STREAM_TIMEOUT):
                 async for data in grpc_call.unary_stream(
                     self._connection.channel,
-                    f"{_DISCOVERY}/GetSoftwareInfo",
+                    f"{self._discovery}/GetSoftwareInfo",
                     req,
                     metadata=metadata,
                 ):
@@ -60,7 +66,7 @@ class OtaServiceClient:
             async with asyncio.timeout(_STREAM_TIMEOUT):
                 async for data in grpc_call.unary_stream(
                     self._connection.channel,
-                    f"{_SCHEDULER}/GetSchedule",
+                    f"{self._scheduler}/GetSchedule",
                     self._vin_bytes(),
                     metadata=metadata,
                 ):
@@ -79,7 +85,7 @@ class OtaServiceClient:
         )
         metadata = await self._metadata()
         data = await grpc_call.unary_unary(
-            self._connection.channel, f"{_SCHEDULER}/Schedule", req, metadata=metadata,
+            self._connection.channel, f"{self._scheduler}/Schedule", req, metadata=metadata,
         )
         raw = decode(data, {1: ("timer", "message")})
         if raw.get("timer"):
@@ -93,7 +99,7 @@ class OtaServiceClient:
         )
         metadata = await self._metadata()
         data = await grpc_call.unary_unary(
-            self._connection.channel, f"{_SCHEDULER}/InstallNow", req, metadata=metadata,
+            self._connection.channel, f"{self._scheduler}/InstallNow", req, metadata=metadata,
         )
         raw = decode(data, {1: ("timer", "message")})
         if raw.get("timer"):
@@ -107,7 +113,7 @@ class OtaServiceClient:
         )
         metadata = await self._metadata()
         data = await grpc_call.unary_unary(
-            self._connection.channel, f"{_SCHEDULER}/CancelSchedule", req, metadata=metadata,
+            self._connection.channel, f"{self._scheduler}/CancelSchedule", req, metadata=metadata,
         )
         raw = decode(data, {1: ("timer", "message")})
         if raw.get("timer"):

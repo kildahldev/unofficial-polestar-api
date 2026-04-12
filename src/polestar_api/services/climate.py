@@ -18,7 +18,6 @@ from ..models.common import VehicleRequest
 if TYPE_CHECKING:
     from ..connection import GrpcConnection
 
-_SVC = "/services.vehiclestates.parkingclimatization.ParkingClimatizationService"
 _RESPONSE_SCHEMA = {3: ("climate", "message")}
 
 
@@ -28,6 +27,10 @@ class ClimateServiceClient:
     def __init__(self, connection: GrpcConnection, vin: str) -> None:
         self._connection = connection
         self._vin = vin
+
+    @property
+    def _svc(self) -> str:
+        return self._connection.backend.climate_svc
 
     @staticmethod
     def _map_running_status(value: int | None) -> ClimatizationRunningStatus:
@@ -89,7 +92,7 @@ class ClimateServiceClient:
         metadata = await self._connection.get_metadata(self._vin)
         data = await grpc_call.unary_unary(
             self._connection.channel,
-            f"{_SVC}/GetLatestParkingClimatization",
+            f"{self._svc}/GetLatestParkingClimatization",
             request.to_bytes(),
             metadata=metadata,
         )
@@ -101,7 +104,7 @@ class ClimateServiceClient:
         metadata = await self._connection.get_metadata(self._vin)
         async for data in grpc_call.unary_stream(
             self._connection.channel,
-            f"{_SVC}/GetParkingClimatization",
+            f"{self._svc}/GetParkingClimatization",
             request.to_bytes(),
             metadata=metadata,
         ):

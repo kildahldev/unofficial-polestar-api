@@ -12,8 +12,6 @@ from ..models.common import Coordinate, Location, Timestamp
 if TYPE_CHECKING:
     from ..connection import GrpcConnection
 
-# C3 Digital Twin Layer location service
-_SVC = "/dtlinternet.DtlInternetService"
 
 def _vin_request(vin: str) -> bytes:
     """Encode a location request (VIN at field 1)."""
@@ -69,6 +67,10 @@ class LocationServiceClient:
         self._connection = connection
         self._vin = vin
 
+    @property
+    def _svc(self) -> str:
+        return self._connection.backend.location_svc
+
     async def _metadata(self) -> dict[str, str]:
         return await self._connection.get_metadata(self._vin)
 
@@ -76,7 +78,7 @@ class LocationServiceClient:
         metadata = await self._metadata()
         data = await grpc_call.unary_unary(
             self._connection.channel,
-            f"{_SVC}/GetLastKnownLocation",
+            f"{self._svc}/GetLastKnownLocation",
             _vin_request(self._vin),
             metadata=metadata,
         )
@@ -86,7 +88,7 @@ class LocationServiceClient:
         metadata = await self._metadata()
         data = await grpc_call.unary_unary(
             self._connection.channel,
-            f"{_SVC}/GetLastParkedLocation",
+            f"{self._svc}/GetLastParkedLocation",
             _vin_request(self._vin),
             metadata=metadata,
         )
@@ -96,7 +98,7 @@ class LocationServiceClient:
         metadata = await self._metadata()
         async for data in grpc_call.unary_stream(
             self._connection.channel,
-            f"{_SVC}/StreamLastKnownLocations",
+            f"{self._svc}/StreamLastKnownLocations",
             _vin_request(self._vin),
             metadata=metadata,
         ):
@@ -106,7 +108,7 @@ class LocationServiceClient:
         metadata = await self._metadata()
         async for data in grpc_call.unary_stream(
             self._connection.channel,
-            f"{_SVC}/StreamLastParkedLocations",
+            f"{self._svc}/StreamLastParkedLocations",
             _vin_request(self._vin),
             metadata=metadata,
         ):

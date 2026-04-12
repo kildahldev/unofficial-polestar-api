@@ -26,7 +26,6 @@ from ..models.exterior import (
 if TYPE_CHECKING:
     from ..connection import GrpcConnection
 
-_SVC = "/services.vehiclestates.exterior.ExteriorService"
 _RESPONSE_SCHEMA = {3: ("exterior", "message")}
 
 
@@ -36,6 +35,10 @@ class ExteriorServiceClient:
     def __init__(self, connection: GrpcConnection, vin: str) -> None:
         self._connection = connection
         self._vin = vin
+
+    @property
+    def _svc(self) -> str:
+        return self._connection.backend.exterior_svc
 
     @staticmethod
     def _lock(value: int | None) -> LockStatus:
@@ -105,7 +108,7 @@ class ExteriorServiceClient:
         metadata = await self._connection.get_metadata(self._vin)
         data = await grpc_call.unary_unary(
             self._connection.channel,
-            f"{_SVC}/GetLatestExterior",
+            f"{self._svc}/GetLatestExterior",
             request.to_bytes(),
             metadata=metadata,
         )
@@ -117,7 +120,7 @@ class ExteriorServiceClient:
         metadata = await self._connection.get_metadata(self._vin)
         async for data in grpc_call.unary_stream(
             self._connection.channel,
-            f"{_SVC}/GetExterior",
+            f"{self._svc}/GetExterior",
             request.to_bytes(),
             metadata=metadata,
         ):

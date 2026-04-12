@@ -13,7 +13,6 @@ from .chronos import wrap_chronos
 if TYPE_CHECKING:
     from ..connection import GrpcConnection
 
-_SVC = "/chronos.services.v2.GlobalChargeTimerService"
 _STREAM_TIMEOUT = 10.0
 
 
@@ -21,6 +20,10 @@ class ChargeTimerServiceClient:
     def __init__(self, connection: GrpcConnection, vin: str) -> None:
         self._connection = connection
         self._vin = vin
+
+    @property
+    def _svc(self) -> str:
+        return self._connection.backend.charge_timer_svc
 
     async def get(self) -> ChargeTimerResponse:
         metadata = await self._connection.get_metadata(self._vin)
@@ -30,7 +33,7 @@ class ChargeTimerServiceClient:
             async with asyncio.timeout(_STREAM_TIMEOUT):
                 async for data in grpc_call.unary_stream(
                     self._connection.channel,
-                    f"{_SVC}/GetGlobalChargeTimerStream",
+                    f"{self._svc}/GetGlobalChargeTimerStream",
                     wrap_chronos(self._vin),
                     metadata=metadata,
                 ):
@@ -48,7 +51,7 @@ class ChargeTimerServiceClient:
         metadata["vin"] = self._vin
         data = await grpc_call.unary_unary(
             self._connection.channel,
-            f"{_SVC}/SetGlobalChargeTimer",
+            f"{self._svc}/SetGlobalChargeTimer",
             wrap_chronos(self._vin, payload),
             metadata=metadata,
         )

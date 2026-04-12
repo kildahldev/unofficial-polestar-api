@@ -13,7 +13,6 @@ from .chronos import wrap_chronos
 if TYPE_CHECKING:
     from ..connection import GrpcConnection
 
-_SVC = "/chronos.services.v1.AmpLimitService"
 _STREAM_TIMEOUT = 10.0
 
 
@@ -22,6 +21,10 @@ class AmpLimitServiceClient:
         self._connection = connection
         self._vin = vin
 
+    @property
+    def _svc(self) -> str:
+        return self._connection.backend.amp_limit_svc
+
     async def get(self) -> AmpLimitResponse:
         metadata = await self._connection.get_metadata(self._vin)
         metadata["vin"] = self._vin
@@ -29,7 +32,7 @@ class AmpLimitServiceClient:
         try:
             async with asyncio.timeout(_STREAM_TIMEOUT):
                 async for data in grpc_call.unary_stream(
-                    self._connection.channel, f"{_SVC}/GetAmpLimit",
+                    self._connection.channel, f"{self._svc}/GetAmpLimit",
                     wrap_chronos(self._vin), metadata=metadata,
                 ):
                     break
@@ -45,7 +48,7 @@ class AmpLimitServiceClient:
         metadata = await self._connection.get_metadata(self._vin)
         metadata["vin"] = self._vin
         data = await grpc_call.unary_unary(
-            self._connection.channel, f"{_SVC}/SetAmpLimit",
+            self._connection.channel, f"{self._svc}/SetAmpLimit",
             wrap_chronos(self._vin, payload), metadata=metadata,
         )
         return AmpLimitResponse.from_bytes(data)

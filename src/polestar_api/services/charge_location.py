@@ -19,7 +19,6 @@ from .chronos import wrap_chronos
 if TYPE_CHECKING:
     from ..connection import GrpcConnection
 
-_SVC = "/chronos.services.v1.ChargeLocationService"
 
 
 def _decode_daily_time(data: bytes) -> tuple[int, int]:
@@ -125,6 +124,10 @@ class ChargeLocationServiceClient:
         self._connection = connection
         self._vin = vin
 
+    @property
+    def _svc(self) -> str:
+        return self._connection.backend.charge_location_svc
+
     async def _metadata(self) -> dict:
         metadata = await self._connection.get_metadata(self._vin)
         metadata["vin"] = self._vin
@@ -135,7 +138,7 @@ class ChargeLocationServiceClient:
         metadata = await self._metadata()
         data = await grpc_call.unary_unary(
             self._connection.channel,
-            f"{_SVC}/GetChargeLocations",
+            f"{self._svc}/GetChargeLocations",
             wrap_chronos(self._vin),
             metadata=metadata,
         )
@@ -155,7 +158,7 @@ class ChargeLocationServiceClient:
         metadata = await self._metadata()
         data = await grpc_call.unary_unary(
             self._connection.channel,
-            f"{_SVC}/isAtALocation",
+            f"{self._svc}/isAtALocation",
             wrap_chronos(self._vin),
             metadata=metadata,
         )
@@ -192,7 +195,7 @@ class ChargeLocationServiceClient:
         metadata = await self._metadata()
         data = await grpc_call.unary_unary(
             self._connection.channel,
-            f"{_SVC}/CreateAtTheCarLocation",
+            f"{self._svc}/CreateAtTheCarLocation",
             wrap_chronos(self._vin, payload),
             metadata=metadata,
         )
@@ -212,7 +215,7 @@ class ChargeLocationServiceClient:
         )
         metadata = await self._metadata()
         data = await grpc_call.unary_unary(
-            self._connection.channel, f"{_SVC}/UpdateAlias",
+            self._connection.channel, f"{self._svc}/UpdateAlias",
             wrap_chronos(self._vin, payload), metadata=metadata,
         )
         raw = decode(data, {1: ("status", "int32")})
@@ -226,7 +229,7 @@ class ChargeLocationServiceClient:
         )
         metadata = await self._metadata()
         data = await grpc_call.unary_unary(
-            self._connection.channel, f"{_SVC}/UpdateAmpLimit",
+            self._connection.channel, f"{self._svc}/UpdateAmpLimit",
             wrap_chronos(self._vin, payload), metadata=metadata,
         )
         raw = decode(data, {1: ("status", "int32")})
@@ -240,7 +243,7 @@ class ChargeLocationServiceClient:
         )
         metadata = await self._metadata()
         data = await grpc_call.unary_unary(
-            self._connection.channel, f"{_SVC}/UpdateMinimumSoc",
+            self._connection.channel, f"{self._svc}/UpdateMinimumSoc",
             wrap_chronos(self._vin, payload), metadata=metadata,
         )
         raw = decode(data, {1: ("status", "int32")})
@@ -254,7 +257,7 @@ class ChargeLocationServiceClient:
         )
         metadata = await self._metadata()
         data = await grpc_call.unary_unary(
-            self._connection.channel, f"{_SVC}/UpdateOptimizedSetting",
+            self._connection.channel, f"{self._svc}/UpdateOptimizedSetting",
             wrap_chronos(self._vin, payload), metadata=metadata,
         )
         raw = decode(data, {1: ("status", "int32")})
@@ -270,7 +273,7 @@ class ChargeLocationServiceClient:
         metadata = await self._metadata()
         data = await grpc_call.unary_unary(
             self._connection.channel,
-            f"{_SVC}/DeleteLocation",
+            f"{self._svc}/DeleteLocation",
             wrap_chronos(self._vin, payload),
             metadata=metadata,
         )

@@ -12,16 +12,16 @@ from .. import grpc as grpc_call
 if TYPE_CHECKING:
     from ..connection import GrpcConnection
 
-METHOD_GET_LATEST = "/services.vehiclestates.battery.BatteryService/GetLatestBattery"
-METHOD_STREAM = "/services.vehiclestates.battery.BatteryService/GetBattery"
-
-
 class BatteryServiceClient:
     """Battery service wrapper."""
 
     def __init__(self, connection: GrpcConnection, vin: str) -> None:
         self._connection = connection
         self._vin = vin
+
+    @property
+    def _svc(self) -> str:
+        return self._connection.backend.battery_svc
 
     async def get_latest(self) -> Battery:
         """Get the latest battery status."""
@@ -30,7 +30,7 @@ class BatteryServiceClient:
 
         response_data = await grpc_call.unary_unary(
             self._connection.channel,
-            METHOD_GET_LATEST,
+            f"{self._svc}/GetLatestBattery",
             request.to_bytes(),
             metadata=metadata,
         )
@@ -44,7 +44,7 @@ class BatteryServiceClient:
 
         async for response_data in grpc_call.unary_stream(
             self._connection.channel,
-            METHOD_STREAM,
+            f"{self._svc}/GetBattery",
             request.to_bytes(),
             metadata=metadata,
         ):

@@ -13,7 +13,6 @@ from ..models.health import Health
 if TYPE_CHECKING:
     from ..connection import GrpcConnection
 
-_SVC = "/services.vehiclestates.health.HealthService"
 _RESPONSE_SCHEMA = {3: ("health", "message")}
 
 
@@ -27,12 +26,16 @@ class HealthServiceClient:
         self._connection = connection
         self._vin = vin
 
+    @property
+    def _svc(self) -> str:
+        return self._connection.backend.health_svc
+
     async def get_latest(self) -> Health | None:
         metadata = await self._connection.get_metadata(self._vin)
         async with asyncio.timeout(15):
             async for data in grpc_call.unary_stream(
                 self._connection.channel,
-                f"{_SVC}/GetHealth",
+                f"{self._svc}/GetHealth",
                 _health_request(self._vin),
                 metadata=metadata,
             ):

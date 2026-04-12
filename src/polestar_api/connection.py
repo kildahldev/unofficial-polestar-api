@@ -9,6 +9,7 @@ import grpclib.metadata
 from grpclib.client import Channel
 from grpclib.config import Configuration
 
+from .backend import BackendProfile
 from .grpc import _RAW_CODEC
 
 if TYPE_CHECKING:
@@ -32,10 +33,11 @@ _GRPC_CONFIG = Configuration(
 class GrpcConnection:
     """Manages a grpclib Channel with automatic bearer token injection."""
 
-    def __init__(self, host: str, port: int, auth: AuthManager) -> None:
+    def __init__(self, host: str, port: int, auth: AuthManager, backend: BackendProfile | None = None) -> None:
         self._host = host
         self._port = port
         self._auth = auth
+        self.backend = backend or BackendProfile()
         self._channel: Channel | None = None
 
     @property

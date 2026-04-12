@@ -13,7 +13,6 @@ from ..models.precleaning import PreCleaningInfo
 if TYPE_CHECKING:
     from ..connection import GrpcConnection
 
-_SVC = "/services.vehiclestates.precleaning.PreCleaningService"
 _RESPONSE_SCHEMA = {3: ("precleaning", "message")}
 
 
@@ -29,12 +28,16 @@ class PreCleaningServiceClient:
         self._connection = connection
         self._vin = vin
 
+    @property
+    def _svc(self) -> str:
+        return self._connection.backend.precleaning_svc
+
     async def get_latest(self) -> PreCleaningInfo | None:
         metadata = await self._connection.get_metadata(self._vin)
         async with asyncio.timeout(15):
             async for data in grpc_call.unary_stream(
                 self._connection.channel,
-                f"{_SVC}/GetPreCleaning",
+                f"{self._svc}/GetPreCleaning",
                 _precleaning_request(self._vin),
                 metadata=metadata,
             ):

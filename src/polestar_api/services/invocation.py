@@ -32,16 +32,16 @@ from ..exceptions import ApiError
 if TYPE_CHECKING:
     from ..connection import GrpcConnection
 
-# C3 invocation service
-_SVC = "/invocation.InvocationService"
-
-
 class InvocationServiceClient:
     """Car command service — lock, unlock, climate, honk/flash."""
 
     def __init__(self, connection: GrpcConnection, vin: str) -> None:
         self._connection = connection
         self._vin = vin
+
+    @property
+    def _svc(self) -> str:
+        return self._connection.backend.invocation_svc
 
     def _request(self) -> InvocationRequest:
         return InvocationRequest(vin=self._vin)
@@ -52,7 +52,7 @@ class InvocationServiceClient:
         response = None
         async for response in grpc_call.unary_stream(
             self._connection.channel,
-            f"{_SVC}/{method}",
+            f"{self._svc}/{method}",
             request_bytes,
             metadata=metadata,
         ):

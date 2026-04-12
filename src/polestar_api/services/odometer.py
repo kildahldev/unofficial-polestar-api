@@ -13,7 +13,6 @@ from ..models.odometer import OdometerStatus
 if TYPE_CHECKING:
     from ..connection import GrpcConnection
 
-_SVC = "/services.vehiclestates.odometer.OdometerService"
 _RESPONSE_SCHEMA = {3: ("odometer", "message")}
 
 
@@ -29,12 +28,16 @@ class OdometerServiceClient:
         self._connection = connection
         self._vin = vin
 
+    @property
+    def _svc(self) -> str:
+        return self._connection.backend.odometer_svc
+
     async def get_latest(self) -> OdometerStatus | None:
         metadata = await self._connection.get_metadata(self._vin)
         async with asyncio.timeout(15):
             async for data in grpc_call.unary_stream(
                 self._connection.channel,
-                f"{_SVC}/GetOdometer",
+                f"{self._svc}/GetOdometer",
                 _odometer_request(self._vin),
                 metadata=metadata,
             ):

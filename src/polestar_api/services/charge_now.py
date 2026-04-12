@@ -11,20 +11,21 @@ from .chronos import wrap_chronos
 if TYPE_CHECKING:
     from ..connection import GrpcConnection
 
-_SVC = "/chronos.services.v1.ChargeNowService"
-
-
 class ChargeNowServiceClient:
     def __init__(self, connection: GrpcConnection, vin: str) -> None:
         self._connection = connection
         self._vin = vin
+
+    @property
+    def _svc(self) -> str:
+        return self._connection.backend.charge_now_svc
 
     async def _call(self, method: str) -> int:
         """Call a charge now method. Returns response status code."""
         metadata = await self._connection.get_metadata(self._vin)
         metadata["vin"] = self._vin
         data = await grpc_call.unary_unary(
-            self._connection.channel, f"{_SVC}/{method}",
+            self._connection.channel, f"{self._svc}/{method}",
             wrap_chronos(self._vin), metadata=metadata,
         )
         raw = decode(data, {1: ("status", "int32")})
