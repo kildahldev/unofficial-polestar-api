@@ -35,7 +35,12 @@ Not all features are available on all models.
 
 ### Home Assistant
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=kildahldev&repository=unofficial-polestar-api&category=integration)
+Requires [HACS](https://hacs.xyz/) installed on your Home Assistant instance.
+
+1. In HA, go to **HACS → ⋮ (top right) → Custom repositories**
+2. Paste `kildahldev/unofficial-polestar-api` and select **Integration**
+3. Click **Add**, then find **Unofficial Polestar** in HACS and click **Download**
+4. Restart Home Assistant
 
 See the [HA integration README](ha_integration/README.md) for setup, entities, services, and dashboard cards.
 

@@ -14,8 +14,8 @@ jobs:
 
       - name: Zip custom_components
         run: |
-          cd ha_integration/custom_components/polestar
-          zip -r ../../../polestar.zip . -x '*__pycache__*'
+          cd ha_integration
+          zip -r ../polestar.zip custom_components/polestar/ -x '*__pycache__*'
 
       - name: Upload to release
         uses: softprops/action-gh-release@v2
