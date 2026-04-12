@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import random
 from collections.abc import AsyncIterator
 
 from grpclib.client import Channel
@@ -15,6 +16,12 @@ _LOGGER = logging.getLogger(__name__)
 
 # Transient gRPC statuses worth retrying (matches app's RetryPolicy).
 _RETRIABLE_STATUSES = {Status.UNAVAILABLE, Status.INTERNAL}
+
+
+def _retry_delay(attempt: int) -> float:
+    """Exponential backoff with jitter."""
+    base = min(2 ** attempt, 8)
+    return base * (0.5 + random.random() * 0.5)  # noqa: S311
 
 
 class _RawCodec(CodecBase):
@@ -38,17 +45,34 @@ async def unary_unary(
     request_data: bytes,
     *,
     metadata: dict[str, str] | None = None,
+    retries: int = 2,
 ) -> bytes:
-    """Make a unary-unary gRPC call, returning raw response bytes."""
-    async with channel.request(
-        method,
-        Cardinality.UNARY_UNARY,
-        request_type=bytes,
-        reply_type=bytes,
-        metadata=metadata or {},
-    ) as stream:
-        await stream.send_message(request_data, end=True)
-        return await stream.recv_message()
+    """Make a unary-unary gRPC call with retry on transient errors."""
+    last_exc: Exception | None = None
+    for attempt in range(1 + retries):
+        if attempt:
+            delay = _retry_delay(attempt)
+            _LOGGER.debug("Retry %d/%d for %s after %.1fs", attempt, retries, method, delay)
+            await asyncio.sleep(delay)
+        try:
+            async with channel.request(
+                method,
+                Cardinality.UNARY_UNARY,
+                request_type=bytes,
+                reply_type=bytes,
+                metadata=metadata or {},
+            ) as stream:
+                await stream.send_message(request_data, end=True)
+                return await stream.recv_message()
+        except GRPCError as exc:
+            last_exc = exc
+            if exc.status not in _RETRIABLE_STATUSES:
+                raise
+            _LOGGER.debug("Transient gRPC error on %s: %s", method, exc)
+        except OSError as exc:
+            last_exc = exc
+            _LOGGER.debug("Connection error on %s: %s", method, exc)
+    raise last_exc
 
 
 async def unary_stream(
@@ -70,7 +94,7 @@ async def unary_stream(
     last_exc: Exception | None = None
     for attempt in range(1 + retries):
         if attempt:
-            delay = min(2 ** attempt, 8)
+            delay = _retry_delay(attempt)
             _LOGGER.debug("Retry %d/%d for %s after %.1fs", attempt, retries, method, delay)
             await asyncio.sleep(delay)
         yielded = False

@@ -11,7 +11,7 @@ from ..models.charge_location import (
     ChargeLocation,
     ChargeLocationDepartureTime,
     ChargeLocationTimer,
-    LocationType,
+    ChargeLocationType,
     OptimisedChargingType,
 )
 from .chronos import wrap_chronos
@@ -113,7 +113,7 @@ def _decode_charge_location(data: bytes) -> ChargeLocation:
         is_optimised_charging_enabled=raw.get("is_optimised_charging_enabled", False),
         is_bidirectional_charging_enabled=raw.get("is_bidirectional_charging_enabled", False),
         available_optimised_charging=OptimisedChargingType(raw.get("available_optimised_charging", 0)),
-        location_type=LocationType(raw.get("location_type", 0)),
+        location_type=ChargeLocationType(raw.get("location_type", 0)),
         charge_timers=timers,
         departure_times=departures,
     )
@@ -264,7 +264,7 @@ class ChargeLocationServiceClient:
         return raw.get("status", 0)
 
     async def delete_location(self, location_id: str) -> int:
-        """Delete a saved charge location."""
+        """Delete a saved charge location. Returns status code."""
         # APK: REQUEST=1 (ChronosRequest), LOCATION_ID=2
         payload = encode(
             {"location_id": (2, "string")},

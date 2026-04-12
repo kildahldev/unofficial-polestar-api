@@ -94,8 +94,8 @@ class Vehicle:
 
     # -- Battery --
 
-    async def get_battery(self) -> Battery:
-        """Charge level, range, charging status, power, voltage, and temperatures."""
+    async def get_battery(self) -> Battery | None:
+        """Charge level, range, charging status, power, voltage, and temperatures, or ``None`` if unavailable."""
         return await self._battery.get_latest()
 
     async def stream_battery(self) -> AsyncIterator[Battery]:
@@ -105,8 +105,8 @@ class Vehicle:
 
     # -- Exterior --
 
-    async def get_exterior(self) -> ExteriorStatus:
-        """Door, window, sunroof, hood, tailgate, and alarm status."""
+    async def get_exterior(self) -> ExteriorStatus | None:
+        """Door, window, sunroof, hood, tailgate, and alarm status, or ``None`` if unavailable."""
         return await self._exterior.get_latest()
 
     async def stream_exterior(self) -> AsyncIterator[ExteriorStatus]:
@@ -136,8 +136,8 @@ class Vehicle:
 
     # -- Climate --
 
-    async def get_climate(self) -> ClimatizationInfo:
-        """Climatization running status, request type, and heat/cool action."""
+    async def get_climate(self) -> ClimatizationInfo | None:
+        """Climatization running status, request type, and heat/cool action, or ``None`` if unavailable."""
         return await self._climate.get_latest()
 
     async def stream_climate(self) -> AsyncIterator[ClimatizationInfo]:
@@ -194,8 +194,8 @@ class Vehicle:
 
     # -- Dashboard --
 
-    async def get_dashboard(self) -> DashboardStatus:
-        """Trip meters, odometer, and tyre pressure warnings.
+    async def get_dashboard(self) -> DashboardStatus | None:
+        """Trip meters, odometer, and tyre pressure warnings, or ``None`` if unavailable.
 
         Note: This is a legacy PCCS endpoint (``DashboardService``).
         It is **UNIMPLEMENTED** on Digital Twin vehicles (Polestar 4+).
@@ -203,8 +203,8 @@ class Vehicle:
         """
         return await self._dashboard.get_latest()
 
-    async def get_connectivity(self) -> ConnectivityInfo:
-        """Network status, type, and signal strength.
+    async def get_connectivity(self) -> ConnectivityInfo | None:
+        """Network status, type, and signal strength, or ``None`` if unavailable.
 
         Note: Served by the legacy ``DashboardService``. **UNIMPLEMENTED**
         on Digital Twin vehicles (Polestar 4+).
@@ -213,8 +213,8 @@ class Vehicle:
 
     # -- Odometer --
 
-    async def get_odometer(self) -> OdometerStatus:
-        """Odometer (meters, converted to km via property), trip meters, and timestamp."""
+    async def get_odometer(self) -> OdometerStatus | None:
+        """Odometer (meters, converted to km via property), trip meters, and timestamp, or ``None`` if unavailable."""
         return await self._odometer.get_latest()
 
     # -- Charging --
@@ -255,8 +255,8 @@ class Vehicle:
 
     # -- Health --
 
-    async def get_health(self) -> Health:
-        """Service warnings, brake fluid, tyre pressures (kPa), and tyre pressure warnings.
+    async def get_health(self) -> Health | None:
+        """Service warnings, brake fluid, tyre pressures (kPa), and tyre pressure warnings, or ``None`` if unavailable.
 
         Note: On EVs (Polestar 4), engine coolant, oil level, washer fluid,
         low-voltage battery, and all exterior light warning fields are not
@@ -266,8 +266,8 @@ class Vehicle:
 
     # -- Availability --
 
-    async def get_availability(self) -> Availability:
-        """Vehicle online status and unavailable reason (power saving, OTA, in use, etc.)."""
+    async def get_availability(self) -> Availability | None:
+        """Vehicle online status and unavailable reason (power saving, OTA, in use, etc.), or ``None`` if unavailable."""
         return await self._availability.get_latest()
 
     # -- Windows --
@@ -334,8 +334,8 @@ class Vehicle:
 
     # -- Weather --
 
-    async def get_weather(self) -> WeatherReport:
-        """Temperature at the car's current location."""
+    async def get_weather(self) -> WeatherReport | None:
+        """Temperature at the car's current location, or ``None`` if unavailable."""
         return await self._weather.get_report()
 
     # -- OTA --
@@ -388,11 +388,10 @@ class Vehicle:
 
     # -- Pre-cleaning --
 
-    async def get_precleaning(self) -> PreCleaningInfo:
+    async def get_precleaning(self) -> PreCleaningInfo | None:
         """Air quality status, PM2.5 levels, running state, and runtime remaining.
 
-        Returns ``None`` when pre-cleaning has never run (the backend sends
-        an empty response).
+        Returns ``None`` when the backend sends an empty pre-cleaning payload.
         """
         return await self._precleaning.get_latest()
 

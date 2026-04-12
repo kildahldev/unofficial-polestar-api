@@ -14,7 +14,11 @@ The server assigns a backend per vehicle — which cars use which backend is cur
 
 If you use this library (or the HA integration) please report back what works and what doesn't, for your model.
 
-Contributions and testing from owners of other models are welcome
+Contributions and testing from owners of other models are welcome and encouraged
+
+| Model | Backend | Verified         |
+|---|---|------------------|
+| Polestar 4 | C3 | ✅ Mostly working |
 
 | Backend | Status |
 |---|---|
@@ -23,14 +27,15 @@ Contributions and testing from owners of other models are welcome
 | Vocmo | ❌ Not implemented |
 | HuanFu | ❌ Not implemented |
 
-| Model | Backend | Verified         |
-|---|---|------------------|
-| Polestar 4 | C3 | ✅ Mostly working |
-
 Not all features are available on all models.
 
 
-## Quick Start
+## Usage
+
+### Home Assistant
+For integrating with Home Assistant, use this integration (which uses this API)
+
+### As a library
 
 ```python
 from polestar_api import PolestarApi
@@ -40,10 +45,10 @@ async with PolestarApi(email="you@example.com", password="...") as api:
     car = vehicles[0]
 
     battery = await car.get_battery()
-    print(f"{battery.charge_level}% — {battery.estimated_range_km} km")
+    print(f"{battery.charge_level}% — {battery.range_km} km")
 
     location = await car.get_location()
-    print(f"Lat {location.latitude}, Lon {location.longitude}")
+    print(f"Lat {location.coordinate.latitude}, Lon {location.coordinate.longitude}")
 ```
 
 ## Features
@@ -65,9 +70,6 @@ async with PolestarApi(email="you@example.com", password="...") as api:
 - **Pre-cleaning** — air quality status (PM2.5, AQI) and start/stop cabin pre-cleaning
 
 For the full API reference with all methods, models, and enums, see the [docs](docs/).
-
-## Home Assistant
-For integrating with Home Assistant, I have made an integration here
 
 ## Disclaimer
 

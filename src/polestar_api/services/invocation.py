@@ -1,4 +1,4 @@
-"""Invocation service — lock, unlock, climate, honk/flash commands."""
+"""Invocation service — lock, unlock, climate, windows, pre-cleaning, honk/flash."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from ..connection import GrpcConnection
 
 class InvocationServiceClient:
-    """Car command service — lock, unlock, climate, honk/flash."""
+    """Car command service — lock, unlock, climate, windows, pre-cleaning, honk/flash."""
 
     def __init__(self, connection: GrpcConnection, vin: str) -> None:
         self._connection = connection
@@ -124,11 +124,11 @@ class InvocationServiceClient:
         )
 
     async def precleaning_start(self) -> bytes:
-        """Start pre-cleaning (air quality). Response format TBD."""
+        """Start pre-cleaning and return the raw invocation response bytes."""
         return await self._call("PreCleaningStart", b"")
 
     async def precleaning_stop(self) -> bytes:
-        """Stop pre-cleaning. Response format TBD."""
+        """Stop pre-cleaning and return the raw invocation response bytes."""
         return await self._call("PreCleaningStop", b"")
 
     async def window_control(self, action: WindowControlType) -> ClimatizationResponse:

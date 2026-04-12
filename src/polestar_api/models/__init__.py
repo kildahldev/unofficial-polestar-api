@@ -23,7 +23,7 @@ from .charge_location import (
     ChargeLocation,
     ChargeLocationDepartureTime,
     ChargeLocationTimer,
-    LocationType,
+    ChargeLocationType,
     OptimisedChargingType,
 )
 from .common import Coordinate, DailyTime, Location, ResponseStatus, Timestamp, VehicleRequest, Weekday
@@ -81,7 +81,7 @@ __all__ = [
     "InvocationResponse",
     "InvocationStatus",
     "Location",
-    "LocationType",
+    "ChargeLocationType",
     "LocationRequest",
     "LocationResponse",
     "LocationStatusUpdate",

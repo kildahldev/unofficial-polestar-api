@@ -8,7 +8,7 @@ from enum import IntEnum
 from .common import Weekday
 
 
-class LocationType(IntEnum):
+class ChargeLocationType(IntEnum):
     UNSPECIFIED = 0
     RECENT = 1
     SAVED = 2
@@ -55,6 +55,6 @@ class ChargeLocation:
     is_optimised_charging_enabled: bool = False
     is_bidirectional_charging_enabled: bool = False
     available_optimised_charging: OptimisedChargingType = OptimisedChargingType.UNAVAILABLE
-    location_type: LocationType = LocationType.UNSPECIFIED
+    location_type: ChargeLocationType = ChargeLocationType.UNSPECIFIED
     charge_timers: tuple[ChargeLocationTimer, ...] = ()
     departure_times: tuple[ChargeLocationDepartureTime, ...] = ()

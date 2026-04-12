@@ -1,4 +1,4 @@
-"""Dashboard service — odometer, trip meters, tire pressure, warnings."""
+"""Dashboard service — odometer, trip meters, warnings, and connectivity."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from ..connection import GrpcConnection
 
 class DashboardServiceClient:
-    """Dashboard status service."""
+    """Dashboard and connectivity status service."""
 
     def __init__(self, connection: GrpcConnection, vin: str) -> None:
         self._connection = connection

@@ -38,7 +38,7 @@ class OtaServiceClient:
         return metadata
 
     async def get_software_info(self) -> CarSoftwareInfo | None:
-        """Get current software update info (first result from server stream)."""
+        """Get software update info from the first stream message, or ``None`` if missing."""
         req = encode(
             {"vin": (1, "string"), "locale": (2, "string")},
             {"vin": self._vin, "locale": "en"},
@@ -60,7 +60,7 @@ class OtaServiceClient:
         return None
 
     async def get_schedule(self) -> Scheduler | None:
-        """Get current OTA schedule (first result from server stream)."""
+        """Get the current OTA schedule from the first stream message, or ``None`` if missing."""
         metadata = await self._metadata()
         try:
             async with asyncio.timeout(_STREAM_TIMEOUT):

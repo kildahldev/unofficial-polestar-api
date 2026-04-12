@@ -16,6 +16,8 @@ class PolestarApi:
         async with PolestarApi(email="...", password="...") as api:
             vehicles = await api.get_vehicles()
             battery = await vehicles[0].get_battery()
+            if battery is not None:
+                print(battery.charge_level)
     """
 
     def __init__(

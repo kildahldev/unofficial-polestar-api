@@ -1,4 +1,4 @@
-"""Exterior status — doors, windows, locks, sunroof, hood, tailgate."""
+"""Exterior status — locks, doors, windows, sunroof, hood, tailgate, tank lid."""
 
 from __future__ import annotations
 

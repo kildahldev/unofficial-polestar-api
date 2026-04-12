@@ -23,8 +23,8 @@ class BatteryServiceClient:
     def _svc(self) -> str:
         return self._connection.backend.battery_svc
 
-    async def get_latest(self) -> Battery:
-        """Get the latest battery status."""
+    async def get_latest(self) -> Battery | None:
+        """Get the latest battery status, or ``None`` if the backend omits it."""
         request = VehicleRequest(vin=self._vin)
         metadata = await self._connection.get_metadata(self._vin)
 
