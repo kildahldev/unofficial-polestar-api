@@ -25,6 +25,10 @@ dependencies = [
     "grpclib>=0.4.7",
 ]
 
+[project.urls]
+Homepage = "https://github.com/kildahldev/unofficial-polestar-api"
+Issues = "https://github.com/kildahldev/unofficial-polestar-api/issues"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
