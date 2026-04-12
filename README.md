@@ -42,7 +42,7 @@ Requires [HACS](https://hacs.xyz/) installed on your Home Assistant instance.
 3. Click **Add**, then find **Unofficial Polestar** in HACS and click **Download**
 4. Restart Home Assistant
 
-See the [HA integration README](ha_integration/README.md) for setup, entities, services, and dashboard cards.
+See the [HA integration README](ha_integration_README.md) for setup, entities, services, and dashboard cards.
 
 ### As a library
 
