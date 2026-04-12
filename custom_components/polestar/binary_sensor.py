@@ -60,7 +60,7 @@ BINARY_SENSORS: tuple[PolestarBinarySensorDescription, ...] = (
         key="is_locked",
         name="Locked",
         device_class=BinarySensorDeviceClass.LOCK,
-        value_fn=lambda d: d.exterior.is_locked if d.exterior else None,
+        value_fn=lambda d: not d.exterior.is_locked if d.exterior else None,
     ),
     PolestarBinarySensorDescription(
         key="any_door_open",
