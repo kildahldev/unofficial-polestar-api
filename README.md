@@ -33,7 +33,10 @@ Not all features are available on all models.
 ## Usage
 
 ### Home Assistant
-For integrating with Home Assistant, use this integration (which uses this API)
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=kildahldev&repository=unofficial-polestar-api&category=integration)
+
+See the [HA integration README](ha_integration/README.md) for setup, entities, services, and dashboard cards.
 
 ### As a library
 
