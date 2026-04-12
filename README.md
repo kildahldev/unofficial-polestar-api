@@ -23,6 +23,10 @@ Contributions and testing from owners of other models are welcome
 | Vocmo | ❌ Not implemented |
 | HuanFu | ❌ Not implemented |
 
+| Model | Backend | Verified         |
+|---|---|------------------|
+| Polestar 4 | C3 | ✅ Mostly working |
+
 Not all features are available on all models.
 
 
