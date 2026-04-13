@@ -122,6 +122,28 @@ def encode_packed_varints(field_number: int, values: list[int]) -> bytes:
     return encode_field(field_number, 2, encode_varint(len(packed)) + packed)
 
 
+def _skip_group(data: bytes, pos: int, field_number: int) -> int:
+    """Skip a deprecated protobuf group until its matching end-group tag."""
+    while pos < len(data):
+        tag, pos = decode_varint(data, pos)
+        wt = tag & 0x07
+        fn = tag >> 3
+        if wt == 4 and fn == field_number:
+            return pos
+        if wt == 0:
+            _, pos = decode_varint(data, pos)
+        elif wt == 1:
+            pos += 8
+        elif wt == 2:
+            length, pos = decode_varint(data, pos)
+            pos += length
+        elif wt == 3:
+            pos = _skip_group(data, pos, fn)
+        elif wt == 5:
+            pos += 4
+    return pos
+
+
 def decode(data, schema=None):
     """Decode protobuf bytes into a dict.
 
@@ -144,6 +166,11 @@ def decode(data, schema=None):
             length, pos = decode_varint(data, pos)
             value = data[pos : pos + length]
             pos += length
+        elif wire_type == 3:  # start group (deprecated)
+            pos = _skip_group(data, pos, field_number)
+            continue
+        elif wire_type == 4:  # end group (handled by _skip_group)
+            continue
         elif wire_type == 5:  # 32-bit
             value = struct.unpack("<f", data[pos : pos + 4])[0]
             pos += 4
