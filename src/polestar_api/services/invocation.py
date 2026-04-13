@@ -25,6 +25,7 @@ from ..models.climatization import (
     ClimatizationStopRequest,
     HeatingIntensity,
 )
+from ..models.precleaning import PreCleaningRequest
 from ..models.wakeup import WakeUpReason, WakeUpResponse
 from ..models.window import WindowControlRequest, WindowControlType
 from ..exceptions import ApiError
@@ -125,11 +126,13 @@ class InvocationServiceClient:
 
     async def precleaning_start(self) -> bytes:
         """Start pre-cleaning and return the raw invocation response bytes."""
-        return await self._call("PreCleaningStart", b"")
+        req = PreCleaningRequest(request=self._request(), start=True)
+        return await self._call("PreCleaning", req.to_bytes())
 
     async def precleaning_stop(self) -> bytes:
         """Stop pre-cleaning and return the raw invocation response bytes."""
-        return await self._call("PreCleaningStop", b"")
+        req = PreCleaningRequest(request=self._request(), start=False)
+        return await self._call("PreCleaning", req.to_bytes())
 
     async def window_control(self, action: WindowControlType) -> ClimatizationResponse:
         req = WindowControlRequest(request=self._request(), windows_control=action)
