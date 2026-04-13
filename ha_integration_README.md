@@ -14,13 +14,13 @@ Each vehicle gets ~106 entities when all features are available:
 
 | Platform | Count | Examples |
 |----------|-------|---------|
-| Sensor | 47 | Battery level, charging type, connectivity, availability reason, climate status, health warnings, charge locations |
-| Binary sensor | 25 | Charging, plugged in, locked, doors, windows, hood, tailgate, tank lid, connectivity |
+| Sensor | 48 | Battery level, charging status, availability reason, climate status, health warnings, tyre pressures, charge locations |
+| Binary sensor | 25 | Charging, plugged in, locked, doors, windows, hood, tailgate, tank lid, available |
 | Device tracker | 2 | GPS location, parked location |
 | Lock | 1 | Central lock |
 | Switch | 4 | Climate, pre-cleaning, charging, charge timer |
 | Number | 4 | Target SOC, charging amp limit, climate target temperature, timer target temperature |
-| Button | 6 | Flash lights, honk and flash, refresh, windows, trunk |
+| Button | 7 | Flash lights, honk, honk and flash, refresh, open/close windows, unlock trunk |
 | Select | 11 | Target SOC mode, climate start seat/steering heating, climate timer default seat/steering heating and battery preconditioning |
 | Time | 2 | Charge timer start and stop |
 | Calendar | 3 | Parking climate timer slots |
@@ -162,11 +162,6 @@ indicator_rows:
       - type: entity
         entity: binary_sensor.polestar_VIN_plugged_in
         icon: mdi:ev-plug-type2
-        state_color: true
-        show_state: true
-      - type: entity
-        entity: binary_sensor.polestar_VIN_connected
-        icon: mdi:signal-4g
         state_color: true
         show_state: true
       - type: entity
@@ -585,96 +580,6 @@ button_cards:
             - entity: sensor.polestar_VIN_charge_locations
               name: Saved locations
 
-  # -- Trunk --
-  - name: Trunk
-    icon: mdi:car-back
-    entity: binary_sensor.polestar_VIN_tailgate
-    state_color: true
-    show_secondary: true
-    card_type: custom
-    button_type: default
-    tap_action:
-      action: call-service
-      service: button.press
-      data:
-        entity_id: button.polestar_VIN_unlock_trunk
-    sub_card:
-      title: Trunk
-      custom_card:
-        - type: custom:mushroom-template-card
-          entity: button.polestar_VIN_unlock_trunk
-          primary: Unlock Trunk
-          secondary: Tap to unlock
-          icon: mdi:car-back
-          icon_color: blue
-          tap_action:
-            action: call-service
-            service: button.press
-            data:
-              entity_id: button.polestar_VIN_unlock_trunk
-          layout: horizontal
-          multiline_secondary: true
-        - type: entities
-          show_header_toggle: false
-          entities:
-            - entity: binary_sensor.polestar_VIN_tailgate
-              name: Tailgate
-              icon: mdi:car-back
-
-  # -- Windows --
-  - name: Windows
-    icon: mdi:window-open-variant
-    entity: button.polestar_VIN_open_windows
-    card_type: custom
-    button_type: default
-    tap_action:
-      action: call-service
-      service: button.press
-      data:
-        entity_id: button.polestar_VIN_open_windows
-    sub_card:
-      title: Windows
-      custom_card:
-        - type: horizontal-stack
-          cards:
-            - type: custom:mushroom-template-card
-              entity: button.polestar_VIN_open_windows
-              primary: Open All
-              secondary: Tap to open
-              icon: mdi:window-open-variant
-              icon_color: blue
-              tap_action:
-                action: call-service
-                service: button.press
-                data:
-                  entity_id: button.polestar_VIN_open_windows
-              layout: horizontal
-              multiline_secondary: true
-            - type: custom:mushroom-template-card
-              entity: button.polestar_VIN_close_windows
-              primary: Close All
-              secondary: Tap to close
-              icon: mdi:window-closed-variant
-              icon_color: blue
-              tap_action:
-                action: call-service
-                service: button.press
-                data:
-                  entity_id: button.polestar_VIN_close_windows
-              layout: horizontal
-              multiline_secondary: true
-        - type: entities
-          show_header_toggle: false
-          entities:
-            - entity: binary_sensor.polestar_VIN_front_left_window
-              name: Front left
-            - entity: binary_sensor.polestar_VIN_front_right_window
-              name: Front right
-            - entity: binary_sensor.polestar_VIN_rear_left_window
-              name: Rear left
-            - entity: binary_sensor.polestar_VIN_rear_right_window
-              name: Rear right
-
   # -- Vehicle Info (includes Software & Tyres) --
   - name: Vehicle
     icon: mdi:car-info
@@ -706,6 +611,12 @@ button_cards:
             - entity: sensor.polestar_VIN_average_consumption_since_charge
               name: Since charge
         - type: entities
+          title: Connectivity
+          show_header_toggle: false
+          entities:
+            - entity: sensor.polestar_VIN_usage_mode
+              name: Usage mode
+        - type: entities
           title: Service & Warnings
           show_header_toggle: false
           entities:
@@ -723,8 +634,6 @@ button_cards:
               name: Washer fluid
             - entity: sensor.polestar_VIN_low_voltage_battery_warning
               name: 12V battery
-            - entity: sensor.polestar_VIN_usage_mode
-              name: Usage mode
         - type: entities
           show_header_toggle: false
           entities:
@@ -747,14 +656,74 @@ button_cards:
             - entity: sensor.polestar_VIN_rear_right_tyre_pressure
               name: Rear right
 
-  # -- Actions (Flash, Honk, Refresh) --
+  # -- Actions (Trunk, Windows, Flash, Honk, Refresh) --
   - name: Actions
     icon: mdi:car-cog
     card_type: custom
     button_type: default
     sub_card:
-      title: Quick Actions
+      title: Actions
       custom_card:
+        - type: custom:mushroom-template-card
+          entity: button.polestar_VIN_unlock_trunk
+          primary: Unlock Trunk
+          secondary: Tap to unlock
+          icon: mdi:car-back
+          icon_color: blue
+          tap_action:
+            action: call-service
+            service: button.press
+            data:
+              entity_id: button.polestar_VIN_unlock_trunk
+          layout: horizontal
+          multiline_secondary: true
+        - type: entities
+          show_header_toggle: false
+          entities:
+            - entity: binary_sensor.polestar_VIN_tailgate
+              name: Tailgate
+              icon: mdi:car-back
+        - type: horizontal-stack
+          cards:
+            - type: custom:mushroom-template-card
+              entity: button.polestar_VIN_open_windows
+              primary: Open All
+              secondary: Tap to open
+              icon: mdi:window-open-variant
+              icon_color: blue
+              tap_action:
+                action: call-service
+                service: button.press
+                data:
+                  entity_id: button.polestar_VIN_open_windows
+              layout: vertical
+              fill_container: true
+              multiline_secondary: true
+            - type: custom:mushroom-template-card
+              entity: button.polestar_VIN_close_windows
+              primary: Close All
+              secondary: Tap to close
+              icon: mdi:window-closed-variant
+              icon_color: blue
+              tap_action:
+                action: call-service
+                service: button.press
+                data:
+                  entity_id: button.polestar_VIN_close_windows
+              layout: vertical
+              fill_container: true
+              multiline_secondary: true
+        - type: entities
+          show_header_toggle: false
+          entities:
+            - entity: binary_sensor.polestar_VIN_front_left_window
+              name: Front left
+            - entity: binary_sensor.polestar_VIN_front_right_window
+              name: Front right
+            - entity: binary_sensor.polestar_VIN_rear_left_window
+              name: Rear left
+            - entity: binary_sensor.polestar_VIN_rear_right_window
+              name: Rear right
         - type: horizontal-stack
           cards:
             - type: custom:mushroom-template-card
@@ -768,7 +737,8 @@ button_cards:
                 service: button.press
                 data:
                   entity_id: button.polestar_VIN_flash_lights
-              layout: horizontal
+              layout: vertical
+              fill_container: true
               multiline_secondary: true
             - type: custom:mushroom-template-card
               entity: button.polestar_VIN_honk_and_flash
@@ -781,7 +751,8 @@ button_cards:
                 service: button.press
                 data:
                   entity_id: button.polestar_VIN_honk_and_flash
-              layout: horizontal
+              layout: vertical
+              fill_container: true
               multiline_secondary: true
         - type: horizontal-stack
           cards:
@@ -797,12 +768,13 @@ button_cards:
                 data:
                   entity_id: button.polestar_VIN_refresh
               layout: horizontal
+              fill_container: true
               multiline_secondary: true
 
 layout_config:
   button_grid:
     rows: 2
-    columns: 4
+    columns: 3
     swipe: false
   images_swipe:
     max_height: 180
