@@ -7,14 +7,14 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 
 from polestar_api import PolestarApi
 from polestar_api.auth import MemoryTokenStore
 from polestar_api.exceptions import AuthError
 
-from .const import CONF_DEMO, CONF_VIN, DOMAIN
+from .const import CONF_DEMO, CONF_UPDATE_INTERVAL, CONF_VIN, DEFAULT_UPDATE_INTERVAL, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,10 +34,38 @@ REAUTH_SCHEMA = vol.Schema(
 )
 
 
+class PolestarOptionsFlow(OptionsFlow):
+    """Handle options for Polestar."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        current = self.config_entry.options.get(
+            CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
+        )
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(CONF_UPDATE_INTERVAL, default=current): vol.All(
+                        int, vol.Range(min=60, max=86400)
+                    ),
+                }
+            ),
+        )
+
+
 class PolestarConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Polestar."""
 
     VERSION = 2
+
+    @staticmethod
+    def async_get_options_flow(config_entry):
+        return PolestarOptionsFlow()
 
     def __init__(self) -> None:
         self._email: str | None = None

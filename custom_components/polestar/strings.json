@@ -1,4 +1,14 @@
 {
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "update_interval": "Polling interval (seconds)"
+        },
+        "description": "How often to poll the Polestar cloud for updates. Lower values give faster updates but may increase server load and 12v battery usage. Default is 300 seconds (5 minutes)."
+      }
+    }
+  },
   "config": {
     "step": {
       "user": {

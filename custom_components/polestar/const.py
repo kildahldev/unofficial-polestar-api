@@ -18,7 +18,8 @@ PLATFORMS = [
     "update",
 ]
 
-UPDATE_INTERVAL = 300  # seconds
+DEFAULT_UPDATE_INTERVAL = 600  # seconds
+CONF_UPDATE_INTERVAL = "update_interval"
 STREAM_RETRY_DELAY = 30  # seconds
 
 SERVICE_START_CLIMATE = "start_climate"

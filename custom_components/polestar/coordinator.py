@@ -40,7 +40,7 @@ from polestar_api.models.parking_climate_timer import (
 from polestar_api.models.precleaning import PreCleaningInfo
 from polestar_api.models.weather import WeatherReport
 
-from .const import STREAM_RETRY_DELAY, UPDATE_INTERVAL
+from .const import CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL, STREAM_RETRY_DELAY
 from .utils import local_utc_offset_minutes, time_to_minutes
 
 if TYPE_CHECKING:
@@ -142,7 +142,9 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
             hass,
             _LOGGER,
             name=f"Polestar {vehicle.vin}",
-            update_interval=timedelta(seconds=UPDATE_INTERVAL),
+            update_interval=timedelta(
+                seconds=entry.options.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
+            ),
             config_entry=entry,
         )
         self.vehicle = vehicle
