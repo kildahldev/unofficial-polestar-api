@@ -20,17 +20,10 @@ Contributions and testing from owners of other models are welcome and encouraged
 | Model      | Backend | Verified         |
 |------------|---------|------------------|
 | Polestar 4 | C3      | ✅ Mostly working |
-| Polestar 2 | ?       | Unknown          |
-| Polestar 3 | ?       | Unknown          |
+| Polestar 2 | C3      | ✅ Mostly working |
+| Polestar 3 | C3      | ✅ Mostly working |
 
-| Backend | Status |
-|---|---|
-| C3 | ✅ Implemented |
-| PCCS | ❌ Not implemented |
-| Vocmo | ❌ Not implemented |
-| HuanFu | ❌ Not implemented |
-
-Not all features are available on all models.
+Not all features are available on all models. Look at the features list for some comments on different models.
 
 ## Usage
 
@@ -42,6 +35,8 @@ Requires [HACS](https://hacs.xyz/) installed on your Home Assistant instance.
 2. Paste `kildahldev/unofficial-polestar-api` and select **Integration**
 3. Click **Add**, then find **Unofficial Polestar** in HACS and click **Download**
 4. Restart Home Assistant
+
+Then add the integration via **Settings → Devices & Services → Add Integration → Polestar**. Enter your Polestar ID email, password, and VIN (Vehicle Identification Number). Each config entry sets up one vehicle — add the integration again with a different VIN if you have multiple cars. Tick **Demo mode** to get a fake vehicle with static data (no API connection needed).
 
 See the [HA integration README](ha_integration_README.md) for setup, entities, services, and dashboard cards.
 
@@ -73,11 +68,11 @@ async with PolestarApi(email="you@example.com", password="...") as api:
 - **Exterior** — door, window, sunroof, hood, tailgate, and alarm status
 - **Charging** — target SOC, amp limit, charge timers, start/stop immediate charging
 - **Charge locations** — full CRUD for saved locations with per-location amp limits, min SOC, timers, departure times, and smart charging
-- **Health** — service warnings, fluid levels, tyre pressures (kPa), all exterior light warnings, 12V battery
+- **Health** — service warnings, fluid levels, tyre pressures (kPa), all exterior light warnings, 12V battery *(Tyre pressure is unavailable on Polestar 2 as it does not have TPMS)*
 - **Availability** — vehicle online status with unavailable reason
 - **Weather** — temperature at car location
-- **OTA** — software update info, scheduling, install now, cancel
-- **Pre-cleaning** — air quality status (PM2.5, AQI) and start/stop cabin pre-cleaning
+- **OTA** — software update info, scheduling, install now, cancel *(Appears to be unavailable on Polestar 4)*
+- **Pre-cleaning** — air quality status (PM2.5, AQI) and start/stop cabin pre-cleaning *(Appears to be unavailable on Polestar 4)*
 
 For the full API reference with all methods, models, and enums, see the [docs](https://kildahldev.github.io/unofficial-polestar-api/).
 
