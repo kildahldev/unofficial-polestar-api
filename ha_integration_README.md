@@ -34,6 +34,16 @@ Features vary between models, and are yet to be fully documented
 
 Entity IDs are generated from the vehicle model and registration. For example, a Polestar 4 registered `ES59205` will create entities like `sensor.polestar_4_es59205_battery_level`, `lock.polestar_4_es59205_lock`, and `button.polestar_4_es59205_refresh`.
 
+## Update interval
+
+The integration polls the Polestar cloud for updates every **10 minutes** by default. To change this:
+
+1. Go to **Settings → Devices & Services → Polestar**
+2. Click **Configure** on your vehicle entry
+3. Set the **Polling interval** (in seconds, minimum 60, maximum 86400)
+
+Lower values give faster updates but may increase server load and 12v battery drain. In addition to polling, the integration keeps long-lived streams open for real-time updates (battery, location, door status, etc.), so polling mainly covers data that isn't streamed.
+
 ## Services
 
 The integration also registers custom services for the parts of the Polestar API that do not fit a single HA entity cleanly:
