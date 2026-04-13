@@ -1,10 +1,12 @@
 {
   "domain": "polestar",
   "name": "Unofficial Polestar",
-  "codeowners": [],
+  "codeowners": ["@kildahldev"],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/kildahldev/unofficial-polestar-api",
+  "documentation": "https://github.com/kildahldev/unofficial-polestar-api/blob/main/ha_integration_README.md",
+  "issue_tracker": "https://github.com/kildahldev/unofficial-polestar-api/issues",
+  "integration_type": "device",
   "iot_class": "cloud_polling",
   "requirements": ["unofficial-polestar-api==0.2.0b4"],
   "version": "0.2.0"
