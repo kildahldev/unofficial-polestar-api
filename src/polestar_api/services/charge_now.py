@@ -28,8 +28,13 @@ class ChargeNowServiceClient:
             self._connection.channel, f"{self._svc}/{method}",
             wrap_chronos(self._vin), metadata=metadata,
         )
-        raw = decode(data, {1: ("status", "int32")})
-        return raw.get("status", 0)
+        # Unwrap chronos envelope — field 3 is the actual payload
+        raw = decode(data)
+        payload = raw.get(3)
+        if isinstance(payload, bytes):
+            inner = decode(payload, {1: ("status", "int32")})
+            return inner.get("status", 0)
+        return 0
 
     async def start(self) -> int:
         """Start charging now (override timer). Returns status code."""

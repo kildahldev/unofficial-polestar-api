@@ -6,7 +6,7 @@ import asyncio
 from typing import TYPE_CHECKING
 
 from .. import grpc as grpc_call
-from ..codec import encode
+from ..codec import decode, encode
 from ..models.charging import AmpLimitResponse
 from .chronos import wrap_chronos
 
@@ -25,6 +25,16 @@ class AmpLimitServiceClient:
     def _svc(self) -> str:
         return self._connection.backend.amp_limit_svc
 
+    @staticmethod
+    def _parse(data: bytes) -> AmpLimitResponse:
+        """Unwrap chronos envelope and parse the amp limit payload."""
+        raw = decode(data)
+        payload = raw.get(3)
+        if isinstance(payload, bytes):
+            inner = decode(payload)
+            return AmpLimitResponse(amperage_limit=int(inner.get(1, 0) or 0))
+        return AmpLimitResponse()
+
     async def get(self) -> AmpLimitResponse:
         metadata = await self._connection.get_metadata(self._vin)
         metadata["vin"] = self._vin
@@ -40,7 +50,7 @@ class AmpLimitServiceClient:
             pass
         if data is None:
             return AmpLimitResponse()
-        return AmpLimitResponse.from_bytes(data)
+        return self._parse(data)
 
     async def set(self, amperage: int) -> AmpLimitResponse:
         # APK: REQUEST=1 (ChronosRequest), AMP_LIMIT=2
@@ -51,4 +61,4 @@ class AmpLimitServiceClient:
             self._connection.channel, f"{self._svc}/SetAmpLimit",
             wrap_chronos(self._vin, payload), metadata=metadata,
         )
-        return AmpLimitResponse.from_bytes(data)
+        return self._parse(data)

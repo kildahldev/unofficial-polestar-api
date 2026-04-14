@@ -6,7 +6,7 @@ import asyncio
 from typing import TYPE_CHECKING
 
 from .. import grpc as grpc_call
-from ..codec import encode, encode_bool, encode_message
+from ..codec import decode, encode, encode_bool, encode_message
 from ..models.charging import BatteryChargeTimer, ChargeTimerResponse
 from .chronos import wrap_chronos
 
@@ -25,6 +25,15 @@ class ChargeTimerServiceClient:
     def _svc(self) -> str:
         return self._connection.backend.charge_timer_svc
 
+    @staticmethod
+    def _parse(data: bytes) -> ChargeTimerResponse:
+        """Unwrap chronos envelope and parse the charge timer payload."""
+        raw = decode(data)
+        payload = raw.get(3)
+        if isinstance(payload, bytes):
+            return ChargeTimerResponse.from_bytes(payload)
+        return ChargeTimerResponse()
+
     async def get(self) -> ChargeTimerResponse:
         metadata = await self._connection.get_metadata(self._vin)
         metadata["vin"] = self._vin
@@ -42,7 +51,7 @@ class ChargeTimerServiceClient:
             pass
         if data is None:
             return ChargeTimerResponse()
-        return ChargeTimerResponse.from_bytes(data)
+        return self._parse(data)
 
     async def set(self, timer: BatteryChargeTimer) -> ChargeTimerResponse:
         # APK: REQUEST=1 (ChronosRequest), CHARGE_TIMER=2, TIME_IS_UTC0=3
@@ -55,4 +64,4 @@ class ChargeTimerServiceClient:
             wrap_chronos(self._vin, payload),
             metadata=metadata,
         )
-        return ChargeTimerResponse.from_bytes(data)
+        return self._parse(data)
