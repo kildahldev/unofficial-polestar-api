@@ -20,7 +20,8 @@ PLATFORMS = [
 
 DEFAULT_UPDATE_INTERVAL = 600  # seconds
 CONF_UPDATE_INTERVAL = "update_interval"
-STREAM_RETRY_DELAY = 30  # seconds
+STREAM_RETRY_DELAY = 30  # seconds (initial, doubles each retry)
+STREAM_MAX_RETRIES = 10
 
 SERVICE_START_CLIMATE = "start_climate"
 SERVICE_SET_CHARGE_TIMER = "set_charge_timer"

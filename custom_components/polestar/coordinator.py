@@ -9,6 +9,8 @@ from dataclasses import dataclass, field, replace
 from datetime import time as dt_time, timedelta
 from typing import TYPE_CHECKING, Any
 
+from grpclib.const import Status as GrpcStatus
+from grpclib.exceptions import GRPCError
 from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -40,7 +42,7 @@ from polestar_api.models.parking_climate_timer import (
 from polestar_api.models.precleaning import PreCleaningInfo
 from polestar_api.models.weather import WeatherReport
 
-from .const import CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL, STREAM_RETRY_DELAY
+from .const import CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL, STREAM_MAX_RETRIES, STREAM_RETRY_DELAY
 from .utils import local_utc_offset_minutes, time_to_minutes
 
 if TYPE_CHECKING:
@@ -310,6 +312,7 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
             "location": "stream_location",
             "climate": "stream_climate",
             "exterior": "stream_exterior",
+            "precleaning": "stream_precleaning",
         }
         for attr, method_name in streams.items():
             method = getattr(self.vehicle, method_name, None)
@@ -333,9 +336,11 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         stream_factory: Callable[[], Awaitable[Any] | Any],
     ) -> None:
         """Run a single long-lived stream and merge updates into coordinator state."""
+        consecutive_failures = 0
         while True:
             try:
                 async for value in stream_factory():
+                    consecutive_failures = 0
                     current = self.data or PolestarVehicleData()
                     merged_value = self._merge_partial_update(attr, getattr(current, attr), value)
                     self.async_set_updated_data(replace(current, **{attr: merged_value}))
@@ -344,9 +349,36 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
             except (AuthError, TokenExpiredError) as err:
                 _LOGGER.warning("Live %s stream auth failure for %s: %s", attr, self.vehicle.vin, err)
                 await asyncio.sleep(STREAM_RETRY_DELAY)
+            except GRPCError as err:
+                if err.status == GrpcStatus.UNIMPLEMENTED:
+                    _LOGGER.debug("Live %s stream not supported for %s, stopping", attr, self.vehicle.vin)
+                    return
+                consecutive_failures += 1
+                delay = self._stream_retry_delay(attr, consecutive_failures, err)
+                if delay is None:
+                    return
+                await asyncio.sleep(delay)
             except Exception as err:  # noqa: BLE001
-                _LOGGER.debug("Live %s stream failed for %s: %s", attr, self.vehicle.vin, err)
-                await asyncio.sleep(STREAM_RETRY_DELAY)
+                consecutive_failures += 1
+                delay = self._stream_retry_delay(attr, consecutive_failures, err)
+                if delay is None:
+                    return
+                await asyncio.sleep(delay)
+
+    def _stream_retry_delay(self, attr: str, failures: int, err: Exception) -> float | None:
+        """Return the backoff delay in seconds, or None to stop retrying."""
+        if failures >= STREAM_MAX_RETRIES:
+            _LOGGER.warning(
+                "Live %s stream for %s failed %d times in a row, giving up — "
+                "data will still update via polling. "
+                "Reload the integration to restart streams",
+                attr, self.vehicle.vin, failures,
+            )
+            return None
+        delay = min(STREAM_RETRY_DELAY * (2 ** (failures - 1)), 600)
+        _LOGGER.debug("Live %s stream failed for %s (attempt %d): %s — retrying in %ds",
+                       attr, self.vehicle.vin, failures, err, delay)
+        return delay
 
     @staticmethod
     def _merge_partial_update(attr: str, previous: Any, result: Any) -> Any:
