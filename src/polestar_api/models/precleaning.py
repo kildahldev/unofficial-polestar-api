@@ -7,6 +7,14 @@ from enum import IntEnum
 
 from ..wire import ProtoMessage
 from .common import Timestamp
+from .invocation import InvocationRequest
+
+
+@dataclass(frozen=True)
+class PreCleaningRequest(ProtoMessage, schema={1: "request", 2: "start"}):
+    """C3 PreCleaning invocation request — start=True to start, False to stop."""
+    request: InvocationRequest | None = None
+    start: bool = False
 
 
 class PreCleaningRunningStatus(IntEnum):
