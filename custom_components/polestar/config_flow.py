@@ -18,11 +18,12 @@ from .const import CONF_DEMO, CONF_UPDATE_INTERVAL, CONF_VIN, DEFAULT_UPDATE_INT
 
 _LOGGER = logging.getLogger(__name__)
 
-USER_SCHEMA = vol.Schema(
+_GUEST_SENTINEL = "__guest_manual_vin__"
+
+CREDENTIALS_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_EMAIL): str,
         vol.Required(CONF_PASSWORD): str,
-        vol.Required(CONF_VIN): str,
         vol.Optional(CONF_DEMO, default=False): bool,
     }
 )
@@ -32,6 +33,35 @@ REAUTH_SCHEMA = vol.Schema(
         vol.Required(CONF_PASSWORD): str,
     }
 )
+
+
+def _vehicle_options_schema(
+    vehicles: dict[str, str],
+    default_interval: int = DEFAULT_UPDATE_INTERVAL,
+) -> vol.Schema:
+    """Schema for the vehicle picker step (owner accounts)."""
+    options = dict(vehicles)
+    options[_GUEST_SENTINEL] = "My vehicle is not listed (secondary user / guest)"
+    return vol.Schema(
+        {
+            vol.Required(CONF_VIN): vol.In(options),
+            vol.Optional(CONF_UPDATE_INTERVAL, default=default_interval): vol.All(
+                int, vol.Range(min=60, max=86400)
+            ),
+        }
+    )
+
+
+def _guest_vin_schema(default_interval: int = DEFAULT_UPDATE_INTERVAL) -> vol.Schema:
+    """Schema for the manual VIN entry step (guest accounts)."""
+    return vol.Schema(
+        {
+            vol.Required(CONF_VIN): str,
+            vol.Optional(CONF_UPDATE_INTERVAL, default=default_interval): vol.All(
+                int, vol.Range(min=60, max=86400)
+            ),
+        }
+    )
 
 
 class PolestarOptionsFlow(OptionsFlow):
@@ -69,33 +99,24 @@ class PolestarConfigFlow(ConfigFlow, domain=DOMAIN):
 
     def __init__(self) -> None:
         self._email: str | None = None
+        self._password: str | None = None
+        self._vehicles: dict[str, str] = {}  # vin -> display label
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
+        """Step 1: Collect credentials."""
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            email = user_input[CONF_EMAIL]
-            password = user_input[CONF_PASSWORD]
-            vin = user_input[CONF_VIN].upper().strip()
+            self._email = user_input[CONF_EMAIL]
+            self._password = user_input[CONF_PASSWORD]
             demo = user_input.get(CONF_DEMO, False)
 
-            await self.async_set_unique_id(vin)
-            self._abort_if_unique_id_configured()
-
             if demo:
-                return self.async_create_entry(
-                    title=f"Polestar Demo ({vin})",
-                    data={
-                        CONF_EMAIL: email,
-                        CONF_PASSWORD: password,
-                        CONF_VIN: vin,
-                        CONF_DEMO: True,
-                    },
-                )
+                return await self.async_step_demo_vin()
 
-            api = PolestarApi(email, password, token_store=MemoryTokenStore())
+            api = PolestarApi(self._email, self._password, token_store=MemoryTokenStore())
             try:
                 await api.async_init()
                 vehicles = await api.get_vehicles()
@@ -105,18 +126,20 @@ class PolestarConfigFlow(ConfigFlow, domain=DOMAIN):
                 _LOGGER.exception("Unexpected error during setup")
                 errors["base"] = "cannot_connect"
             else:
-                if not any(v.vin == vin for v in vehicles):
-                    errors["base"] = "vin_not_found"
-                else:
-                    await api.close()
-                    return self.async_create_entry(
-                        title=f"Polestar ({vin})",
-                        data={
-                            CONF_EMAIL: email,
-                            CONF_PASSWORD: password,
-                            CONF_VIN: vin,
-                        },
-                    )
+                self._vehicles = {}
+                for v in vehicles:
+                    label = v.vin
+                    if v.model_name:
+                        label = f"{v.model_name} ({v.vin})"
+                    elif v.model_year:
+                        label = f"Polestar {v.model_year} ({v.vin})"
+                    self._vehicles[v.vin] = label
+
+                if not self._vehicles:
+                    # No vehicles found — likely a secondary user / guest account.
+                    return await self.async_step_guest_vin()
+
+                return await self.async_step_vehicle()
             finally:
                 try:
                     await api.close()
@@ -125,8 +148,92 @@ class PolestarConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user",
-            data_schema=USER_SCHEMA,
+            data_schema=CREDENTIALS_SCHEMA,
             errors=errors,
+        )
+
+    async def async_step_vehicle(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Step 2: Pick a vehicle from the discovered list."""
+        if user_input is not None:
+            vin = user_input[CONF_VIN]
+            interval = user_input.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
+
+            if vin == _GUEST_SENTINEL:
+                return await self.async_step_guest_vin()
+
+            await self.async_set_unique_id(vin)
+            self._abort_if_unique_id_configured()
+
+            return self.async_create_entry(
+                title=f"Polestar ({vin})",
+                data={
+                    CONF_EMAIL: self._email,
+                    CONF_PASSWORD: self._password,
+                    CONF_VIN: vin,
+                },
+                options={CONF_UPDATE_INTERVAL: interval},
+            )
+
+        return self.async_show_form(
+            step_id="vehicle",
+            data_schema=_vehicle_options_schema(self._vehicles),
+        )
+
+    async def async_step_guest_vin(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Manual VIN entry for secondary user / guest accounts."""
+        if user_input is not None:
+            vin = user_input[CONF_VIN].upper().strip()
+            interval = user_input.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
+
+            await self.async_set_unique_id(vin)
+            self._abort_if_unique_id_configured()
+
+            return self.async_create_entry(
+                title=f"Polestar ({vin})",
+                data={
+                    CONF_EMAIL: self._email,
+                    CONF_PASSWORD: self._password,
+                    CONF_VIN: vin,
+                },
+                options={CONF_UPDATE_INTERVAL: interval},
+            )
+
+        return self.async_show_form(
+            step_id="guest_vin",
+            data_schema=_guest_vin_schema(),
+        )
+
+    async def async_step_demo_vin(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """VIN entry for demo mode."""
+        if user_input is not None:
+            vin = user_input[CONF_VIN].upper().strip()
+
+            await self.async_set_unique_id(vin)
+            self._abort_if_unique_id_configured()
+
+            return self.async_create_entry(
+                title=f"Polestar Demo ({vin})",
+                data={
+                    CONF_EMAIL: self._email,
+                    CONF_PASSWORD: self._password,
+                    CONF_VIN: vin,
+                    CONF_DEMO: True,
+                },
+            )
+
+        return self.async_show_form(
+            step_id="demo_vin",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_VIN): str,
+                }
+            ),
         )
 
     async def async_step_reauth(

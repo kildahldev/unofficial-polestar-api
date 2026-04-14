@@ -14,7 +14,7 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 from .const import CONF_DEMO, CONF_VIN, DOMAIN, PLATFORMS
 from .coordinator import PolestarCoordinator
 from .demo import DemoVehicle
-from polestar_api import PolestarApi
+from polestar_api import PolestarApi, Vehicle
 from polestar_api.exceptions import AuthError
 from .services import async_register_services, async_unregister_services
 from .token_store import HassTokenStore
@@ -48,10 +48,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     vehicle = next((v for v in vehicles if v.vin == configured_vin), None)
 
     if vehicle is None:
-        await api.close()
-        raise ConfigEntryAuthFailed(
-            f"VIN {configured_vin} not found on this account"
+        # Guest / linked accounts don't appear in the VDMS vehicle list.
+        # Create a Vehicle directly — gRPC access is validated at runtime.
+        _LOGGER.info(
+            "VIN %s not in VDMS vehicle list (guest/linked account), "
+            "creating vehicle directly",
+            configured_vin,
         )
+        vehicle = Vehicle(vin=configured_vin, connection=api._connection)
 
     coordinator = PolestarCoordinator(hass, vehicle, entry)
     await coordinator.async_config_entry_first_refresh()
