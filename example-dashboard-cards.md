@@ -1,3 +1,8 @@
+---
+layout: none
+permalink: /example-dashboard-cards
+---
+{% raw %}
 ## Dashboard Cards
 
 Below are some opinionated configurations for a dashboard setup
@@ -755,3 +760,4 @@ layout_config:
 ```
 
 </details>
+{% endraw %}
