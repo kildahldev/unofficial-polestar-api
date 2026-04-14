@@ -3,7 +3,7 @@
   "name": "Unofficial Polestar",
   "codeowners": ["@kildahldev"],
   "config_flow": true,
-  "dependencies": [],
+  "dependencies": ["http"],
   "documentation": "https://github.com/kildahldev/unofficial-polestar-api/blob/main/ha_integration_README.md",
   "issue_tracker": "https://github.com/kildahldev/unofficial-polestar-api/issues",
   "integration_type": "device",
