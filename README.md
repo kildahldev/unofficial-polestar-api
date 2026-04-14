@@ -66,7 +66,7 @@ async with PolestarApi(email="you@example.com", password="...") as api:
 - **Honk & flash** — flash lights or honk+flash
 - **Windows** — open/close all windows
 - **Exterior** — door, window, sunroof, hood, tailgate, and alarm status
-- **Charging** — target SOC, amp limit, charge timers, start/stop immediate charging
+- **Charging** — target SOC, amp limit, charge timers, start/stop immediate charging *(Someo of these appear to be unavailable on Polestar 4)*
 - **Charge locations** — full CRUD for saved locations with per-location amp limits, min SOC, timers, departure times, and smart charging
 - **Health** — service warnings, fluid levels, tyre pressures (kPa), all exterior light warnings, 12V battery *(Tyre pressure is unavailable on Polestar 2 as it does not have TPMS)*
 - **Availability** — vehicle online status with unavailable reason
