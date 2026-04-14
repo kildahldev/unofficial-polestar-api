@@ -24,47 +24,47 @@ start_climate:
       selector:
         select:
           options:
-            - unspecified
-            - off
-            - level1
-            - level2
-            - level3
+            - "unspecified"
+            - "off"
+            - "level1"
+            - "level2"
+            - "level3"
     front_right_seat:
       selector:
         select:
           options:
-            - unspecified
-            - off
-            - level1
-            - level2
-            - level3
+            - "unspecified"
+            - "off"
+            - "level1"
+            - "level2"
+            - "level3"
     rear_left_seat:
       selector:
         select:
           options:
-            - unspecified
-            - off
-            - level1
-            - level2
-            - level3
+            - "unspecified"
+            - "off"
+            - "level1"
+            - "level2"
+            - "level3"
     rear_right_seat:
       selector:
         select:
           options:
-            - unspecified
-            - off
-            - level1
-            - level2
-            - level3
+            - "unspecified"
+            - "off"
+            - "level1"
+            - "level2"
+            - "level3"
     steering_wheel:
       selector:
         select:
           options:
-            - unspecified
-            - off
-            - level1
-            - level2
-            - level3
+            - "unspecified"
+            - "off"
+            - "level1"
+            - "level2"
+            - "level3"
 
 set_charge_timer:
   fields:

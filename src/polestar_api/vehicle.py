@@ -395,6 +395,11 @@ class Vehicle:
         """
         return await self._precleaning.get_latest()
 
+    async def stream_precleaning(self) -> AsyncIterator[PreCleaningInfo]:
+        """Real-time pre-cleaning status updates."""
+        async for status in self._precleaning.stream():
+            yield status
+
     async def start_precleaning(self) -> None:
         """Start cabin air quality pre-cleaning."""
         await self._invocation.precleaning_start()
