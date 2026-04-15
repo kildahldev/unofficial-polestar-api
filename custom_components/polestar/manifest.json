@@ -8,7 +8,6 @@
   "integration_type": "device",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/kildahldev/unofficial-polestar-api/issues",
-  "homeassistant": "2025.2.0",
   "requirements": ["unofficial-polestar-api==0.2.0"],
   "version": "0.2.1-beta.1"
 }
