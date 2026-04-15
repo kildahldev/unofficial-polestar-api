@@ -76,6 +76,10 @@ async with PolestarApi(email="you@example.com", password="...") as api:
 
 For the full API reference with all methods, models, and enums, see the [docs](https://kildahldev.github.io/unofficial-polestar-api/).
 
+## Known Issues
+
+- **Charging switch doesn't start/stop charging** — The "Charging" switch calls `StartOverrideChargeTimer` / `StopOverrideChargeTimer`, which only override the charge timer schedule. There is no known gRPC endpoint to directly start or stop a charge session. The Polestar app may achieve this by manipulating the target SoC instead. Investigation ongoing.
+
 ## Disclaimer
 
 This project is not affiliated with, endorsed by, or in any way officially connected to Polestar, Volvo Cars, or any of their subsidiaries.
