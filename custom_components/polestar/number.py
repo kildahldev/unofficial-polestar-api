@@ -6,7 +6,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
 from typing import Any
 
-from homeassistant.components.number import NumberEntity, NumberEntityDescription
+from homeassistant.components.number import NumberDeviceClass, NumberEntity, NumberEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE, UnitOfElectricCurrent, UnitOfTemperature
 from homeassistant.core import HomeAssistant
@@ -56,6 +56,7 @@ NUMBERS: tuple[PolestarNumberDescription, ...] = (
         key="climate_target_temperature",
         name="Climate target temperature",
         icon="mdi:thermometer-auto",
+        device_class=NumberDeviceClass.TEMPERATURE,
         entity_category=EntityCategory.CONFIG,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         native_min_value=0,
@@ -134,6 +135,7 @@ class PolestarTimerTemperatureNumber(PolestarEntity, NumberEntity):
 
     _attr_name = "Timer target temperature"
     _attr_icon = "mdi:thermometer-auto"
+    _attr_device_class = NumberDeviceClass.TEMPERATURE
     _attr_entity_category = EntityCategory.CONFIG
     _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
     _attr_native_min_value = 15.0
