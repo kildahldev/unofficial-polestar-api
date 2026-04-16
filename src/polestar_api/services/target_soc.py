@@ -30,12 +30,13 @@ class TargetSocServiceClient:
 
     @staticmethod
     def _parse(data: bytes) -> TargetSocResponse:
+        """Unwrap chronos envelope and parse the target SoC payload."""
         raw = decode(data)
-        target_soc = raw.get(3)
-        if isinstance(target_soc, bytes):
-            target_raw = decode(target_soc)
-            return TargetSocResponse(target_level=int(target_raw.get(1, 0) or 0))
-        return TargetSocResponse.from_bytes(data)
+        payload = raw.get(3)
+        if isinstance(payload, bytes):
+            inner = decode(payload)
+            return TargetSocResponse(target_level=int(inner.get(1, 0) or 0))
+        return TargetSocResponse()
 
     async def get(self) -> TargetSocResponse:
         metadata = await self._connection.get_metadata(self._vin)
