@@ -226,9 +226,15 @@ class Vehicle:
     async def set_target_soc(
         self,
         level: int,
-        setting_type: ChargeTargetLevelSettingType = ChargeTargetLevelSettingType.DAILY,
+        setting_type: ChargeTargetLevelSettingType = ChargeTargetLevelSettingType.CUSTOM,
     ) -> TargetSocResponse:
-        """Set the charge target level (0-100%)."""
+        """Set the charge target level (0-100%).
+
+        ``DAILY`` and ``LONG_TRIP`` are server-managed presets — the server
+        ignores the provided *level* for those setting types and keeps its
+        stored preset value.  Use ``CUSTOM`` (default) to apply an arbitrary
+        level.
+        """
         return await self._target_soc.set(level, setting_type)
 
     async def get_amp_limit(self) -> AmpLimitResponse:

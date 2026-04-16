@@ -441,11 +441,17 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         return response
 
     async def async_set_target_soc(self, level: int) -> TargetSocResponse:
-        """Set target SoC using the selected setting type."""
+        """Set target SoC to an arbitrary level.
+
+        Always uses CUSTOM — DAILY/LONG_TRIP are server-side presets that
+        ignore the requested level.  The setting-type select entity still
+        lets the user switch presets independently.
+        """
         response = await self.async_run_command(
-            lambda: self.vehicle.set_target_soc(level, self.target_soc_setting_type),
+            lambda: self.vehicle.set_target_soc(level, ChargeTargetLevelSettingType.CUSTOM),
             error_message="Set target SOC command failed",
         )
+        self.target_soc_setting_type = ChargeTargetLevelSettingType.CUSTOM
         self._schedule_background_refresh("target_soc")
         return response
 
