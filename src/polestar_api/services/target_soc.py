@@ -61,22 +61,15 @@ class TargetSocServiceClient:
         setting_type: ChargeTargetLevelSettingType = ChargeTargetLevelSettingType.DAILY,
     ) -> TargetSocResponse:
         # APK: REQUEST=1 (ChronosRequest), BATTERY_CHARGE_TARGET_LEVEL=2, SETTING_TYPE=3
+        # SetTargetSoc is unary on the server; streaming hangs until timeout.
         payload = encode(
             {"level": (2, "int32"), "setting_type": (3, "int32")},
             {"level": level, "setting_type": int(setting_type)},
         )
         metadata = await self._connection.get_metadata(self._vin)
         metadata["vin"] = self._vin
-        data = None
-        try:
-            async with asyncio.timeout(_STREAM_TIMEOUT):
-                async for data in grpc_call.unary_stream(
-                    self._connection.channel, f"{self._svc}/SetTargetSoc",
-                    wrap_chronos(self._vin, payload), metadata=metadata,
-                ):
-                    break  # take first message from subscription
-        except TimeoutError:
-            pass
-        if data is None:
-            return TargetSocResponse()
+        data = await grpc_call.unary_unary(
+            self._connection.channel, f"{self._svc}/SetTargetSoc",
+            wrap_chronos(self._vin, payload), metadata=metadata,
+        )
         return self._parse(data)
