@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "unofficial-polestar-api"
-version = "0.3.0b2"
+version = "0.3.0b3"
 description = "Unofficial async Python client for Polestar vehicle APIs"
 readme = "README.md"
 license = "MIT"
