@@ -37,7 +37,7 @@ NUMBERS: tuple[PolestarNumberDescription, ...] = (
         native_unit_of_measurement=PERCENTAGE,
         native_min_value=20,
         native_max_value=100,
-        native_step=1,
+        native_step=10,
         value_fn=lambda c: c.data.target_soc.target_level if c.data and c.data.target_soc else None,
         set_fn=lambda c, val: c.async_set_target_soc(int(val)),
     ),
