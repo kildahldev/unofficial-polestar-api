@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import asyncio
-
 from .. import grpc as grpc_call
 from ..codec import decode, encode
 from ..models.health import Health
@@ -32,15 +30,13 @@ class HealthServiceClient:
 
     async def get_latest(self) -> Health | None:
         metadata = await self._connection.get_metadata(self._vin)
-        async with asyncio.timeout(15):
-            async for data in grpc_call.unary_stream(
-                self._connection.channel,
-                f"{self._svc}/GetHealth",
-                _health_request(self._vin),
-                metadata=metadata,
-            ):
-                raw = decode(data, _RESPONSE_SCHEMA)
-                if raw.get("health"):
-                    return Health.from_bytes(raw["health"])
-                return None
+        data = await grpc_call.unary_unary(
+            self._connection.channel,
+            f"{self._svc}/GetHealth",
+            _health_request(self._vin),
+            metadata=metadata,
+        )
+        raw = decode(data, _RESPONSE_SCHEMA)
+        if raw.get("health"):
+            return Health.from_bytes(raw["health"])
         return None
