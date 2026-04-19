@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING
 
 from .. import grpc as grpc_call
@@ -12,6 +13,7 @@ if TYPE_CHECKING:
     from ..connection import GrpcConnection
 
 _RESPONSE_SCHEMA = {3: ("odometer", "message")}
+_STREAM_TIMEOUT = 10.0
 
 
 def _odometer_request(vin: str) -> bytes:
@@ -32,12 +34,20 @@ class OdometerServiceClient:
 
     async def get_latest(self) -> OdometerStatus | None:
         metadata = await self._connection.get_metadata(self._vin)
-        data = await grpc_call.unary_unary(
-            self._connection.channel,
-            f"{self._svc}/GetOdometer",
-            _odometer_request(self._vin),
-            metadata=metadata,
-        )
+        data = None
+        try:
+            async with asyncio.timeout(_STREAM_TIMEOUT):
+                async for data in grpc_call.unary_stream(
+                    self._connection.channel,
+                    f"{self._svc}/GetOdometer",
+                    _odometer_request(self._vin),
+                    metadata=metadata,
+                ):
+                    break
+        except TimeoutError:
+            pass
+        if data is None:
+            return None
         raw = decode(data, _RESPONSE_SCHEMA)
         if raw.get("odometer"):
             return OdometerStatus.from_bytes(raw["odometer"])
