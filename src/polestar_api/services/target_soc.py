@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from .. import grpc as grpc_call
 from ..codec import decode, encode
 
-_LOGGER = logging.getLogger(__name__)
+_LOGGER = logging.getLogger("custom_components.polestar.coordinator")
 from ..models.charging import (
     ChargeTargetLevelSettingType,
     TargetSocResponse,
@@ -69,17 +69,13 @@ class TargetSocServiceClient:
             {"level": (2, "int32"), "setting_type": (3, "int32")},
             {"level": level, "setting_type": int(setting_type)},
         )
-        request_data = wrap_chronos(self._vin, payload)
-        _LOGGER.info("SetTargetSoc request: level=%d, setting_type=%d, payload=%s", level, int(setting_type), request_data.hex())
         metadata = await self._connection.get_metadata(self._vin)
         metadata["vin"] = self._vin
         data = await grpc_call.unary_unary(
             self._connection.channel, f"{self._svc}/SetTargetSoc",
-            request_data, metadata=metadata,
+            wrap_chronos(self._vin, payload), metadata=metadata,
         )
-        _LOGGER.info("SetTargetSoc raw response (%d bytes): %s", len(data), data.hex())
+        _LOGGER.debug("SetTargetSoc raw response (%d bytes): %s", len(data), data.hex())
         raw = decode(data)
-        _LOGGER.info("SetTargetSoc decoded fields: %s", {k: v.hex() if isinstance(v, bytes) else v for k, v in raw.items()})
-        result = self._parse(data)
-        _LOGGER.info("SetTargetSoc parsed result: %s", result)
-        return result
+        _LOGGER.debug("SetTargetSoc decoded fields: %s", {k: v.hex() if isinstance(v, bytes) else v for k, v in raw.items()})
+        return self._parse(data)
