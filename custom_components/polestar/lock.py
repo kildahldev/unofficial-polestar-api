@@ -51,6 +51,7 @@ class PolestarLock(PolestarEntity, LockEntity):
             await self.coordinator.async_run_command(
                 self._vehicle.lock,
                 error_message="Lock command failed",
+                capability="lock",
             )
         finally:
             self._attr_is_locking = False
@@ -66,6 +67,7 @@ class PolestarLock(PolestarEntity, LockEntity):
             await self.coordinator.async_run_command(
                 self._vehicle.unlock,
                 error_message="Unlock command failed",
+                capability="unlock",
             )
         finally:
             self._attr_is_unlocking = False

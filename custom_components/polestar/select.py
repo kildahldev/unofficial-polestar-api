@@ -13,7 +13,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import DOMAIN
 from .coordinator import PolestarCoordinator
-from .entity import PolestarEntity
+from .entity import OptimisticStateMixin, PolestarEntity
 from polestar_api.models.charging import ChargeTargetLevelSettingType
 from polestar_api.models.climatization import HeatingIntensity
 from polestar_api.models.parking_climate_timer import (
@@ -151,7 +151,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class PolestarSelect(PolestarEntity, RestoreEntity, SelectEntity):
+class PolestarSelect(OptimisticStateMixin, PolestarEntity, RestoreEntity, SelectEntity):
     """Select entity for local command preferences."""
 
     entity_description: PolestarSelectDescription
@@ -179,7 +179,8 @@ class PolestarSelect(PolestarEntity, RestoreEntity, SelectEntity):
         key = self.entity_description.key
         if key == "target_soc_setting_type":
             mode = self.coordinator.target_soc_setting_type
-            return mode.name.lower() if mode is not None else None
+            real_value = mode.name.lower() if mode is not None else None
+            return self._resolve_optimistic(real_value)
 
         prefs = self.coordinator.climate_preferences
         if key == "climate_front_left_seat":
@@ -196,8 +197,12 @@ class PolestarSelect(PolestarEntity, RestoreEntity, SelectEntity):
         key = self.entity_description.key
         if key == "target_soc_setting_type":
             # Explicit, deliberate mode switch — tells the car to change mode now.
-            await self.coordinator.async_set_target_soc_mode(_TARGET_SOC_MAP[option])
-            self.async_write_ha_state()
+            self._set_optimistic(option)
+            try:
+                await self.coordinator.async_set_target_soc_mode(_TARGET_SOC_MAP[option])
+            except Exception:
+                self._clear_optimistic()
+                raise
             return
 
         heating = _HEATING_MAP[option]
@@ -215,7 +220,7 @@ class PolestarSelect(PolestarEntity, RestoreEntity, SelectEntity):
         self.async_write_ha_state()
 
 
-class PolestarTimerSettingsSelect(PolestarEntity, SelectEntity):
+class PolestarTimerSettingsSelect(OptimisticStateMixin, PolestarEntity, SelectEntity):
     """Select entity for API-backed parking climate timer default settings."""
 
     entity_description: PolestarSelectDescription
@@ -243,20 +248,20 @@ class PolestarTimerSettingsSelect(PolestarEntity, SelectEntity):
         key = self.entity_description.key
         if key == "timer_battery_preconditioning":
             bp = settings.battery_preconditioning
-            if bp == BatteryPreconditioning.UNDEFINED:
-                return "off"
-            return bp.name.lower()
-        # Heating keys
-        if key == "timer_steering_wheel":
-            return settings.steering_wheel_heating.name.lower()
-        seat = settings.seat_heating
-        if key == "timer_front_left_seat":
-            return seat.front_left.name.lower()
-        if key == "timer_front_right_seat":
-            return seat.front_right.name.lower()
-        if key == "timer_rear_left_seat":
-            return seat.rear_left.name.lower()
-        return seat.rear_right.name.lower()
+            real_value = "off" if bp == BatteryPreconditioning.UNDEFINED else bp.name.lower()
+        elif key == "timer_steering_wheel":
+            real_value = settings.steering_wheel_heating.name.lower()
+        else:
+            seat = settings.seat_heating
+            if key == "timer_front_left_seat":
+                real_value = seat.front_left.name.lower()
+            elif key == "timer_front_right_seat":
+                real_value = seat.front_right.name.lower()
+            elif key == "timer_rear_left_seat":
+                real_value = seat.rear_left.name.lower()
+            else:
+                real_value = seat.rear_right.name.lower()
+        return self._resolve_optimistic(real_value)
 
     async def async_select_option(self, option: str) -> None:
         settings = self._settings
@@ -279,4 +284,9 @@ class PolestarTimerSettingsSelect(PolestarEntity, SelectEntity):
             else:
                 seat = replace(seat, rear_right=heating)
             updated = replace(settings, seat_heating=seat)
-        await self.coordinator.async_set_climate_timer_settings(updated)
+        self._set_optimistic(option)
+        try:
+            await self.coordinator.async_set_climate_timer_settings(updated)
+        except Exception:
+            self._clear_optimistic()
+            raise

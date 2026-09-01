@@ -50,17 +50,14 @@ class InvocationServiceClient:
     async def _call(self, method: str, request_bytes: bytes) -> bytes:
         metadata = await self._connection.get_metadata(self._vin)
         metadata["vin"] = self._vin
-        response = None
         async for response in grpc_call.unary_stream(
             self._connection.channel,
             f"{self._svc}/{method}",
             request_bytes,
             metadata=metadata,
         ):
-            pass
-        if response is None:
-            raise ApiError(f"{method} returned no invocation response")
-        return response
+            return response
+        raise ApiError(f"{method} returned no invocation response")
 
     async def lock(
         self,

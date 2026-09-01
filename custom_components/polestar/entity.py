@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import time
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -12,6 +13,41 @@ from .coordinator import PolestarCoordinator
 
 if TYPE_CHECKING:
     from polestar_api.vehicle import Vehicle
+
+
+class OptimisticStateMixin:
+    """Show a locally-set value instantly, ahead of the next confirmed refresh.
+
+    The Polestar cloud backend can take several seconds to reflect a command.
+    Call `_set_optimistic(value)` right after a command succeeds to display
+    the new value immediately, and read state through `_resolve_optimistic`
+    instead of the raw coordinator value. The override is dropped as soon as
+    the coordinator reports a matching value, or after `_OPTIMISTIC_TTL`
+    seconds if the backend never confirms it.
+    """
+
+    _OPTIMISTIC_TTL = 10.0
+    _optimistic_value: Any = None
+    _optimistic_deadline: float = 0.0
+
+    def _set_optimistic(self, value: Any) -> None:
+        self._optimistic_value = value
+        self._optimistic_deadline = time.monotonic() + self._OPTIMISTIC_TTL
+        self.async_write_ha_state()
+
+    def _clear_optimistic(self) -> None:
+        self._optimistic_value = None
+        self._optimistic_deadline = 0.0
+        self.async_write_ha_state()
+
+    def _resolve_optimistic(self, real_value: Any) -> Any:
+        if self._optimistic_deadline == 0.0:
+            return real_value
+        if real_value == self._optimistic_value or time.monotonic() >= self._optimistic_deadline:
+            self._optimistic_deadline = 0.0
+            self._optimistic_value = None
+            return real_value
+        return self._optimistic_value
 
 
 class PolestarEntity(CoordinatorEntity[PolestarCoordinator]):

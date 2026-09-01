@@ -149,11 +149,14 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
                 seconds=entry.options.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
             ),
             config_entry=entry,
+            always_update=True,
         )
         self.vehicle = vehicle
         self.climate_preferences = ClimateCommandPreferences()
         self._installed_version_cache: str | None = None
         self._stream_tasks: dict[str, asyncio.Task[None]] = {}
+        self._unsupported_streams: set[str] = set()
+        self._unsupported_commands: set[str] = set()
 
     @staticmethod
     def _command_succeeded(response: Any) -> bool:
@@ -203,15 +206,29 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         *,
         error_message: str = "Command failed",
         timeout: int = 30,
+        capability: str | None = None,
     ) -> Any:
-        """Run a remote command and validate its response."""
+        """Run a remote command and validate its response.
+
+        If *capability* is set and the server returns FAILED_PRECONDITION or
+        UNIMPLEMENTED, the capability is marked as unsupported so entities can
+        become unavailable instead of repeatedly failing.
+        """
         try:
             response = await asyncio.wait_for(command(), timeout=timeout)
         except TimeoutError:
             raise HomeAssistantError(f"{error_message} (timed out after {timeout}s)")
+        except GRPCError as err:
+            if capability and err.status in (GrpcStatus.UNIMPLEMENTED, GrpcStatus.FAILED_PRECONDITION):
+                self._unsupported_commands.add(capability)
+            raise HomeAssistantError(self._command_error_message(err, error_message))
         if not self._command_succeeded(response):
             raise HomeAssistantError(self._command_error_message(response, error_message))
         return response
+
+    def is_command_supported(self, capability: str) -> bool:
+        """Return whether a command capability is supported by the car."""
+        return capability not in self._unsupported_commands
 
     def _schedule_background_refresh(self, *attrs: str) -> None:
         """Kick off a background refresh for the given attributes."""
@@ -284,6 +301,8 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
 
         data = PolestarVehicleData(**values)
         self._update_installed_version_cache(data.software)
+        self._unsupported_commands.clear()
+        self._restart_dead_streams()
         return data
 
     async def async_request_attrs_refresh(self, *attrs: str) -> None:
@@ -302,26 +321,43 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
             self._update_installed_version_cache(data.software)
         self.async_set_updated_data(data)
 
+    _STREAMS: dict[str, str] = {
+        "battery": "stream_battery",
+        "location": "stream_location",
+        "parked_location": "stream_parked_location",
+        "climate": "stream_climate",
+        "exterior": "stream_exterior",
+        "precleaning": "stream_precleaning",
+        "odometer": "stream_odometer",
+    }
+
     async def async_start_streams(self) -> None:
         """Start background stream tasks for live battery/location/exterior/climate updates."""
         if self._stream_tasks:
             return
-
-        streams = {
-            "battery": "stream_battery",
-            "location": "stream_location",
-            "climate": "stream_climate",
-            "exterior": "stream_exterior",
-            "precleaning": "stream_precleaning",
-            "odometer": "stream_odometer",
-        }
-        for attr, method_name in streams.items():
+        for attr, method_name in self._STREAMS.items():
             method = getattr(self.vehicle, method_name, None)
             if method is not None:
                 self._stream_tasks[attr] = asyncio.create_task(
                     self._async_run_stream(attr, method),
                     name=f"polestar-{self.vehicle.vin}-{attr}-stream",
                 )
+
+    def _restart_dead_streams(self) -> None:
+        """Restart streams that gave up, after a successful poll proves connectivity."""
+        for attr, method_name in self._STREAMS.items():
+            if attr in self._unsupported_streams:
+                continue
+            task = self._stream_tasks.get(attr)
+            if task is not None and not task.done():
+                continue
+            method = getattr(self.vehicle, method_name, None)
+            if method is None:
+                continue
+            self._stream_tasks[attr] = asyncio.create_task(
+                self._async_run_stream(attr, method),
+                name=f"polestar-{self.vehicle.vin}-{attr}-stream",
+            )
 
     async def async_shutdown(self) -> None:
         """Cancel any running stream tasks."""
@@ -330,6 +366,7 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         if self._stream_tasks:
             await asyncio.gather(*self._stream_tasks.values(), return_exceptions=True)
         self._stream_tasks.clear()
+        self._unsupported_streams.clear()
 
     async def _async_run_stream(
         self,
@@ -353,6 +390,7 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
             except GRPCError as err:
                 if err.status == GrpcStatus.UNIMPLEMENTED:
                     _LOGGER.debug("Live %s stream not supported for %s, stopping", attr, self.vehicle.vin)
+                    self._unsupported_streams.add(attr)
                     return
                 consecutive_failures += 1
                 delay = self._stream_retry_delay(attr, consecutive_failures, err)
@@ -504,6 +542,7 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         await self.async_run_command(
             self.vehicle.start_precleaning,
             error_message="Start pre-cleaning command failed",
+            capability="precleaning",
         )
         self._schedule_background_refresh("precleaning")
 
@@ -512,6 +551,7 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         await self.async_run_command(
             self.vehicle.stop_precleaning,
             error_message="Stop pre-cleaning command failed",
+            capability="precleaning",
         )
         self._schedule_background_refresh("precleaning")
 
@@ -520,6 +560,7 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         response = await self.async_run_command(
             self.vehicle.start_charging,
             error_message="Start charging command failed",
+            capability="charging",
         )
         self._schedule_background_refresh("battery")
         return response
@@ -529,6 +570,7 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         response = await self.async_run_command(
             self.vehicle.stop_charging,
             error_message="Stop charging command failed",
+            capability="charging",
         )
         self._schedule_background_refresh("battery")
         return response
@@ -538,6 +580,7 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         response = await self.async_run_command(
             self.vehicle.open_windows,
             error_message="Open windows command failed",
+            capability="open_windows",
         )
         self._schedule_background_refresh("exterior")
         return response
@@ -547,6 +590,7 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         response = await self.async_run_command(
             self.vehicle.close_windows,
             error_message="Close windows command failed",
+            capability="close_windows",
         )
         self._schedule_background_refresh("exterior")
         return response
@@ -556,6 +600,7 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         response = await self.async_run_command(
             self.vehicle.unlock_trunk,
             error_message="Unlock trunk command failed",
+            capability="unlock_trunk",
         )
         self._schedule_background_refresh("exterior")
         return response

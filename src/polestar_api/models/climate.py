@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from enum import IntEnum
 
 from ..wire import ProtoMessage
+from ..models.climatization import HeatingIntensity
 
 
 class ClimatizationRunningStatus(IntEnum):
@@ -52,6 +53,13 @@ class ClimatizationInfo(ProtoMessage, schema={
     request_type: ClimatizationRequestType = ClimatizationRequestType.UNDEFINED
     time_remaining: int = 0
     heat_or_cool_action: HeatOrCoolAction = HeatOrCoolAction.UNDEFINED
+    current_temperature_celsius: float | None = None
+    target_temperature_celsius: float | None = None
+    front_left_seat: HeatingIntensity | None = None
+    front_right_seat: HeatingIntensity | None = None
+    rear_left_seat: HeatingIntensity | None = None
+    rear_right_seat: HeatingIntensity | None = None
+    steering_wheel: HeatingIntensity | None = None
 
     @property
     def is_active(self) -> bool:

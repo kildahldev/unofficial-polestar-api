@@ -16,7 +16,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import DOMAIN
 from .coordinator import PolestarCoordinator, PolestarVehicleData
-from .entity import PolestarEntity
+from .entity import OptimisticStateMixin, PolestarEntity
 from polestar_api.models.charging import ChargeTargetLevelSettingType
 from polestar_api.models.parking_climate_timer import ParkingClimateTimerSettings
 
@@ -63,7 +63,11 @@ NUMBERS: tuple[PolestarNumberDescription, ...] = (
         native_min_value=0,
         native_max_value=30,
         native_step=0.5,
-        value_fn=lambda c: c.climate_preferences.target_temperature,
+        value_fn=lambda c: (
+            c.data.climate.target_temperature_celsius
+            if c.data and c.data.climate and c.data.climate.target_temperature_celsius is not None
+            else c.climate_preferences.target_temperature
+        ),
         set_fn=lambda c, val: None,
         restore_state=True,
     ),
@@ -85,7 +89,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class PolestarNumber(PolestarEntity, RestoreEntity, NumberEntity):
+class PolestarNumber(OptimisticStateMixin, PolestarEntity, RestoreEntity, NumberEntity):
     """Polestar number entity."""
 
     entity_description: PolestarNumberDescription
@@ -126,22 +130,28 @@ class PolestarNumber(PolestarEntity, RestoreEntity, NumberEntity):
     @property
     def native_value(self) -> float | None:
         try:
-            return self.entity_description.value_fn(self.coordinator)
+            real_value = self.entity_description.value_fn(self.coordinator)
         except (AttributeError, TypeError):
             return None
+        return self._resolve_optimistic(real_value)
 
     async def async_set_native_value(self, value: float) -> None:
         if self.entity_description.key == "climate_target_temperature":
             self.coordinator.climate_preferences.target_temperature = value
-            self.async_write_ha_state()
+            self._set_optimistic(value)
             return
 
+        self._set_optimistic(value)
         result = self.entity_description.set_fn(self.coordinator, value)
         if result is not None:
-            await result
+            try:
+                await result
+            except Exception:
+                self._clear_optimistic()
+                raise
 
 
-class PolestarTimerTemperatureNumber(PolestarEntity, NumberEntity):
+class PolestarTimerTemperatureNumber(OptimisticStateMixin, PolestarEntity, NumberEntity):
     """API-backed number entity for parking climate timer target temperature."""
 
     _attr_name = "Timer target temperature"
@@ -172,11 +182,16 @@ class PolestarTimerTemperatureNumber(PolestarEntity, NumberEntity):
         settings = self._settings
         if settings is None:
             return None
-        return settings.temperature_celsius
+        return self._resolve_optimistic(settings.temperature_celsius)
 
     async def async_set_native_value(self, value: float) -> None:
         settings = self._settings
         if settings is None:
             return
         updated = replace(settings, temperature_celsius=value, is_temperature_requested=True)
-        await self.coordinator.async_set_climate_timer_settings(updated)
+        self._set_optimistic(value)
+        try:
+            await self.coordinator.async_set_climate_timer_settings(updated)
+        except Exception:
+            self._clear_optimistic()
+            raise

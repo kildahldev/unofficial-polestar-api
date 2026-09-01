@@ -22,6 +22,7 @@ class PolestarButtonDescription(ButtonEntityDescription):
     """Button description with press callable."""
 
     press_fn: Callable[[PolestarButton], Awaitable[Any]]
+    capability: str | None = None
 
 
 BUTTONS: tuple[PolestarButtonDescription, ...] = (
@@ -32,7 +33,9 @@ BUTTONS: tuple[PolestarButtonDescription, ...] = (
         press_fn=lambda button: button.coordinator.async_run_command(
             lambda: button._vehicle.honk_flash(action=HonkFlashAction.FLASH),
             error_message="Flash lights command failed",
+            capability="flash",
         ),
+        capability="flash",
     ),
     PolestarButtonDescription(
         key="honk",
@@ -41,7 +44,9 @@ BUTTONS: tuple[PolestarButtonDescription, ...] = (
         press_fn=lambda button: button.coordinator.async_run_command(
             lambda: button._vehicle.honk_flash(action=HonkFlashAction.HONK),
             error_message="Honk command failed",
+            capability="honk",
         ),
+        capability="honk",
     ),
     PolestarButtonDescription(
         key="honk_flash",
@@ -50,7 +55,9 @@ BUTTONS: tuple[PolestarButtonDescription, ...] = (
         press_fn=lambda button: button.coordinator.async_run_command(
             lambda: button._vehicle.honk_flash(action=HonkFlashAction.HONK_AND_FLASH),
             error_message="Honk and flash command failed",
+            capability="honk_flash",
         ),
+        capability="honk_flash",
     ),
     PolestarButtonDescription(
         key="wakeup",
@@ -63,18 +70,21 @@ BUTTONS: tuple[PolestarButtonDescription, ...] = (
         name="Open windows",
         icon="mdi:window-open",
         press_fn=lambda button: button.coordinator.async_open_windows(),
+        capability="open_windows",
     ),
     PolestarButtonDescription(
         key="close_windows",
         name="Close windows",
         icon="mdi:window-closed",
         press_fn=lambda button: button.coordinator.async_close_windows(),
+        capability="close_windows",
     ),
     PolestarButtonDescription(
         key="unlock_trunk",
         name="Unlock trunk",
         icon="mdi:car-back",
         press_fn=lambda button: button.coordinator.async_unlock_trunk(),
+        capability="unlock_trunk",
     ),
 )
 
@@ -102,6 +112,14 @@ class PolestarButton(PolestarEntity, ButtonEntity):
         super().__init__(coordinator)
         self.entity_description = description
         self._attr_unique_id = f"{self._vehicle.vin}_{description.key}"
+
+    @property
+    def available(self) -> bool:
+        """Return False if the car doesn't support this command."""
+        cap = self.entity_description.capability
+        if cap and not self.coordinator.is_command_supported(cap):
+            return False
+        return super().available
 
     async def async_press(self) -> None:
         await self.entity_description.press_fn(self)
