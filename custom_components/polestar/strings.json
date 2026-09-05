@@ -57,5 +57,14 @@
       "already_configured": "This vehicle is already configured",
       "reauth_successful": "Re-authentication successful"
     }
+  },
+  "entity": {
+    "sensor": {
+      "software_state": {
+        "state": {
+          "no_update_available": "No update available"
+        }
+      }
+    }
   }
 }
