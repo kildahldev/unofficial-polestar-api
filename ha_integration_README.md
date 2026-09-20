@@ -16,6 +16,15 @@ Then add the integration via **Settings → Devices & Services → Add Integrati
 - **Secondary / guest accounts** (no vehicles listed): choose **"My vehicle is not listed"** and enter the VIN (Vehicle Identification Number) manually.
 - **Demo mode:** tick **Demo mode** on the first step and enter any VIN to get a fake vehicle with static data (no API connection needed).
 
+## Changing your Polestar email or password
+
+If your Polestar ID password (or email) changes, you don't need to remove and re-add the integration. The existing entry is kept, so all entities, history and dashboards carry over.
+
+- **Sign-in stops working:** Home Assistant prompts you to re-authenticate. Enter the current password, and update the email too if it changed.
+- **Change it proactively:** open the integration under **Settings → Devices & Services → Polestar**, click **⋮** on the vehicle entry and choose **Reconfigure**.
+
+The new credentials are checked before they are saved, and the account must have access to the same vehicle (VIN) as the entry it replaces. Guest / secondary accounts, which don't list any vehicles, are accepted.
+
 ## Entities
 
 Each vehicle gets ~106 entities when all features are available:

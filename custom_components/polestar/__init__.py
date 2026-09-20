@@ -32,7 +32,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     password = entry.data[CONF_PASSWORD]
     configured_vin = entry.data[CONF_VIN]
 
-    token_store = HassTokenStore(hass, entry.entry_id)
+    token_store = HassTokenStore(hass, entry.entry_id, email)
     api = PolestarApi(email, password, token_store=token_store)
 
     try:

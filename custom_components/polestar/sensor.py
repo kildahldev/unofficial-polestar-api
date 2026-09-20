@@ -413,15 +413,43 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         key="software_version",
         name="Software version",
         icon="mdi:update",
-        value_fn=lambda d: d.software.new_sw_version if d.software else None,
+        # OTA discovery (d.software) only reports a *pending* update and
+        # comes back empty when nothing is queued — it can't say what's
+        # currently installed on a car that's already up to date. MyCars
+        # (d.mycars) always reports the installed version regardless.
+        # Prefer OTA's value when present (it may reflect an in-progress
+        # install's target version), fall back to MyCars otherwise.
+        value_fn=lambda d: (d.software.new_sw_version if d.software else None)
+        or (d.mycars.details.installed_software_version if d.mycars and d.mycars.details else None),
+    ),
+    PolestarSensorDescription(
+        key="model_year",
+        name="Model year",
+        icon="mdi:calendar",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d: d.mycars.details.model_year if d.mycars and d.mycars.details else None,
+    ),
+    PolestarSensorDescription(
+        key="market",
+        name="Market",
+        icon="mdi:earth",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d: d.mycars.details.market if d.mycars and d.mycars.details else None,
     ),
     PolestarSensorDescription(
         key="software_state",
         name="Software state",
+        translation_key="software_state",
         device_class=SensorDeviceClass.ENUM,
         entity_category=EntityCategory.DIAGNOSTIC,
-        options=enum_options(SoftwareState, exclude_unspecified=False),
-        value_fn=lambda d: enum_name(d.software.state, allow_unspecified=True) if d.software else None,
+        # d.software is None when OTA discovery has nothing pending (a
+        # normal, common state — see MyCars vs OTA discovery distinction
+        # in models/mycars.py) — surface that plainly instead of falling
+        # through to HA's generic "Unknown" for a bare None value, which
+        # is indistinguishable in the UI from the real SoftwareState.UNKNOWN
+        # enum member.
+        options=[*enum_options(SoftwareState, exclude_unspecified=False), "no_update_available"],
+        value_fn=lambda d: enum_name(d.software.state, allow_unspecified=True) if d.software else "no_update_available",
     ),
     PolestarSensorDescription(
         key="climate_running_status",
@@ -499,6 +527,7 @@ async def async_setup_entry(
     for coordinator in data["coordinators"].values():
         for desc in SENSORS:
             entities.append(PolestarSensor(coordinator, desc))
+        entities.append(PolestarRegistrationNumberSensor(coordinator))
     async_add_entities(entities)
 
 
@@ -523,3 +552,27 @@ class PolestarSensor(PolestarEntity, SensorEntity):
         if self.coordinator.data is None or self.entity_description.attrs_fn is None:
             return {}
         return self.entity_description.attrs_fn(self.coordinator.data)
+
+
+class PolestarRegistrationNumberSensor(PolestarEntity, SensorEntity):
+    """Registration number sensor.
+
+    Unlike every other sensor in this file, this isn't polled data — it
+    comes from vehicle.registration_no, fetched once via the app-backend
+    GraphQL GetVDMSCars query during initial setup (see discovery.py) and
+    already used to build the device's display name. Exposed here as its
+    own sensor since it's real, working data that just wasn't surfaced as
+    an entity before.
+    """
+
+    _attr_icon = "mdi:card-account-details"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_name = "Registration number"
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{self._vehicle.vin}_registration_number"
+
+    @property
+    def native_value(self) -> str | None:
+        return self._vehicle.registration_no

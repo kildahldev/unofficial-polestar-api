@@ -9,7 +9,6 @@ from typing import Any
 from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
@@ -55,7 +54,6 @@ SWITCHES: tuple[PolestarSwitchDescription, ...] = (
         key="charge_timer",
         name="Charge timer",
         icon="mdi:clock-outline",
-        entity_category=EntityCategory.CONFIG,
         is_on_fn=lambda d: d.charge_timer.timer.activated if d.charge_timer and d.charge_timer.timer else None,
         turn_on_fn=lambda c: c.async_set_charge_timer(activated=True),
         turn_off_fn=lambda c: c.async_set_charge_timer(activated=False),

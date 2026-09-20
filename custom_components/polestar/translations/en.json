@@ -43,19 +43,40 @@
       },
       "reauth_confirm": {
         "title": "Re-authenticate with Polestar",
-        "description": "Your session has expired. Please enter your password to reconnect.",
+        "description": "Your Polestar sign-in is no longer valid. Enter your current password. If the email address of your Polestar ID has changed, update it too.",
         "data": {
+          "email": "Email",
+          "password": "Password"
+        }
+      },
+      "reconfigure": {
+        "title": "Change Polestar account",
+        "description": "Update the email and/or password used to sign in to Polestar. The vehicle, its entities and their history are kept, so the new account must have access to the same vehicle.",
+        "data": {
+          "email": "Email",
           "password": "Password"
         }
       }
     },
     "error": {
       "invalid_auth": "Invalid email or password",
-      "cannot_connect": "Could not connect to Polestar"
+      "cannot_connect": "Could not connect to Polestar",
+      "vin_mismatch": "This account does not have access to the vehicle configured for this entry"
     },
     "abort": {
       "already_configured": "This vehicle is already configured",
-      "reauth_successful": "Re-authentication successful"
+      "reauth_successful": "Re-authentication successful",
+      "reconfigure_successful": "Polestar account updated",
+      "demo_mode": "Demo entries have no account to change"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "software_state": {
+        "state": {
+          "no_update_available": "No update available"
+        }
+      }
     }
   }
 }
