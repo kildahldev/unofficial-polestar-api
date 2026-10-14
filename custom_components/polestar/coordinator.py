@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 from grpclib.const import Status as GrpcStatus
 from grpclib.exceptions import GRPCError
+from homeassistant.core import callback
 from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -300,7 +301,20 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         data = replace(previous, **values)
         if "software" in values:
             self._update_installed_version_cache(data.software)
-        self.async_set_updated_data(data)
+        self._async_push_data(data)
+
+    @callback
+    def _async_push_data(self, data: PolestarVehicleData) -> None:
+        """Publish a partial update without resetting the poll timer.
+
+        async_set_updated_data() reschedules the next full refresh. Live
+        streams push roughly every minute, so using it here starves the
+        full poll, and attrs that are only polled (target SOC, amp limit,
+        charge timers, ...) never refresh until the integration reloads.
+        """
+        self.data = data
+        self.last_update_success = True
+        self.async_update_listeners()
 
     async def async_start_streams(self) -> None:
         """Start background stream tasks for live battery/location/exterior/climate updates."""
@@ -344,7 +358,7 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
                     consecutive_failures = 0
                     current = self.data or PolestarVehicleData()
                     merged_value = self._merge_partial_update(attr, getattr(current, attr), value)
-                    self.async_set_updated_data(replace(current, **{attr: merged_value}))
+                    self._async_push_data(replace(current, **{attr: merged_value}))
             except asyncio.CancelledError:
                 raise
             except (AuthError, TokenExpiredError) as err:
