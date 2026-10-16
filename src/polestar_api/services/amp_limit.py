@@ -8,6 +8,12 @@ from typing import TYPE_CHECKING
 from .. import grpc as grpc_call
 from ..codec import decode, encode
 from ..models.charging import AmpLimitResponse
+from ..models.common import (
+    CHRONOS_SUCCESS_STATES,
+    ChronosStatus,
+    ResponseStatus,
+    ResponseStatusCode,
+)
 from .chronos import wrap_chronos
 
 if TYPE_CHECKING:
@@ -61,4 +67,22 @@ class AmpLimitServiceClient:
             self._connection.channel, f"{self._svc}/SetAmpLimit",
             wrap_chronos(self._vin, payload), metadata=metadata,
         )
-        return self._parse(data)
+        # SetAmpLimit returns a flat delivery acknowledgement, unlike GetAmpLimit's
+        # nested amperage payload. Preserve the lifecycle code for callers.
+        status_code = decode(data).get(3, 0)
+        if not isinstance(status_code, int):
+            status_code = 0
+        try:
+            chronos_status = ChronosStatus(status_code)
+        except ValueError:
+            chronos_status = ChronosStatus.UNKNOWN_ERROR
+        return AmpLimitResponse(
+            response_status=ResponseStatus(
+                status=(
+                    ResponseStatusCode.SUCCESS
+                    if chronos_status in CHRONOS_SUCCESS_STATES
+                    else ResponseStatusCode.ERROR
+                ),
+                status_code=status_code,
+            ),
+        )
