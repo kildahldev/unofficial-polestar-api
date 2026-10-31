@@ -57,6 +57,7 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 _POST_COMMAND_REFRESH_DELAYS: tuple[int, ...] = (3, 5)
+_AVAILABILITY_REFRESH_SECONDS = 60
 _COMMAND_INVOCATION_SUCCESS = {
     InvocationStatus.SENT,
     InvocationStatus.DELIVERED,
@@ -302,6 +303,23 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
             self._update_installed_version_cache(data.software)
         self.async_set_updated_data(data)
 
+    async def _async_refresh_availability_loop(self) -> None:
+        """Refresh availability every minute: it has no stream and shows when the car is driving."""
+        while True:
+            await asyncio.sleep(_AVAILABILITY_REFRESH_SECONDS)
+            try:
+                values, successful_fetches = await self._async_fetch_values(
+                    ("availability",), self.data or PolestarVehicleData()
+                )
+                if successful_fetches:
+                    # Not async_set_updated_data: that restarts the poll interval.
+                    self.data = replace(self.data or PolestarVehicleData(), **values)
+                    self.async_update_listeners()
+            except asyncio.CancelledError:
+                raise
+            except Exception as err:  # noqa: BLE001
+                _LOGGER.debug("Availability refresh failed for %s: %s", self.vehicle.vin, err)
+
     async def async_start_streams(self) -> None:
         """Start background stream tasks for live battery/location/exterior/climate updates."""
         if self._stream_tasks:
@@ -322,6 +340,10 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
                     self._async_run_stream(attr, method),
                     name=f"polestar-{self.vehicle.vin}-{attr}-stream",
                 )
+        self._stream_tasks["availability"] = asyncio.create_task(
+            self._async_refresh_availability_loop(),
+            name=f"polestar-{self.vehicle.vin}-availability-refresh",
+        )
 
     async def async_shutdown(self) -> None:
         """Cancel any running stream tasks."""
