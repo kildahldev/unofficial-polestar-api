@@ -249,10 +249,27 @@
         "name": "Altitude"
       },
       "availability_unavailable_reason": {
-        "name": "Unavailable reason"
+        "name": "Unavailable reason",
+        "state": {
+          "no_internet": "No internet",
+          "power_saving_mode": "Power saving mode",
+          "car_in_use": "Car in use",
+          "ota_installation_in_progress": "OTA installation in progress",
+          "stolen_vehicle_tracking_in_progress": "Stolen vehicle tracking in progress",
+          "service_mode_active": "Service mode active"
+        }
       },
       "availability_usage_mode": {
-        "name": "Usage mode"
+        "name": "Usage mode",
+        "state": {
+          "abandoned": "Abandoned",
+          "inactive": "Inactive",
+          "convenience": "Convenience",
+          "active": "Active",
+          "driving": "Driving",
+          "engine_on": "Engine on",
+          "engine_off": "Engine off"
+        }
       },
       "avg_consumption": {
         "name": "Average consumption"
@@ -273,10 +290,22 @@
         "name": "Charge locations"
       },
       "charger_connection": {
-        "name": "Charger connection"
+        "name": "Charger connection",
+        "state": {
+          "connected": "Connected",
+          "disconnected": "Disconnected",
+          "fault": "Fault"
+        }
       },
       "charger_power_status": {
-        "name": "Charger power status"
+        "name": "Charger power status",
+        "state": {
+          "no_power": "No power",
+          "initializing": "Initializing",
+          "available_but_inactive": "Available but inactive",
+          "providing_power": "Providing power",
+          "fault": "Fault"
+        }
       },
       "charging_current": {
         "name": "Charging current"
@@ -285,19 +314,57 @@
         "name": "Charging power"
       },
       "charging_status": {
-        "name": "Charging status"
+        "name": "Charging status",
+        "state": {
+          "charging": "Charging",
+          "idle": "Idle",
+          "scheduled": "Scheduled",
+          "discharging": "Discharging",
+          "error": "Error",
+          "smart_charging": "Smart charging",
+          "done": "Done",
+          "smart_charging_paused": "Smart charging paused"
+        }
       },
       "charging_type": {
-        "name": "Charging type"
+        "name": "Charging type",
+        "state": {
+          "none": "None",
+          "ac": "AC",
+          "dc": "DC",
+          "wireless": "Wireless"
+        }
       },
       "charging_voltage": {
         "name": "Charging voltage"
       },
       "climate_request_type": {
-        "name": "Climate request type"
+        "name": "Climate request type",
+        "state": {
+          "undefined": "Undefined",
+          "no_request": "No request",
+          "timer": "Timer",
+          "now_from_hmi": "Now from car",
+          "now_from_remote": "Now from remote",
+          "precleaning_from_hmi": "Pre-cleaning from car",
+          "precleaning_from_remote": "Pre-cleaning from remote",
+          "heater_from_hmi": "Heater from car"
+        }
       },
       "climate_running_status": {
-        "name": "Climate running status"
+        "name": "Climate running status",
+        "state": {
+          "undefined": "Undefined",
+          "idle": "Idle",
+          "start_attempt": "Start attempt",
+          "start_after_delay": "Start after delay",
+          "external_power_only": "External power only",
+          "active": "Active",
+          "active_with_precleaning": "Active with pre-cleaning",
+          "precleaning_only": "Pre-cleaning only",
+          "heater_active": "Heater active",
+          "delete_timer": "Delete timer"
+        }
       },
       "climate_time_remaining": {
         "name": "Climate time remaining"
@@ -354,7 +421,24 @@
         "name": "Rear right tyre pressure"
       },
       "software_state": {
-        "name": "Software state"
+        "name": "Software state",
+        "state": {
+          "unknown": "Unknown",
+          "download_ready": "Download ready",
+          "download_started": "Download started",
+          "download_completed": "Download completed",
+          "download_failed": "Download failed",
+          "installation_initiated": "Installation initiated",
+          "installation_started": "Installation started",
+          "installation_aborted": "Installation aborted",
+          "installation_failed": "Installation failed",
+          "installation_completed": "Installation completed",
+          "installation_deferred": "Installation deferred",
+          "installation_failed_critical": "Installation failed critical",
+          "installation_scheduled": "Installation scheduled",
+          "installation_schedule_triggered": "Installation schedule triggered",
+          "installation_unknown": "Installation unknown"
+        }
       },
       "software_version": {
         "name": "Software version"
