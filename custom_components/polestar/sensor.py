@@ -178,7 +178,7 @@ class PolestarSensorDescription(SensorEntityDescription):
 SENSORS: tuple[PolestarSensorDescription, ...] = (
     PolestarSensorDescription(
         key="battery_level",
-        name="Battery level",
+        translation_key="battery_level",
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=PERCENTAGE,
@@ -186,7 +186,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="range",
-        name="Range",
+        translation_key="range",
         device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
@@ -194,7 +194,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="target_soc",
-        name="Target SOC",
+        translation_key="target_soc",
         icon="mdi:battery-charging-high",
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=PERCENTAGE,
@@ -203,7 +203,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="charging_power",
-        name="Charging power",
+        translation_key="charging_power",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfPower.WATT,
@@ -211,7 +211,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="charging_current",
-        name="Charging current",
+        translation_key="charging_current",
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
@@ -219,7 +219,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="charging_voltage",
-        name="Charging voltage",
+        translation_key="charging_voltage",
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
@@ -227,14 +227,14 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="time_to_full",
-        name="Time to full charge",
+        translation_key="time_to_full",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UnitOfTime.MINUTES,
         value_fn=lambda d: d.battery.time_to_full if d.battery else None,
     ),
     PolestarSensorDescription(
         key="time_to_target",
-        name="Time to target charge",
+        translation_key="time_to_target",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UnitOfTime.MINUTES,
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -242,7 +242,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="time_to_min_soc",
-        name="Time to minimum SoC",
+        translation_key="time_to_min_soc",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UnitOfTime.MINUTES,
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -251,7 +251,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     PolestarSensorDescription(
         key="charging_status",
         icon="mdi:power-plug-battery",
-        name="Charging status",
+        translation_key="charging_status",
         device_class=SensorDeviceClass.ENUM,
         options=enum_options(ChargingStatus),
         value_fn=lambda d: enum_name(d.battery.charging_status) if d.battery else None,
@@ -259,14 +259,14 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     PolestarSensorDescription(
         key="charger_connection",
         icon="mdi:ev-plug-type2",
-        name="Charger connection",
+        translation_key="charger_connection",
         device_class=SensorDeviceClass.ENUM,
         options=enum_options(ChargerConnectionStatus),
         value_fn=lambda d: enum_name(d.battery.charger_connection_status) if d.battery else None,
     ),
     PolestarSensorDescription(
         key="charging_type",
-        name="Charging type",
+        translation_key="charging_type",
         device_class=SensorDeviceClass.ENUM,
         entity_category=EntityCategory.DIAGNOSTIC,
         options=enum_options(ChargingType),
@@ -274,7 +274,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="charger_power_status",
-        name="Charger power status",
+        translation_key="charger_power_status",
         device_class=SensorDeviceClass.ENUM,
         entity_category=EntityCategory.DIAGNOSTIC,
         options=enum_options(ChargerPowerStatus),
@@ -283,7 +283,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     PolestarSensorDescription(
         key="avg_consumption",
         fetch_attr="avg_consumption",
-        name="Average consumption",
+        translation_key="avg_consumption",
         device_class=SensorDeviceClass.ENERGY_DISTANCE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfEnergyDistance.KILO_WATT_HOUR_PER_100_KM,
@@ -293,7 +293,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     PolestarSensorDescription(
         key="avg_consumption_auto",
         fetch_attr="avg_consumption_auto",
-        name="Average consumption (auto)",
+        translation_key="avg_consumption_auto",
         device_class=SensorDeviceClass.ENERGY_DISTANCE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfEnergyDistance.KILO_WATT_HOUR_PER_100_KM,
@@ -304,7 +304,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     PolestarSensorDescription(
         key="avg_consumption_since_charge",
         fetch_attr="avg_consumption_since_charge",
-        name="Average consumption since charge",
+        translation_key="avg_consumption_since_charge",
         device_class=SensorDeviceClass.ENERGY_DISTANCE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfEnergyDistance.KILO_WATT_HOUR_PER_100_KM,
@@ -314,7 +314,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="odometer",
-        name="Odometer",
+        translation_key="odometer",
         device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.TOTAL_INCREASING,
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
@@ -322,7 +322,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="trip_meter_manual",
-        name="Trip meter (manual)",
+        translation_key="trip_meter_manual",
         device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
@@ -330,7 +330,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="trip_meter_auto",
-        name="Trip meter (auto)",
+        translation_key="trip_meter_auto",
         device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
@@ -340,7 +340,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         key="heading",
         # The C3 location service sends only a position, so these stay 0 on it.
         required_data=_location_reports_motion,
-        name="Heading",
+        translation_key="heading",
         native_unit_of_measurement="°",
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d: d.location.heading if d.location else None,
@@ -349,7 +349,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         key="speed",
         # The C3 location service sends only a position, so these stay 0 on it.
         required_data=_location_reports_motion,
-        name="Speed",
+        translation_key="speed",
         device_class=SensorDeviceClass.SPEED,
         native_unit_of_measurement=UnitOfSpeed.KILOMETERS_PER_HOUR,
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -359,7 +359,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         key="altitude",
         # The C3 location service sends only a position, so these stay 0 on it.
         required_data=_location_reports_motion,
-        name="Altitude",
+        translation_key="altitude",
         device_class=SensorDeviceClass.DISTANCE,
         native_unit_of_measurement=UnitOfLength.METERS,
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -367,7 +367,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="distance_to_service",
-        name="Distance to service",
+        translation_key="distance_to_service",
         device_class=SensorDeviceClass.DISTANCE,
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
         icon="mdi:wrench-clock",
@@ -375,14 +375,14 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="days_to_service",
-        name="Days to service",
+        translation_key="days_to_service",
         native_unit_of_measurement="d",
         icon="mdi:wrench-clock",
         value_fn=lambda d: d.health.days_to_service if d.health else None,
     ),
     PolestarSensorDescription(
         key="engine_hours_to_service",
-        name="Engine hours to service",
+        translation_key="engine_hours_to_service",
         requires_combustion_engine=True,
         native_unit_of_measurement="h",
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -391,7 +391,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="outside_temperature",
-        name="Outside temperature",
+        translation_key="outside_temperature",
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
@@ -402,7 +402,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         key="fl_tyre_pressure",
         fetch_attr="tyre_pressure",
         icon="mdi:tire",
-        name="Front left tyre pressure",
+        translation_key="fl_tyre_pressure",
         device_class=SensorDeviceClass.PRESSURE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfPressure.KPA,
@@ -414,7 +414,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         key="fr_tyre_pressure",
         fetch_attr="tyre_pressure",
         icon="mdi:tire",
-        name="Front right tyre pressure",
+        translation_key="fr_tyre_pressure",
         device_class=SensorDeviceClass.PRESSURE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfPressure.KPA,
@@ -426,7 +426,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         key="rl_tyre_pressure",
         fetch_attr="tyre_pressure",
         icon="mdi:tire",
-        name="Rear left tyre pressure",
+        translation_key="rl_tyre_pressure",
         device_class=SensorDeviceClass.PRESSURE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfPressure.KPA,
@@ -438,7 +438,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         key="rr_tyre_pressure",
         fetch_attr="tyre_pressure",
         icon="mdi:tire",
-        name="Rear right tyre pressure",
+        translation_key="rr_tyre_pressure",
         device_class=SensorDeviceClass.PRESSURE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfPressure.KPA,
@@ -449,7 +449,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     PolestarSensorDescription(
         key="air_quality_index",
         fetch_attr="precleaning",
-        name="Air quality index",
+        translation_key="air_quality_index",
         device_class=SensorDeviceClass.AQI,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d: d.precleaning.measured_air_quality_index if d.precleaning else None,
@@ -457,7 +457,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     PolestarSensorDescription(
         key="pm25",
         fetch_attr="precleaning",
-        name="PM2.5",
+        translation_key="pm25",
         device_class=SensorDeviceClass.PM25,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement="µg/m³",
@@ -466,7 +466,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     PolestarSensorDescription(
         key="precleaning_runtime_left",
         fetch_attr="precleaning",
-        name="Pre-cleaning runtime left",
+        translation_key="precleaning_runtime_left",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UnitOfTime.MINUTES,
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -475,7 +475,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     PolestarSensorDescription(
         key="precleaning_start_reason",
         fetch_attr="precleaning",
-        name="Pre-cleaning start reason",
+        translation_key="precleaning_start_reason",
         device_class=SensorDeviceClass.ENUM,
         entity_category=EntityCategory.DIAGNOSTIC,
         options=enum_options(PreCleaningStartReason),
@@ -484,7 +484,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     PolestarSensorDescription(
         key="precleaning_error",
         fetch_attr="precleaning",
-        name="Pre-cleaning error",
+        translation_key="precleaning_error",
         device_class=SensorDeviceClass.ENUM,
         entity_category=EntityCategory.DIAGNOSTIC,
         options=enum_options(PreCleaningErrorType),
@@ -492,13 +492,13 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="software_version",
-        name="Software version",
+        translation_key="software_version",
         icon="mdi:update",
         value_fn=lambda d: d.software.new_sw_version if d.software else None,
     ),
     PolestarSensorDescription(
         key="software_state",
-        name="Software state",
+        translation_key="software_state",
         device_class=SensorDeviceClass.ENUM,
         entity_category=EntityCategory.DIAGNOSTIC,
         options=enum_options(SoftwareState, exclude_unspecified=False),
@@ -507,14 +507,14 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     PolestarSensorDescription(
         key="climate_running_status",
         icon="mdi:air-conditioner",
-        name="Climate running status",
+        translation_key="climate_running_status",
         device_class=SensorDeviceClass.ENUM,
         options=enum_options(ClimatizationRunningStatus, exclude_unspecified=False),
         value_fn=lambda d: enum_name(d.climate.running_status, allow_unspecified=True) if d.climate else None,
     ),
     PolestarSensorDescription(
         key="climate_request_type",
-        name="Climate request type",
+        translation_key="climate_request_type",
         device_class=SensorDeviceClass.ENUM,
         entity_category=EntityCategory.DIAGNOSTIC,
         options=enum_options(ClimatizationRequestType, exclude_unspecified=False),
@@ -522,7 +522,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="climate_time_remaining",
-        name="Climate time remaining",
+        translation_key="climate_time_remaining",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UnitOfTime.MINUTES,
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -530,14 +530,14 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="climate_ends_at",
-        name="Climate ends at",
+        translation_key="climate_ends_at",
         device_class=SensorDeviceClass.TIMESTAMP,
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d: _timestamp_or_none(climate_end_time(d.climate)),
     ),
     PolestarSensorDescription(
         key="climate_current_temperature",
-        name="Climate current temperature",
+        translation_key="climate_current_temperature",
         device_class=SensorDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         state_class=SensorStateClass.MEASUREMENT,
@@ -545,7 +545,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="climate_target_temperature",
-        name="Climate target temperature",
+        translation_key="climate_target_temperature",
         device_class=SensorDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         state_class=SensorStateClass.MEASUREMENT,
@@ -553,7 +553,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="climate_front_left_seat",
-        name="Climate front left seat",
+        translation_key="climate_front_left_seat",
         device_class=SensorDeviceClass.ENUM,
         options=["off", "level1", "level2", "level3"],
         icon="mdi:car-seat-heater",
@@ -561,7 +561,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="climate_front_right_seat",
-        name="Climate front right seat",
+        translation_key="climate_front_right_seat",
         device_class=SensorDeviceClass.ENUM,
         options=["off", "level1", "level2", "level3"],
         icon="mdi:car-seat-heater",
@@ -570,7 +570,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     PolestarSensorDescription(
         key="climate_rear_left_seat",
         fetch_attr="rear_seat_heating",
-        name="Climate rear left seat",
+        translation_key="climate_rear_left_seat",
         device_class=SensorDeviceClass.ENUM,
         options=["off", "level1", "level2", "level3"],
         icon="mdi:car-seat-heater",
@@ -579,7 +579,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     PolestarSensorDescription(
         key="climate_rear_right_seat",
         fetch_attr="rear_seat_heating",
-        name="Climate rear right seat",
+        translation_key="climate_rear_right_seat",
         device_class=SensorDeviceClass.ENUM,
         options=["off", "level1", "level2", "level3"],
         icon="mdi:car-seat-heater",
@@ -587,7 +587,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="climate_steering_wheel",
-        name="Climate steering wheel",
+        translation_key="climate_steering_wheel",
         device_class=SensorDeviceClass.ENUM,
         options=["off", "level1", "level2", "level3"],
         icon="mdi:steering",
@@ -595,7 +595,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="availability_unavailable_reason",
-        name="Unavailable reason",
+        translation_key="availability_unavailable_reason",
         device_class=SensorDeviceClass.ENUM,
         entity_category=EntityCategory.DIAGNOSTIC,
         options=enum_options(UnavailableReason),
@@ -603,7 +603,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="availability_usage_mode",
-        name="Usage mode",
+        translation_key="availability_usage_mode",
         device_class=SensorDeviceClass.ENUM,
         entity_category=EntityCategory.DIAGNOSTIC,
         options=enum_options(UsageMode),
@@ -612,7 +612,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     PolestarSensorDescription(
         key="charge_locations",
         fetch_attr="charge_locations",
-        name="Charge locations",
+        translation_key="charge_locations",
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d: len(d.charge_locations) if d.charge_locations is not None else None,
@@ -621,7 +621,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     PolestarSensorDescription(
         key="current_charge_location",
         fetch_attr="current_charge_location",
-        name="Current charge location",
+        translation_key="current_charge_location",
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=_current_charge_location_state,
         attrs_fn=_current_charge_location_attrs,
@@ -680,7 +680,7 @@ class PolestarSensor(PolestarEntity, SensorEntity):
 class PolestarVinSensor(PolestarEntity, SensorEntity):
     """The VIN, with the registration plate (if known) as an attribute."""
 
-    _attr_name = "VIN"
+    _attr_translation_key = "vin"
     _attr_icon = "mdi:card-account-details-outline"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
@@ -712,7 +712,7 @@ class PolestarVinSensor(PolestarEntity, SensorEntity):
 class PolestarBatteryCapacitySensor(PolestarEntity, SensorEntity):
     """Battery capacity as the car reports it (gross, from the C3 car-information service)."""
 
-    _attr_name = "Battery Capacity"
+    _attr_translation_key = "battery_capacity"
     _attr_device_class = SensorDeviceClass.ENERGY_STORAGE
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
     _attr_entity_category = EntityCategory.DIAGNOSTIC
@@ -729,7 +729,7 @@ class PolestarBatteryCapacitySensor(PolestarEntity, SensorEntity):
 class PolestarInternetActivationSensor(PolestarEntity, SensorEntity):
     """The car's mobile-network activation status (``acceptance_not_needed``, ...), read when the entry loads."""
 
-    _attr_name = "Internet Activation"
+    _attr_translation_key = "internet_activation"
     _attr_icon = "mdi:sim"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
@@ -756,7 +756,7 @@ class PolestarVehicleInfoSensor(PolestarEntity, SensorEntity):
     upgrade is applied). The VIN, prices, order numbers and addresses are not included.
     """
 
-    _attr_name = "Vehicle Info"
+    _attr_translation_key = "vehicle_info"
     _attr_icon = "mdi:text-box-search-outline"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_entity_registry_enabled_default = False

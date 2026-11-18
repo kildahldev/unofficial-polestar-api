@@ -151,7 +151,7 @@ def test_old_warning_entities_are_gone_and_removed_from_the_registry():
     for key in ("service_warning", "brake_fluid_warning", "washer_fluid_warning", "low_voltage_battery_warning"):
         assert f'key="{key}"' not in sensor_src
     assert 'key="is_locked"' not in binary_src
-    assert 'key="in_use"' in binary_src and 'name="Light status"' in binary_src
+    assert 'key="in_use"' in binary_src and 'translation_key="light_failure"' in binary_src
     init_src = (ROOT / "__init__.py").read_text()
     assert "_async_remove_replaced_entities(hass, vehicle.vin)" in init_src
 
