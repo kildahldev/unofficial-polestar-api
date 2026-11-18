@@ -21,6 +21,9 @@ PLATFORMS = [
 
 DEFAULT_UPDATE_INTERVAL = 600  # seconds
 CONF_UPDATE_INTERVAL = "update_interval"
+DEFAULT_ACTIVE_INTERVAL = 120  # seconds between full polls while charging, driving or climate running
+CONF_ACTIVE_INTERVAL = "active_interval"
+POST_TRIP_SECONDS = 300  # keep the active interval this long after driving stops
 STREAM_RETRY_DELAY = 30  # seconds (initial, doubles each retry)
 STREAM_MIN_RESUBSCRIBE_INTERVAL = 30  # seconds between subscribes after a clean close
 STREAM_MAX_RETRIES = 10
