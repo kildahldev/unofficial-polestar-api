@@ -177,6 +177,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=PERCENTAGE,
+        suggested_display_precision=0,
         value_fn=lambda d: d.battery.charge_level if d.battery else None,
     ),
     PolestarSensorDescription(
@@ -185,6 +186,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
+        suggested_display_precision=0,
         value_fn=lambda d: d.battery.range_km if d.battery else None,
     ),
     PolestarSensorDescription(
@@ -201,6 +203,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+        suggested_display_precision=0,
         value_fn=lambda d: d.battery.current_amps if d.battery else None,
     ),
     PolestarSensorDescription(
@@ -209,6 +212,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+        suggested_display_precision=0,
         value_fn=lambda d: d.battery.voltage_volts if d.battery else None,
     ),
     PolestarSensorDescription(
@@ -216,6 +220,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         translation_key="time_to_full",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UnitOfTime.MINUTES,
+        suggested_display_precision=0,
         value_fn=lambda d: d.battery.time_to_full if d.battery else None,
     ),
     PolestarSensorDescription(
@@ -223,6 +228,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         translation_key="time_to_target",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UnitOfTime.MINUTES,
+        suggested_display_precision=0,
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d: d.battery.time_to_target if d.battery else None,
     ),
@@ -231,6 +237,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         translation_key="time_to_min_soc",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UnitOfTime.MINUTES,
+        suggested_display_precision=0,
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d: d.battery.time_to_min_soc if d.battery else None,
     ),
@@ -304,6 +311,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.TOTAL_INCREASING,
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
+        suggested_display_precision=0,
         value_fn=lambda d: d.odometer.odometer_km if d.odometer else None,
     ),
     PolestarSensorDescription(
@@ -312,6 +320,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
+        suggested_display_precision=0,
         value_fn=lambda d: (d.dashboard.dashboard_data.trip_meter_manual_km if d.dashboard and d.dashboard.dashboard_data else None) or (d.odometer.trip_meter_manual_km if d.odometer and d.odometer.trip_meter_manual_km else None),
     ),
     PolestarSensorDescription(
@@ -320,6 +329,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
+        suggested_display_precision=0,
         value_fn=lambda d: (d.dashboard.dashboard_data.trip_meter_auto_km if d.dashboard and d.dashboard.dashboard_data else None) or (d.odometer.trip_meter_automatic_km if d.odometer and d.odometer.trip_meter_automatic_km is not None else None),
     ),
     PolestarSensorDescription(
@@ -338,6 +348,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         translation_key="speed",
         device_class=SensorDeviceClass.SPEED,
         native_unit_of_measurement=UnitOfSpeed.KILOMETERS_PER_HOUR,
+        suggested_display_precision=0,
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d: d.location.speed if d.location else None,
     ),
@@ -348,6 +359,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         translation_key="altitude",
         device_class=SensorDeviceClass.DISTANCE,
         native_unit_of_measurement=UnitOfLength.METERS,
+        suggested_display_precision=0,
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d: d.location.altitude if d.location else None,
     ),
@@ -356,6 +368,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         translation_key="distance_to_service",
         device_class=SensorDeviceClass.DISTANCE,
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
+        suggested_display_precision=0,
         icon="mdi:wrench-clock",
         value_fn=lambda d: d.health.distance_to_service_km if d.health else None,
     ),
@@ -484,6 +497,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         translation_key="climate_time_remaining",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UnitOfTime.MINUTES,
+        suggested_display_precision=0,
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d: climate_minutes_remaining(d.climate, dt_util.utcnow().timestamp()),
     ),
