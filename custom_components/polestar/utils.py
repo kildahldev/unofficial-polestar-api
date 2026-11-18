@@ -207,3 +207,17 @@ def weather_attributes(weather: Any) -> dict[str, Any]:
         "report_time": datetime.fromtimestamp(millis / 1000, tz=dt_util.UTC).isoformat(),
         "source": "weather service",
     }
+
+
+def charge_timer_active(charge_timer: Any) -> bool | None:
+    """Whether the charge timer is on. A car with no timer set sends none: that is off, not unknown.
+
+    None (unknown) only when the car has not answered at all, so the switch never shows both
+    on and off buttons because of an unset timer.
+    """
+    if charge_timer is None:
+        return None
+    timer = getattr(charge_timer, "timer", None)
+    if timer is None:
+        return False
+    return bool(getattr(timer, "activated", False))

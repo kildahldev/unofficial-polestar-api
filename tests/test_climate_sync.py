@@ -71,3 +71,13 @@ def test_sensor_wiring():
     assert src.count("suggested_unit_of_measurement=UnitOfPressure.PSI") == 4
     assert "attrs_fn=lambda d: weather_attributes(d.weather)" in src
     assert "attrs_fn=lambda d: climate_attributes(d.climate)" in (ROOT / "switch.py").read_text()
+
+
+def test_charge_timer_switch_is_never_unknown_for_an_unset_timer(utils):
+    from types import SimpleNamespace as NS
+
+    assert utils.charge_timer_active(None) is None  # no answer yet
+    assert utils.charge_timer_active(NS(timer=None)) is False  # answered, no timer set
+    assert utils.charge_timer_active(NS(timer=NS(activated=False))) is False
+    assert utils.charge_timer_active(NS(timer=NS(activated=True))) is True
+    assert "is_on_fn=lambda d: charge_timer_active(d.charge_timer)" in (ROOT / "switch.py").read_text()
