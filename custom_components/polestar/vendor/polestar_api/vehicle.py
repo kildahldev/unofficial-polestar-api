@@ -115,6 +115,7 @@ class Vehicle:
         # From the C3 car-information service
         self.battery_capacity_kwh: float | None = None
         self.engine_type: str | None = None
+        self.fuel_tank_volume: int = 0
         self.drivetrain_type: str | None = None
         self.digital_key_type: str | None = None
         self.has_performance_software_upgrade: bool | None = None
@@ -189,6 +190,7 @@ class Vehicle:
                 if car.propulsion.battery_capacity_kwh > 0:
                     self.battery_capacity_kwh = round(car.propulsion.battery_capacity_kwh, 1)
                 self.engine_type = car.propulsion.engine_type.name.lower()
+                self.fuel_tank_volume = car.propulsion.fuel_tank_volume
                 self.drivetrain_type = car.propulsion.drivetrain_type.name.lower()
             if car.digital_key is not None:
                 self.digital_key_type = car.digital_key.type.name.lower()

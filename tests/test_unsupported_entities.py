@@ -243,10 +243,13 @@ async def test_other_errors_do_not_mark_fetch_unsupported(monkeypatch):
 
 
 class FakeEntity:
-    def __init__(self, unique_id: str, required_fetch: str | None, required_data=None) -> None:
+    def __init__(
+        self, unique_id: str, required_fetch: str | None, required_data=None, requires_combustion_engine=False
+    ) -> None:
         self.unique_id = unique_id
         self.required_fetch = required_fetch
         self.required_data = required_data
+        self.requires_combustion_engine = requires_combustion_engine
 
 
 def _entry(unique_id: str, disabled_by=None) -> SimpleNamespace:
@@ -635,3 +638,20 @@ def test_odometer_merge_rejects_a_lower_reading(monkeypatch):
 
     assert coordinator_module.PolestarCoordinator._merge_partial_update("odometer", previous, lower) is previous
     assert coordinator_module.PolestarCoordinator._merge_partial_update("odometer", previous, higher) is higher
+
+
+@pytest.mark.parametrize(
+    ("engine_type", "fuel_tank", "kept"),
+    [("electric", 0, False), ("petrol_hybrid", 0, True), ("diesel", 0, True), (None, 0, True), ("electric", 40, True)],
+)
+def test_combustion_only_entities_follow_the_powertrain(monkeypatch, engine_type, fuel_tank, kept):
+    registry = FakeRegistry({"sensor.hours": _entry("v_engine_hours")})
+    _, entity_module = _load(monkeypatch, registry)
+    vehicle = SimpleNamespace(engine_type=engine_type, fuel_tank_volume=fuel_tank)
+    coordinator = SimpleNamespace(is_fetch_supported=lambda attr: True, vehicle=vehicle)
+    entity = FakeEntity("v_engine_hours", None, requires_combustion_engine=True)
+
+    result = entity_module.async_filter_supported_entities(None, coordinator, "sensor", [entity])
+
+    assert (result == [entity]) is kept
+    assert registry.updates == ([] if kept else [("sensor.hours", RegistryEntryDisabler.INTEGRATION)])

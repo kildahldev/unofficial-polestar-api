@@ -179,6 +179,7 @@ class PolestarSensorDescription(SensorEntityDescription):
     attrs_fn: Callable[[PolestarVehicleData], dict[str, Any]] | None = None
     fetch_attr: str | None = None
     required_data: Callable[[PolestarVehicleData], bool] | None = None
+    requires_combustion_engine: bool = False
 
 
 SENSORS: tuple[PolestarSensorDescription, ...] = (
@@ -389,6 +390,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     PolestarSensorDescription(
         key="engine_hours_to_service",
         name="Engine hours to service",
+        requires_combustion_engine=True,
         native_unit_of_measurement="h",
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:engine",
@@ -697,6 +699,7 @@ class PolestarSensor(PolestarEntity, SensorEntity):
         self.entity_description = description
         self.required_fetch = description.fetch_attr
         self.required_data = description.required_data
+        self.requires_combustion_engine = description.requires_combustion_engine
         self._attr_unique_id = f"{self._vehicle.vin}_{description.key}"
 
     @property
