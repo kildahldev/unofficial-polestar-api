@@ -17,6 +17,7 @@ from homeassistant.const import (
     PERCENTAGE,
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
+    UnitOfEnergy,
     UnitOfEnergyDistance,
     UnitOfLength,
     UnitOfPower,
@@ -118,6 +119,19 @@ def _battery_capacity_kwh(model_name: str | None) -> float:
             if key in name:
                 return capacity
     return DEFAULT_BATTERY_CAPACITY_KWH
+
+
+def _vehicle_capacity_kwh(vehicle) -> float:
+    """The car's own battery capacity from C3 when it reports one, else the per-model table."""
+    reported = getattr(vehicle, "battery_capacity_kwh", None)
+    return reported if reported else _battery_capacity_kwh(vehicle.model_name)
+
+
+def _build_week(structure_week: str | None) -> str | None:
+    """``202611`` -> ``2026-W11`` (the production structure week); anything else is returned as is."""
+    if structure_week and len(structure_week) == 6 and structure_week.isdigit():
+        return f"{structure_week[:4]}-W{structure_week[4:]}"
+    return structure_week
 
 
 def _energy_needed_kwh(data: PolestarVehicleData, capacity_kwh: float) -> float | None:
@@ -664,7 +678,13 @@ async def async_setup_entry(
             for key, name, power_kw in CHARGING_TIME_TIERS
         )
         async_add_entities(async_filter_supported_entities(hass, coordinator, "sensor", entities))
-        async_add_entities([PolestarVinSensor(coordinator)])
+        info_entities: list[SensorEntity] = [PolestarVinSensor(coordinator), PolestarVehicleInfoSensor(coordinator)]
+        vehicle = coordinator.vehicle
+        if getattr(vehicle, "battery_capacity_kwh", None):
+            info_entities.append(PolestarBatteryCapacitySensor(coordinator))
+        if getattr(vehicle, "internet_activation", None):
+            info_entities.append(PolestarInternetActivationSensor(coordinator))
+        async_add_entities(info_entities)
 
 
 class PolestarSensor(PolestarEntity, SensorEntity):
@@ -711,10 +731,100 @@ class PolestarVinSensor(PolestarEntity, SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         v = self._vehicle
         plate = self.coordinator.config_entry.options.get(CONF_REGISTRATION_PLATE) or v.registration_no
-        attrs: dict[str, Any] = {"model": v.model_name, "model_year": v.model_year}
+        attrs: dict[str, Any] = {
+            "model": v.model_name,
+            "model_year": v.model_year,
+            "structure_week": v.structure_week,
+            "build_week": _build_week(v.structure_week),
+            "powertrain": v.engine_type,
+            "drivetrain": v.drivetrain_type,
+        }
         if plate:
             attrs["registration_plate"] = plate
         return {k: val for k, val in attrs.items() if val}
+
+
+class PolestarBatteryCapacitySensor(PolestarEntity, SensorEntity):
+    """Battery capacity as the car reports it (gross, from the C3 car-information service)."""
+
+    _attr_name = "Battery Capacity"
+    _attr_device_class = SensorDeviceClass.ENERGY_STORAGE
+    _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{self._vehicle.vin}_battery_capacity"
+
+    @property
+    def native_value(self) -> float | None:
+        return getattr(self._vehicle, "battery_capacity_kwh", None)
+
+
+class PolestarInternetActivationSensor(PolestarEntity, SensorEntity):
+    """The car's mobile-network activation status (``acceptance_not_needed``, ...), read when the entry loads."""
+
+    _attr_name = "Internet Activation"
+    _attr_icon = "mdi:sim"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{self._vehicle.vin}_internet_activation"
+
+    @property
+    def native_value(self) -> str | None:
+        info = getattr(self._vehicle, "internet_activation", None) or {}
+        status = info.get("status")
+        return status.lower() if status else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        info = getattr(self._vehicle, "internet_activation", None) or {}
+        return {"as_of": info["timestamp"]} if info.get("timestamp") else {}
+
+
+class PolestarVehicleInfoSensor(PolestarEntity, SensorEntity):
+    """Everything the app and C3 report about the car, as attributes. Disabled by default.
+
+    For testing on other cars and markets (for example whether the performance software
+    upgrade is applied). The VIN, prices, order numbers and addresses are not included.
+    """
+
+    _attr_name = "Vehicle Info"
+    _attr_icon = "mdi:text-box-search-outline"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
+    _unrecorded_attributes = frozenset({"app", "c3_capabilities", "order"})
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{self._vehicle.vin}_vehicle_info"
+
+    @property
+    def native_value(self) -> str:
+        return "ok"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        v = self._vehicle
+        return {
+            "app": {
+                "slug": v.slug,
+                "pno34": v.pno34,
+                "structure_week": v.structure_week,
+                "is_primary_driver": v.is_primary_driver,
+                "is_bst_edition": v.is_bst_edition,
+                "internet_activation": getattr(v, "internet_activation", None),
+            },
+            "order": getattr(v, "order_specification", None),
+            "c3_capabilities": getattr(v, "car_capabilities", None) or {},
+            "powertrain": v.engine_type,
+            "drivetrain": v.drivetrain_type,
+            "digital_key_type": v.digital_key_type,
+            "has_performance_software_upgrade": v.has_performance_software_upgrade,
+            "supports_engine_start": v.supports_engine_start,
+        }
 
 
 class PolestarChargingTimeSensor(PolestarEntity, SensorEntity):
@@ -741,7 +851,7 @@ class PolestarChargingTimeSensor(PolestarEntity, SensorEntity):
     def native_value(self) -> StateType | None:
         if self.coordinator.data is None:
             return None
-        capacity_kwh = _battery_capacity_kwh(self._vehicle.model_name)
+        capacity_kwh = _vehicle_capacity_kwh(self._vehicle)
         energy_kwh = _safe(lambda d: _energy_needed_kwh(d, capacity_kwh), self.coordinator.data)
         if energy_kwh is None:
             return None
@@ -751,5 +861,5 @@ class PolestarChargingTimeSensor(PolestarEntity, SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         return {
             "assumed_power_kw": self._power_kw,
-            "assumed_battery_capacity_kwh": _battery_capacity_kwh(self._vehicle.model_name),
+            "assumed_battery_capacity_kwh": _vehicle_capacity_kwh(self._vehicle),
         }

@@ -19,3 +19,13 @@ def test_missing_or_malformed_data_gives_empty_result():
     assert _extract_car_information_by_vins({}) == {}
     assert _extract_car_information_by_vins({"data": {"cars": None}}) == {}
     assert _extract_car_information_by_vins({"data": {"cars": {"carInformationByVins": ["x", {"vin": ""}]}}}) == {}
+
+
+def test_by_vins_also_returns_build_data():
+    data = {"data": {"cars": {"carInformationByVins": [
+        {"vin": "V1", "registrationNumber": "ABC123", "modelYear": "2026", "slug": "polestar-2",
+         "structureWeek": "202611", "pno34": "534X", "isPrimaryDriver": True, "isBstEdition": False},
+    ]}}}
+    info = _extract_car_information_by_vins(data)["V1"]
+    assert (info.slug, info.structure_week, info.pno34) == ("polestar-2", "202611", "534X")
+    assert info.is_primary_driver is True and info.is_bst_edition is False
