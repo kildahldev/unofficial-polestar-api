@@ -743,7 +743,7 @@ class PolestarVinSensor(PolestarEntity, SensorEntity):
         plate = self.coordinator.config_entry.options.get(CONF_REGISTRATION_PLATE) or v.registration_no
         attrs: dict[str, Any] = {
             "model": v.model_name,
-            "model_year": v.model_year,
+            "model_year": str(v.model_year) if v.model_year else None,  # text, so no thousands separator
             "structure_week": v.structure_week,
             "build_week": _build_week(v.structure_week),
             "powertrain": v.engine_type,
