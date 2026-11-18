@@ -16,9 +16,11 @@ from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import DOMAIN
 from .coordinator import PolestarCoordinator, PolestarVehicleData
-from .entity import PolestarEntity
+from .entity import OptimisticStateMixin, PolestarEntity, async_filter_supported_entities
 from polestar_api.models.charging import ChargeTargetLevelSettingType
 from polestar_api.models.parking_climate_timer import ParkingClimateTimerSettings
+
+PARALLEL_UPDATES = 1
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -28,6 +30,7 @@ class PolestarNumberDescription(NumberEntityDescription):
     value_fn: Callable[[PolestarCoordinator], float | None]
     set_fn: Callable[[PolestarCoordinator, float], Awaitable[Any] | None]
     restore_state: bool = False
+    fetch_attr: str | None = None
 
 
 NUMBERS: tuple[PolestarNumberDescription, ...] = (
@@ -44,6 +47,7 @@ NUMBERS: tuple[PolestarNumberDescription, ...] = (
     ),
     PolestarNumberDescription(
         key="amp_limit",
+        fetch_attr="amp_limit",
         name="Charging amp limit",
         icon="mdi:current-ac",
         native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
@@ -63,7 +67,11 @@ NUMBERS: tuple[PolestarNumberDescription, ...] = (
         native_min_value=0,
         native_max_value=30,
         native_step=0.5,
-        value_fn=lambda c: c.climate_preferences.target_temperature,
+        value_fn=lambda c: (
+            c.data.climate.target_temperature_celsius
+            if c.data and c.data.climate and c.data.climate.target_temperature_celsius is not None
+            else c.climate_preferences.target_temperature
+        ),
         set_fn=lambda c, val: None,
         restore_state=True,
     ),
@@ -77,15 +85,15 @@ async def async_setup_entry(
 ) -> None:
     """Set up Polestar number entities."""
     data = hass.data[DOMAIN][entry.entry_id]
-    entities = []
     for coordinator in data["coordinators"].values():
+        entities = []
         for desc in NUMBERS:
             entities.append(PolestarNumber(coordinator, desc))
         entities.append(PolestarTimerTemperatureNumber(coordinator))
-    async_add_entities(entities)
+        async_add_entities(async_filter_supported_entities(hass, coordinator, "number", entities))
 
 
-class PolestarNumber(PolestarEntity, RestoreEntity, NumberEntity):
+class PolestarNumber(OptimisticStateMixin, PolestarEntity, RestoreEntity, NumberEntity):
     """Polestar number entity."""
 
     entity_description: PolestarNumberDescription
@@ -93,6 +101,7 @@ class PolestarNumber(PolestarEntity, RestoreEntity, NumberEntity):
     def __init__(self, coordinator: PolestarCoordinator, description: PolestarNumberDescription) -> None:
         super().__init__(coordinator)
         self.entity_description = description
+        self.required_fetch = description.fetch_attr
         self._attr_unique_id = f"{self._vehicle.vin}_{description.key}"
 
     async def async_added_to_hass(self) -> None:
@@ -126,22 +135,29 @@ class PolestarNumber(PolestarEntity, RestoreEntity, NumberEntity):
     @property
     def native_value(self) -> float | None:
         try:
-            return self.entity_description.value_fn(self.coordinator)
+            real_value = self.entity_description.value_fn(self.coordinator)
         except (AttributeError, TypeError):
             return None
+        return self._resolve_optimistic(real_value)
 
     async def async_set_native_value(self, value: float) -> None:
         if self.entity_description.key == "climate_target_temperature":
             self.coordinator.climate_preferences.target_temperature = value
-            self.async_write_ha_state()
+            self._set_optimistic(value)
+            await self.coordinator.async_update_running_climate("temperature")
             return
 
+        self._set_optimistic(value)
         result = self.entity_description.set_fn(self.coordinator, value)
         if result is not None:
-            await result
+            try:
+                await result
+            except Exception:
+                self._clear_optimistic()
+                raise
 
 
-class PolestarTimerTemperatureNumber(PolestarEntity, NumberEntity):
+class PolestarTimerTemperatureNumber(OptimisticStateMixin, PolestarEntity, NumberEntity):
     """API-backed number entity for parking climate timer target temperature."""
 
     _attr_name = "Timer target temperature"
@@ -152,6 +168,7 @@ class PolestarTimerTemperatureNumber(PolestarEntity, NumberEntity):
     _attr_native_min_value = 15.0
     _attr_native_max_value = 30.0
     _attr_native_step = 0.5
+    required_fetch = "climate_timer_settings"
 
     def __init__(self, coordinator: PolestarCoordinator) -> None:
         super().__init__(coordinator)
@@ -172,11 +189,16 @@ class PolestarTimerTemperatureNumber(PolestarEntity, NumberEntity):
         settings = self._settings
         if settings is None:
             return None
-        return settings.temperature_celsius
+        return self._resolve_optimistic(settings.temperature_celsius)
 
     async def async_set_native_value(self, value: float) -> None:
         settings = self._settings
         if settings is None:
             return
         updated = replace(settings, temperature_celsius=value, is_temperature_requested=True)
-        await self.coordinator.async_set_climate_timer_settings(updated)
+        self._set_optimistic(value)
+        try:
+            await self.coordinator.async_set_climate_timer_settings(updated)
+        except Exception:
+            self._clear_optimistic()
+            raise

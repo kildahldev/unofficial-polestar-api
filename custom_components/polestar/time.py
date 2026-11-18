@@ -13,7 +13,9 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import PolestarCoordinator
-from .entity import PolestarEntity
+from .entity import OptimisticStateMixin, PolestarEntity
+
+PARALLEL_UPDATES = 1
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -55,7 +57,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class PolestarChargeTimerTime(PolestarEntity, TimeEntity):
+class PolestarChargeTimerTime(OptimisticStateMixin, PolestarEntity, TimeEntity):
     """Time entity for charge timer start/stop configuration."""
 
     entity_description: PolestarTimeDescription
@@ -82,8 +84,13 @@ class PolestarChargeTimerTime(PolestarEntity, TimeEntity):
         daily = getattr(timer, self.entity_description.value_attr)
         if daily is None:
             return None
-        return dt_time(hour=daily.hour, minute=daily.minute)
+        return self._resolve_optimistic(dt_time(hour=daily.hour, minute=daily.minute))
 
     async def async_set_value(self, value: dt_time) -> None:
         kwargs = {"start": value} if self.entity_description.value_attr == "start" else {"stop": value}
-        await self.coordinator.async_set_charge_timer(**kwargs)
+        self._set_optimistic(value)
+        try:
+            await self.coordinator.async_set_charge_timer(**kwargs)
+        except Exception:
+            self._clear_optimistic()
+            raise

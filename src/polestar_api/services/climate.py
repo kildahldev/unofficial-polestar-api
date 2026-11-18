@@ -13,6 +13,7 @@ from ..models.climate import (
     ClimatizationRunningStatus,
     HeatOrCoolAction,
 )
+from ..models.climatization import HeatingIntensity
 from ..models.common import VehicleRequest
 
 if TYPE_CHECKING:
@@ -52,6 +53,23 @@ class ClimateServiceClient:
         return mapping.get(value, ClimatizationRequestType.UNDEFINED)
 
     @staticmethod
+    def _map_seat_heating(value: int | None) -> HeatingIntensity | None:
+        if value is None:
+            return None
+        try:
+            return HeatingIntensity(value)
+        except ValueError:
+            return None
+
+    @staticmethod
+    def _timestamp_seconds(value) -> int | None:
+        """Seconds since the epoch from a Timestamp message, or ``None`` when it is absent."""
+        if not isinstance(value, bytes):
+            return None
+        seconds = decode(value).get(1)
+        return int(seconds) if isinstance(seconds, int) and seconds > 0 else None
+
+    @staticmethod
     def _infer_heat_or_cool_action(raw: dict) -> HeatOrCoolAction:
         if raw.get(6):
             return HeatOrCoolAction.VENTILATION_ONLY
@@ -69,11 +87,25 @@ class ClimateServiceClient:
     @classmethod
     def _parse_digital_twin(cls, climate_bytes: bytes) -> ClimatizationInfo:
         raw = decode(climate_bytes)
+        current_temp = raw.get(7)
+        target_temp = raw.get(8)
         return ClimatizationInfo(
             running_status=cls._map_running_status(raw.get(2)),
             request_type=cls._map_request_type(raw.get(15)),
             time_remaining=int(raw.get(3, 0) or 0),
             heat_or_cool_action=cls._infer_heat_or_cool_action(raw),
+            current_temperature_celsius=float(current_temp) if isinstance(current_temp, (int, float)) else None,
+            target_temperature_celsius=float(target_temp) if isinstance(target_temp, (int, float)) else None,
+            front_left_seat=cls._map_seat_heating(raw.get(9)),
+            front_right_seat=cls._map_seat_heating(raw.get(10)),
+            # Wire order is front-left, front-right, rear-left, rear-right (not
+            # rear-right-then-rear-left) -- verified against a real car's
+            # per-seat heating state by ericyew/unofficial-polestar-api.
+            rear_left_seat=cls._map_seat_heating(raw.get(11)),
+            rear_right_seat=cls._map_seat_heating(raw.get(12)),
+            steering_wheel=cls._map_seat_heating(raw.get(13)),
+            started_at=cls._timestamp_seconds(raw.get(14)),
+            ending_at=cls._timestamp_seconds(raw.get(16)),
         )
 
     @classmethod

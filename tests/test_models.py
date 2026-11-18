@@ -156,6 +156,22 @@ class TestClimatizationInfo:
         assert restored.time_remaining == 15
         assert restored.is_active is True
 
+    def test_temperature_and_seat_fields_are_plain_attributes(self):
+        """These are set by ClimateServiceClient._parse_digital_twin, not wire-decoded here."""
+        from polestar_api.models.climatization import HeatingIntensity
+
+        info = ClimatizationInfo(
+            current_temperature_celsius=21.5,
+            target_temperature_celsius=22.0,
+            front_left_seat=HeatingIntensity.LEVEL1,
+            rear_right_seat=HeatingIntensity.LEVEL3,
+            started_at=1_700_000_000,
+            ending_at=1_700_000_600,
+        )
+        assert info.current_temperature_celsius == 21.5
+        assert info.rear_right_seat == HeatingIntensity.LEVEL3
+        assert info.ending_at == 1_700_000_600
+
 
 # -- Connectivity --
 
@@ -690,3 +706,59 @@ class TestPackedVarints:
         packed_data = encoded[pos:pos + length]
         result = decode_packed_varints(packed_data)
         assert result == values
+
+
+def test_health_decodes_tyre_status_and_reference_pressures():
+    from polestar_api.models.health import Health, TpmsSensorMeasurement, TpmsStatus, TyrePressureValueStatus, TyreStatus
+    from polestar_api.models.common import Timestamp
+
+    status = TyreStatus(
+        front_left_value_status=TyrePressureValueStatus.OK,
+        front_right_value_status=TyrePressureValueStatus.OK,
+        rear_left_value_status=TyrePressureValueStatus.UNVERIFIED,
+        rear_right_value_status=TyrePressureValueStatus.OK,
+        value_status_updated_at=Timestamp(seconds=1700000000),
+        sensor_measurement=TpmsSensorMeasurement.DIRECT,
+        system_status=TpmsStatus.OK,
+    )
+    health = Health(
+        front_left_tyre_pressure_kpa=250.0,
+        front_tyres_reference_pressure_kpa=260.0,
+        rear_tyres_reference_pressure_kpa=270.0,
+        tyre_status=status,
+    )
+    decoded = Health.from_bytes(health.to_bytes())
+    assert decoded.front_tyres_reference_pressure_kpa == 260.0
+    assert decoded.rear_tyres_reference_pressure_kpa == 270.0
+    assert decoded.tyre_status.system_status is TpmsStatus.OK
+    assert decoded.tyre_status.sensor_measurement is TpmsSensorMeasurement.DIRECT
+    assert decoded.tyre_status.rear_left_value_status is TyrePressureValueStatus.UNVERIFIED
+    assert decoded.tyre_status.value_status_updated_at.seconds == 1700000000
+    assert decoded.tyre_status.all_values_ok is False
+
+
+def test_health_tyre_wire_order_matches_physical_wheels():
+    """Fields 39-42 are FR, RR, FL, RL (verified with distinct per-wheel pressures).
+
+    Credit: this ordering was empirically verified by Hugo Venter
+    (hugo-nz/unofficial-polestar-api) by setting each tyre to a distinct
+    pressure and matching the raw kPa fields against physical gauge
+    readings. See https://github.com/hugo-nz/unofficial-polestar-api.
+    """
+    import struct
+
+    from polestar_api.models.health import Health
+
+    def f32(field, value):
+        key, out = (field << 3) | 5, b""
+        while key > 0x7F:
+            out += bytes([(key & 0x7F) | 0x80])
+            key >>= 7
+        return out + bytes([key]) + struct.pack("<f", value)
+
+    raw = f32(39, 272.5) + f32(40, 282.5) + f32(41, 260.0) + f32(42, 245.0)
+    h = Health.from_bytes(raw)
+    assert h.front_right_tyre_pressure_kpa == 272.5
+    assert h.rear_right_tyre_pressure_kpa == 282.5
+    assert h.front_left_tyre_pressure_kpa == 260.0
+    assert h.rear_left_tyre_pressure_kpa == 245.0

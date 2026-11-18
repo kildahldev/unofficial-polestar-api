@@ -13,7 +13,8 @@ from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import DOMAIN
 from .coordinator import PolestarCoordinator
-from .entity import PolestarEntity
+from .entity import OptimisticStateMixin, PolestarEntity, async_filter_supported_entities
+from .utils import is_polestar_4, normalise_steering_wheel_option
 from polestar_api.models.charging import ChargeTargetLevelSettingType
 from polestar_api.models.climatization import HeatingIntensity
 from polestar_api.models.parking_climate_timer import (
@@ -22,7 +23,17 @@ from polestar_api.models.parking_climate_timer import (
     SeatHeatingSettings,
 )
 
+PARALLEL_UPDATES = 1
+
 _HEATING_OPTIONS = ["unspecified", "off", "level1", "level2", "level3"]
+_STEERING_WHEEL_OPTIONS = ["unspecified", "off", "level3"]
+_LIVE_UPDATE_ELEMENTS = {
+    "climate_front_left_seat": "front_left_seat",
+    "climate_front_right_seat": "front_right_seat",
+    "climate_rear_left_seat": "rear_left_seat",
+    "climate_rear_right_seat": "rear_right_seat",
+    "climate_steering_wheel": "steering_wheel",
+}
 _HEATING_MAP = {
     "unspecified": HeatingIntensity.UNSPECIFIED,
     "off": HeatingIntensity.OFF,
@@ -48,10 +59,13 @@ _BATTERY_PRECONDITIONING_MAP = {
 class PolestarSelectDescription(SelectEntityDescription):
     """Select description for command helper state."""
 
+    fetch_attr: str | None = None
+
 
 SELECTS: tuple[PolestarSelectDescription, ...] = (
     PolestarSelectDescription(
         key="target_soc_setting_type",
+        fetch_attr="target_soc_presets",
         name="Target SOC mode",
         entity_category=EntityCategory.CONFIG,
         options=_TARGET_SOC_OPTIONS,
@@ -70,12 +84,14 @@ SELECTS: tuple[PolestarSelectDescription, ...] = (
     ),
     PolestarSelectDescription(
         key="climate_rear_left_seat",
+        fetch_attr="rear_seat_heating",
         name="Climate rear left seat heat",
         entity_category=EntityCategory.CONFIG,
         options=_HEATING_OPTIONS,
     ),
     PolestarSelectDescription(
         key="climate_rear_right_seat",
+        fetch_attr="rear_seat_heating",
         name="Climate rear right seat heat",
         entity_category=EntityCategory.CONFIG,
         options=_HEATING_OPTIONS,
@@ -142,16 +158,16 @@ async def async_setup_entry(
 ) -> None:
     """Set up Polestar select entities."""
     data = hass.data[DOMAIN][entry.entry_id]
-    entities = []
     for coordinator in data["coordinators"].values():
+        entities = []
         for description in SELECTS:
             entities.append(PolestarSelect(coordinator, description))
         for description in TIMER_SETTINGS_SELECTS:
             entities.append(PolestarTimerSettingsSelect(coordinator, description))
-    async_add_entities(entities)
+        async_add_entities(async_filter_supported_entities(hass, coordinator, "select", entities))
 
 
-class PolestarSelect(PolestarEntity, RestoreEntity, SelectEntity):
+class PolestarSelect(OptimisticStateMixin, PolestarEntity, RestoreEntity, SelectEntity):
     """Select entity for local command preferences."""
 
     entity_description: PolestarSelectDescription
@@ -160,6 +176,13 @@ class PolestarSelect(PolestarEntity, RestoreEntity, SelectEntity):
         super().__init__(coordinator)
         self.entity_description = description
         self._attr_unique_id = f"{self._vehicle.vin}_{description.key}"
+        self.required_fetch = description.fetch_attr
+        # A Polestar 4's steering wheel heating is on/off; it runs any heated level as level3.
+        self._steering_on_off = description.key == "climate_steering_wheel" and is_polestar_4(
+            self._vehicle.model_name, self._vehicle.vin
+        )
+        if self._steering_on_off:
+            self._attr_options = _STEERING_WHEEL_OPTIONS
 
     async def async_added_to_hass(self) -> None:
         """Restore helper state."""
@@ -171,15 +194,19 @@ class PolestarSelect(PolestarEntity, RestoreEntity, SelectEntity):
         last_state = await self.async_get_last_state()
         if last_state is None or last_state.state in {"unknown", "unavailable"}:
             return
-        if last_state.state in self.options:
-            await self.async_select_option(last_state.state)
+        restored = last_state.state
+        if self._steering_on_off:
+            restored = normalise_steering_wheel_option(restored)
+        if restored in self.options:
+            self._store_heating(restored)
 
     @property
     def current_option(self) -> str | None:
         key = self.entity_description.key
         if key == "target_soc_setting_type":
             mode = self.coordinator.target_soc_setting_type
-            return mode.name.lower() if mode is not None else None
+            real_value = mode.name.lower() if mode is not None else None
+            return self._resolve_optimistic(real_value)
 
         prefs = self.coordinator.climate_preferences
         if key == "climate_front_left_seat":
@@ -190,16 +217,27 @@ class PolestarSelect(PolestarEntity, RestoreEntity, SelectEntity):
             return prefs.rear_left_seat.name.lower()
         if key == "climate_rear_right_seat":
             return prefs.rear_right_seat.name.lower()
-        return prefs.steering_wheel.name.lower()
+        name = prefs.steering_wheel.name.lower()
+        return normalise_steering_wheel_option(name) if self._steering_on_off else name
 
     async def async_select_option(self, option: str) -> None:
         key = self.entity_description.key
         if key == "target_soc_setting_type":
             # Explicit, deliberate mode switch — tells the car to change mode now.
-            await self.coordinator.async_set_target_soc_mode(_TARGET_SOC_MAP[option])
-            self.async_write_ha_state()
+            self._set_optimistic(option)
+            try:
+                await self.coordinator.async_set_target_soc_mode(_TARGET_SOC_MAP[option])
+            except Exception:
+                self._clear_optimistic()
+                raise
             return
 
+        self._store_heating(option)
+        if key in _LIVE_UPDATE_ELEMENTS:
+            await self.coordinator.async_update_running_climate(_LIVE_UPDATE_ELEMENTS[key])
+
+    def _store_heating(self, option: str) -> None:
+        key = self.entity_description.key
         heating = _HEATING_MAP[option]
         prefs = self.coordinator.climate_preferences
         if key == "climate_front_left_seat":
@@ -215,10 +253,11 @@ class PolestarSelect(PolestarEntity, RestoreEntity, SelectEntity):
         self.async_write_ha_state()
 
 
-class PolestarTimerSettingsSelect(PolestarEntity, SelectEntity):
+class PolestarTimerSettingsSelect(OptimisticStateMixin, PolestarEntity, SelectEntity):
     """Select entity for API-backed parking climate timer default settings."""
 
     entity_description: PolestarSelectDescription
+    required_fetch = "climate_timer_settings"
 
     def __init__(self, coordinator: PolestarCoordinator, description: PolestarSelectDescription) -> None:
         super().__init__(coordinator)
@@ -243,20 +282,20 @@ class PolestarTimerSettingsSelect(PolestarEntity, SelectEntity):
         key = self.entity_description.key
         if key == "timer_battery_preconditioning":
             bp = settings.battery_preconditioning
-            if bp == BatteryPreconditioning.UNDEFINED:
-                return "off"
-            return bp.name.lower()
-        # Heating keys
-        if key == "timer_steering_wheel":
-            return settings.steering_wheel_heating.name.lower()
-        seat = settings.seat_heating
-        if key == "timer_front_left_seat":
-            return seat.front_left.name.lower()
-        if key == "timer_front_right_seat":
-            return seat.front_right.name.lower()
-        if key == "timer_rear_left_seat":
-            return seat.rear_left.name.lower()
-        return seat.rear_right.name.lower()
+            real_value = "off" if bp == BatteryPreconditioning.UNDEFINED else bp.name.lower()
+        elif key == "timer_steering_wheel":
+            real_value = settings.steering_wheel_heating.name.lower()
+        else:
+            seat = settings.seat_heating
+            if key == "timer_front_left_seat":
+                real_value = seat.front_left.name.lower()
+            elif key == "timer_front_right_seat":
+                real_value = seat.front_right.name.lower()
+            elif key == "timer_rear_left_seat":
+                real_value = seat.rear_left.name.lower()
+            else:
+                real_value = seat.rear_right.name.lower()
+        return self._resolve_optimistic(real_value)
 
     async def async_select_option(self, option: str) -> None:
         settings = self._settings
@@ -279,4 +318,9 @@ class PolestarTimerSettingsSelect(PolestarEntity, SelectEntity):
             else:
                 seat = replace(seat, rear_right=heating)
             updated = replace(settings, seat_heating=seat)
-        await self.coordinator.async_set_climate_timer_settings(updated)
+        self._set_optimistic(option)
+        try:
+            await self.coordinator.async_set_climate_timer_settings(updated)
+        except Exception:
+            self._clear_optimistic()
+            raise

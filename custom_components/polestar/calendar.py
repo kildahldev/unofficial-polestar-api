@@ -15,10 +15,12 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 from .coordinator import PolestarCoordinator
-from .entity import PolestarEntity
+from .entity import PolestarEntity, async_filter_supported_entities
 from polestar_api.models.common import Weekday
 from polestar_api.models.parking_climate_timer import ParkingClimateTimer
-from .utils import serialize_parking_climate_timer
+from .utils import climate_timer_label, serialize_parking_climate_timer
+
+PARALLEL_UPDATES = 1
 
 _CALENDAR_SLOTS = (0, 1, 2)
 _WEEKDAY_RRULE = {
@@ -40,11 +42,9 @@ async def async_setup_entry(
 ) -> None:
     """Set up Polestar calendar entities."""
     data = hass.data[DOMAIN][entry.entry_id]
-    entities = []
     for coordinator in data["coordinators"].values():
-        for slot in _CALENDAR_SLOTS:
-            entities.append(PolestarParkingClimateTimerCalendar(coordinator, slot))
-    async_add_entities(entities)
+        entities = [PolestarParkingClimateTimerCalendar(coordinator, slot) for slot in _CALENDAR_SLOTS]
+        async_add_entities(async_filter_supported_entities(hass, coordinator, "calendar", entities))
 
 
 class PolestarParkingClimateTimerCalendar(PolestarEntity, CalendarEntity):
@@ -53,7 +53,9 @@ class PolestarParkingClimateTimerCalendar(PolestarEntity, CalendarEntity):
     def __init__(self, coordinator: PolestarCoordinator, slot: int) -> None:
         super().__init__(coordinator)
         self._slot = slot
-        self._attr_name = f"Parking climate timer {slot + 1}"
+        self.required_fetch = f"climate_timer_slot_{slot + 1}"
+        self._max_timers = getattr(self._vehicle, "max_climate_timers", None)
+        self._attr_name = climate_timer_label(slot, self._max_timers, "Parking climate timer")
         self._attr_unique_id = f"{self._vehicle.vin}_parking_climate_timer_{slot + 1}"
         self._attr_supported_features = (
             CalendarEntityFeature.CREATE_EVENT
@@ -160,7 +162,7 @@ class PolestarParkingClimateTimerCalendar(PolestarEntity, CalendarEntity):
             if event_start >= start_date:
                 events.append(
                     CalendarEvent(
-                        summary=f"Timer {self._slot + 1}",
+                        summary=climate_timer_label(self._slot, self._max_timers, "Timer"),
                         start=event_start,
                         end=event_start + timedelta(minutes=1),
                         uid=timer.timer_id,

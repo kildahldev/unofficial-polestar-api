@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import hashlib
 import json
@@ -28,6 +29,7 @@ OIDC_DISCOVERY = f"{OIDC_PROVIDER}/.well-known/openid-configuration"
 CLIENT_ID = "lp8dyrd_10"
 REDIRECT_URI = "polestar-explore://explore.polestar.com"
 SCOPES = "openid profile email customer:attributes customer:attributes:write"
+REAUTH_COOLDOWN = 300  # seconds between password logins from ensure_valid_token
 
 
 @dataclass
@@ -127,6 +129,8 @@ class AuthManager:
         self._token_endpoint: str | None = None
         self._email: str | None = None
         self._password: str | None = None
+        self._refresh_lock = asyncio.Lock()
+        self._last_reauth: float | None = None
 
     @property
     def access_token(self) -> str | None:
@@ -142,6 +146,9 @@ class AuthManager:
 
         await self._discover_endpoints()
 
+        if self._tokens and not self._tokens.is_expired:
+            return
+
         if self._tokens and self._tokens.refresh_token:
             try:
                 await self._refresh()
@@ -152,11 +159,25 @@ class AuthManager:
         await self._full_auth(email, password)
 
     async def ensure_valid_token(self) -> str:
-        """Return a valid access token, refreshing or re-authenticating if needed."""
+        """Return a valid access token, refreshing or re-authenticating if needed.
+
+        Concurrent callers share a single refresh: the first one through the
+        lock renews the token and the rest reuse it. A password login is
+        attempted at most once per ``REAUTH_COOLDOWN`` seconds.
+        """
         if not self._tokens:
             raise AuthError("Not authenticated")
 
-        if self._tokens.is_expired:
+        if not self._tokens.is_expired:
+            return self._tokens.access_token
+
+        async with self._refresh_lock:
+            if not self._tokens.is_expired:
+                return self._tokens.access_token
+
+            if self._reauth_on_cooldown():
+                raise TokenExpiredError("Token expired and re-authentication is on cooldown")
+
             if self._tokens.refresh_token:
                 try:
                     await self._refresh()
@@ -165,12 +186,17 @@ class AuthManager:
                     pass  # Refresh token also expired, fall through
 
             # Re-authenticate with stored credentials
-            if self._email and self._password:
-                await self._full_auth(self._email, self._password)
-            else:
+            if not (self._email and self._password):
                 raise TokenExpiredError("Token expired and no credentials available for re-auth")
+            self._last_reauth = time.monotonic()
+            await self._full_auth(self._email, self._password)
 
         return self._tokens.access_token
+
+    def _reauth_on_cooldown(self) -> bool:
+        if self._last_reauth is None:
+            return False
+        return time.monotonic() - self._last_reauth < REAUTH_COOLDOWN
 
     async def _discover_endpoints(self) -> None:
         async with httpx.AsyncClient(verify=_HTTPX_SSL_CONTEXT) as client:

@@ -45,3 +45,10 @@ class InvocationResponse(ProtoMessage, schema={
     status: InvocationStatus = InvocationStatus.UNKNOWN_ERROR
     message: str = ""
     timestamp: int = 0
+
+
+@dataclass(frozen=True)
+class InvocationEnvelope(ProtoMessage, schema={1: "response"}):
+    """Common wrapper: every invocation reply carries an InvocationResponse at field 1."""
+
+    response: InvocationResponse | None = None

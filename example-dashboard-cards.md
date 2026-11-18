@@ -628,16 +628,13 @@ button_cards:
       title: Actions
       custom_card:
         - type: custom:mushroom-template-card
-          entity: button.polestar_VIN_unlock_trunk
-          primary: Unlock Trunk
-          secondary: Tap to unlock
+          entity: lock.polestar_VIN_boot_lock
+          primary: Boot lock
+          secondary: Tap to unlock, or lock the car
           icon: mdi:car-back
           icon_color: blue
           tap_action:
-            action: call-service
-            service: button.press
-            data:
-              entity_id: button.polestar_VIN_unlock_trunk
+            action: toggle
           layout: horizontal
           multiline_secondary: true
         - type: entities

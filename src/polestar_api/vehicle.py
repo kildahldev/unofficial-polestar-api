@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+import logging
+from collections.abc import AsyncIterator, Callable
 from typing import TYPE_CHECKING
 
 from .models.availability import Availability
@@ -35,6 +36,7 @@ from .models.window import WindowControlType
 from .services.amp_limit import AmpLimitServiceClient
 from .services.availability import AvailabilityServiceClient
 from .services.battery import BatteryServiceClient
+from .services.car_information import CarInformationServiceClient
 from .services.charge_location import ChargeLocationServiceClient
 from .services.charge_now import ChargeNowServiceClient
 from .services.charge_timer import ChargeTimerServiceClient
@@ -56,6 +58,9 @@ if TYPE_CHECKING:
     from .connection import GrpcConnection
 
 
+_LOGGER = logging.getLogger(__name__)
+
+
 class Vehicle:
     """Represents a single Polestar vehicle."""
 
@@ -74,10 +79,20 @@ class Vehicle:
         self.registration_no = registration_no
         self.model_year = model_year
         self.model_name = model_name
+        self.supports_charge_locations: bool | None = None
+        self.supports_window_control: bool | None = None
+        self.supports_sunroof_control: bool | None = None
+        self.supports_target_soc_presets: bool | None = None
+        self.reports_avg_consumption: bool | None = None
+        self.reports_avg_consumption_auto: bool | None = None
+        self.reports_avg_consumption_since_charge: bool | None = None
+        self.supports_rear_seat_heating: bool | None = None
+        self.max_climate_timers: int | None = None
 
         self._amp_limit = AmpLimitServiceClient(connection, vin)
         self._availability = AvailabilityServiceClient(connection, vin)
         self._battery = BatteryServiceClient(connection, vin)
+        self._car_information = CarInformationServiceClient(connection, vin)
         self._charge_location = ChargeLocationServiceClient(connection, vin)
         self._charge_now = ChargeNowServiceClient(connection, vin)
         self._charge_timer = ChargeTimerServiceClient(connection, vin)
@@ -94,6 +109,45 @@ class Vehicle:
         self._precleaning = PreCleaningServiceClient(connection, vin)
         self._target_soc = TargetSocServiceClient(connection, vin)
         self._weather = WeatherServiceClient(connection, vin)
+
+    # -- Car information --
+
+    async def async_load_car_information(self) -> None:
+        """Fill in the model name, model year and registration when discovery did not provide them.
+
+        The vehicle list can return only the VIN. The car information service still knows the
+        model name (for example ``Polestar 4``). Values already set are kept, and a failure
+        leaves the vehicle unchanged.
+        """
+        try:
+            my_car = await self._car_information.get_my_car()
+        except Exception:  # noqa: BLE001
+            _LOGGER.debug("Could not load car information for the vehicle")
+            return
+        if my_car is None:
+            return
+        car = my_car.car
+        if car is not None and car.charging is not None:
+            self.supports_charge_locations = car.charging.max_number_of_locations > 0
+        if car is not None:
+            self.reports_avg_consumption = bool(car.reports_avg_electric_consumption)
+            self.reports_avg_consumption_auto = bool(car.reports_avg_electric_consumption_last_trip)
+            self.reports_avg_consumption_since_charge = bool(car.reports_avg_electric_consumption_last_charge)
+        if car is not None and car.charging is not None and car.charging.target_charge_level_settings is not None:
+            presets = car.charging.target_charge_level_settings.supports_target_charge_level_presets
+            self.supports_target_soc_presets = bool(presets)
+        if car is not None and car.parking_climatization is not None:
+            self.supports_rear_seat_heating = bool(car.parking_climatization.supports_rear_seats_settings)
+            timers = car.parking_climatization.timers
+            self.max_climate_timers = timers.max_number if timers is not None else 0
+        if car is not None and car.locks is not None:
+            self.supports_window_control = bool(car.locks.supports_window_control)
+            self.supports_sunroof_control = bool(car.locks.supports_sunroof_control)
+        if car is not None:
+            self.model_name = self.model_name or car.vehicle_type_name or None
+            if self.model_year is None and car.model_year.isdigit():
+                self.model_year = int(car.model_year)
+        self.registration_no = self.registration_no or my_car.registration_plate or None
 
     # -- Battery --
 
@@ -407,6 +461,18 @@ class Vehicle:
         """Real-time pre-cleaning status updates."""
         async for status in self._precleaning.stream():
             yield status
+
+    def add_invocation_listener(self, listener) -> Callable[[], None]:
+        """Be told the final outcome of each remote command (lock, climate, honk, ...).
+
+        *listener(method, response)* receives the last ``InvocationResponse`` the
+        server sent for the command. Returns a function that removes the listener.
+        """
+        return self._invocation.add_listener(listener)
+
+    async def cancel_invocation_follow_ups(self) -> None:
+        """Stop following in-flight command streams (call on shutdown)."""
+        await self._invocation.cancel_follow_ups()
 
     async def start_precleaning(self) -> None:
         """Start cabin air quality pre-cleaning."""

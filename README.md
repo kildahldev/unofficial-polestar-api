@@ -50,7 +50,7 @@ See the [HA integration README](ha_integration_README.md) for setup, entities, s
 - **Location** — last known and last parked position (with real-time streaming)
 - **Climate** — start/stop climatization with target temperature, seat and steering wheel heating
 - **Climate timers** — view and manage scheduled parking climate timers
-- **Locks** — lock, unlock, trunk unlock
+- **Locks** — lock, unlock, boot lock (unlock opens the boot)
 - **Honk & flash** — flash lights or honk+flash
 - **Windows** — open/close all windows
 - **Exterior** — door, window, sunroof, hood, tailgate, and alarm status.

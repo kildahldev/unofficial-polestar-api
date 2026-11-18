@@ -17,6 +17,10 @@ class FakeConfigEntryAuthFailed(Exception):
     """Test stand-in for Home Assistant's auth failure."""
 
 
+class FakeConfigEntryNotReady(Exception):
+    """Test stand-in for Home Assistant's "retry setup" signal."""
+
+
 class FakeEntry:
     data = {"email": "owner@example.com", "password": "secret", "vin": "TESTVIN123"}
     options: dict[str, object] = {}
@@ -89,7 +93,15 @@ def _load_component(monkeypatch):
         monkeypatch,
         "homeassistant.exceptions",
         ConfigEntryAuthFailed=FakeConfigEntryAuthFailed,
+        ConfigEntryNotReady=FakeConfigEntryNotReady,
     )
+    _stub_module(monkeypatch, "homeassistant.helpers")
+    _stub_module(
+        monkeypatch,
+        "homeassistant.helpers.config_validation",
+        config_entry_only_config_schema=lambda domain: (lambda config: config),
+    )
+    _stub_module(monkeypatch, "homeassistant.helpers.typing", ConfigType=dict)
 
     package_name = "_polestar_component_under_test"
     component_dir = Path(__file__).parents[1] / "custom_components" / "polestar"
@@ -164,11 +176,13 @@ async def test_api_error_uses_configured_vin_without_logging_backend_details(mon
 @pytest.mark.asyncio
 @pytest.mark.parametrize("error", [AuthError("bad credentials"), RuntimeError("unexpected")])
 async def test_non_api_errors_close_client_and_propagate(monkeypatch, error):
+    """A non-auth setup failure raises ConfigEntryNotReady so HA retries, rather
+    than failing setup outright."""
     component = _load_component(monkeypatch)
     api_class = _fake_api_class(error)
     monkeypatch.setattr(component, "PolestarApi", api_class)
 
-    expected = FakeConfigEntryAuthFailed if isinstance(error, AuthError) else RuntimeError
+    expected = FakeConfigEntryAuthFailed if isinstance(error, AuthError) else FakeConfigEntryNotReady
     with pytest.raises(expected):
         await component.async_setup_entry(FakeHass(), FakeEntry())
 

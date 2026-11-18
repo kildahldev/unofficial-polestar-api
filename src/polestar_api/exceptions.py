@@ -21,6 +21,25 @@ class ApiError(PolestarError):
         self.status_code = status_code
 
 
+_UNSUPPORTED_MESSAGES = ("Functionality not supported", "Method not found")
+
+
+def is_unsupported_feature_error(err: BaseException) -> bool:
+    """Return True if *err* means the car or backend does not offer this call.
+
+    Polestar answers UNIMPLEMENTED with "Functionality not supported" for features
+    a model lacks, and "Method not found" for endpoints it has removed.
+    """
+    from grpclib.const import Status
+    from grpclib.exceptions import GRPCError
+
+    return (
+        isinstance(err, GRPCError)
+        and err.status == Status.UNIMPLEMENTED
+        and any(message in (err.message or "") for message in _UNSUPPORTED_MESSAGES)
+    )
+
+
 class NetworkError(PolestarError):
     """A network-level error occurred (connection refused, DNS, timeout)."""
 

@@ -30,7 +30,7 @@ from .common import Coordinate, DailyTime, Location, ResponseStatus, Timestamp, 
 from .connectivity import ConnectivityInfo, ConnectivityStatus, NetworkType, SignalStrength
 from .dashboard import CarDashboardData, CarWarningsData, DashboardStatus
 from .exterior import ExteriorStatus
-from .health import Health
+from .health import Health, TpmsSensorMeasurement, TpmsStatus, TyrePressureValueStatus, TyreStatus
 from .honkflash import HonkAndFlashRequest, HonkAndFlashResponse
 from .invocation import InvocationRequest, InvocationResponse, InvocationStatus
 from .location import LocationRequest, LocationResponse, LocationStatusUpdate
@@ -72,6 +72,10 @@ __all__ = [
     "DashboardStatus",
     "ExteriorStatus",
     "Health",
+    "TpmsSensorMeasurement",
+    "TpmsStatus",
+    "TyrePressureValueStatus",
+    "TyreStatus",
     "HeatingIntensity",
     "VehicleRequest",
     "GetBatteryResponse",

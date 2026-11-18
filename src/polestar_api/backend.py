@@ -37,6 +37,7 @@ class BackendProfile:
     charge_timer_svc: str = "/chronos.services.v2.GlobalChargeTimerService"
 
     # standalone
+    car_information_svc: str = "/car_information.CarInformation"
     invocation_svc: str = "/invocation.InvocationService"
     location_svc: str = "/dtlinternet.DtlInternetService"
     weather_svc: str = "/weather.WeatherService"

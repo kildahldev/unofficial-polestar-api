@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
+import logging
 from typing import TYPE_CHECKING
+
+from grpclib.exceptions import GRPCError
 
 from .. import grpc as grpc_call
 from ..codec import decode, decode_packed_varints, encode
@@ -19,6 +23,8 @@ from .chronos import wrap_chronos
 if TYPE_CHECKING:
     from ..connection import GrpcConnection
 
+_LOGGER = logging.getLogger(__name__)
+_STREAM_TIMEOUT = 10.0
 
 
 def _decode_daily_time(data: bytes) -> tuple[int, int]:
@@ -133,15 +139,48 @@ class ChargeLocationServiceClient:
         metadata["vin"] = self._vin
         return metadata
 
-    async def get_locations(self) -> list[ChargeLocation]:
-        """Get saved charge locations."""
+    async def _first_stream_message(self, method: str) -> bytes | None:
+        """Return the first message of a server-streaming method, or ``None`` if none arrives in time."""
         metadata = await self._metadata()
-        data = await grpc_call.unary_unary(
+        stream = grpc_call.unary_stream(
             self._connection.channel,
-            f"{self._svc}/GetChargeLocations",
+            f"{self._svc}/{method}",
             wrap_chronos(self._vin),
             metadata=metadata,
         )
+        try:
+            async with asyncio.timeout(_STREAM_TIMEOUT):
+                async for data in stream:
+                    return data
+        except TimeoutError:
+            return None
+        finally:
+            await stream.aclose()
+        return None
+
+    async def _read(self, stream_method: str, unary_method: str) -> bytes:
+        """Read through the streaming method the Polestar app uses, falling back to the unary one.
+
+        The plain unary read is now rejected with "Validation failed" on current backends.
+        """
+        try:
+            data = await self._first_stream_message(stream_method)
+        except GRPCError as err:
+            _LOGGER.debug("%s failed (%s); trying %s", stream_method, err.status.name, unary_method)
+            data = None
+        if data is not None:
+            return data
+        metadata = await self._metadata()
+        return await grpc_call.unary_unary(
+            self._connection.channel,
+            f"{self._svc}/{unary_method}",
+            wrap_chronos(self._vin),
+            metadata=metadata,
+        )
+
+    async def get_locations(self) -> list[ChargeLocation]:
+        """Get saved charge locations."""
+        data = await self._read("GetChargeLocationsStream", "GetChargeLocations")
         raw = decode(data, {3: ("locations", "message")})
         locations = raw.get("locations")
         if locations is None:
@@ -155,13 +194,7 @@ class ChargeLocationServiceClient:
 
         Returns dict with 'location_id' (str) and 'arrived_at' (int timestamp).
         """
-        metadata = await self._metadata()
-        data = await grpc_call.unary_unary(
-            self._connection.channel,
-            f"{self._svc}/isAtALocation",
-            wrap_chronos(self._vin),
-            metadata=metadata,
-        )
+        data = await self._read("isAtALocationStream", "isAtALocation")
         raw = decode(data, {
             1: ("status", "int32"),
             2: ("location_id", "string"),
