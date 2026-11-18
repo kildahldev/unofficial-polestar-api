@@ -227,3 +227,26 @@ def entry_title(model_name: str | None, model_year: int | None, vin: str) -> str
     """Config entry title in the Volvo integration's style: "Polestar 2 2026" (VIN when the year is unknown)."""
     model = model_name or "Polestar"
     return f"{model} {model_year}" if model_year else f"{model} {vin}"
+
+
+def flatten_attributes(data: Any, prefix: str = "") -> dict[str, Any]:
+    """Turn nested data into flat snake_case attributes so Home Assistant lists them one per row.
+
+    Empty values are left out and lists of simple values become one comma-separated string.
+    """
+    import re
+
+    out: dict[str, Any] = {}
+    if not isinstance(data, dict):
+        return out
+    for key, value in data.items():
+        name = re.sub(r"[^0-9a-z]+", "_", re.sub(r"(?<=[a-z0-9])([A-Z])", r"_\1", f"{prefix}{key}").lower()).strip("_")
+        if value is None or value == "" or value == [] or value == {}:
+            continue
+        if isinstance(value, dict):
+            out.update(flatten_attributes(value, f"{name}_"))
+        elif isinstance(value, (list, tuple)):
+            out[name] = ", ".join(str(item) for item in value)
+        else:
+            out[name] = value
+    return out

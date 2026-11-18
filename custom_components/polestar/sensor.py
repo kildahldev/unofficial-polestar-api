@@ -14,6 +14,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
+    MATCH_ALL,
     PERCENTAGE,
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
@@ -58,6 +59,7 @@ from .const import CONF_REGISTRATION_PLATE, DOMAIN
 from .coordinator import PolestarVehicleData
 from .entity import PolestarEntity, async_filter_supported_entities
 from .utils import (
+    flatten_attributes,
     weather_attributes,
     climate_end_time,
     climate_minutes_remaining,
@@ -805,7 +807,7 @@ class PolestarVehicleInfoSensor(PolestarEntity, SensorEntity):
     _attr_icon = "mdi:text-box-search-outline"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_entity_registry_enabled_default = False
-    _unrecorded_attributes = frozenset({"app", "c3_capabilities", "order"})
+    _unrecorded_attributes = frozenset({MATCH_ALL})  # one attribute per field: keep them out of the database
 
     def __init__(self, coordinator) -> None:
         super().__init__(coordinator)
@@ -819,21 +821,25 @@ class PolestarVehicleInfoSensor(PolestarEntity, SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         v = self._vehicle
         return {
-            "app": {
-                "slug": v.slug,
-                "pno34": v.pno34,
-                "structure_week": v.structure_week,
-                "is_primary_driver": v.is_primary_driver,
-                "is_bst_edition": v.is_bst_edition,
-                "internet_activation": getattr(v, "internet_activation", None),
-            },
-            "order": getattr(v, "order_specification", None),
-            "c3_capabilities": getattr(v, "car_capabilities", None) or {},
             "powertrain": v.engine_type,
             "drivetrain": v.drivetrain_type,
             "digital_key_type": v.digital_key_type,
             "has_performance_software_upgrade": v.has_performance_software_upgrade,
             "supports_engine_start": v.supports_engine_start,
+            **flatten_attributes(
+                {
+                    "app": {
+                        "slug": v.slug,
+                        "pno34": v.pno34,
+                        "structure_week": v.structure_week,
+                        "is_primary_driver": v.is_primary_driver,
+                        "is_bst_edition": v.is_bst_edition,
+                        "internet_activation": getattr(v, "internet_activation", None),
+                    },
+                    "order": getattr(v, "order_specification", None),
+                    "c3": getattr(v, "car_capabilities", None) or {},
+                }
+            ),
         }
 
 

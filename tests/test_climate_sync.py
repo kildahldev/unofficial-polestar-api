@@ -89,3 +89,26 @@ def test_entry_title_matches_volvo_style(utils):
     assert utils.entry_title(None, None, "V1") == "Polestar V1"
     src = (ROOT / "config_flow.py").read_text()
     assert "title=self._titles.get(vin) or entry_title(None, None, vin)" in src
+
+
+def test_flatten_attributes_one_row_per_field(utils):
+    flat = utils.flatten_attributes(
+        {
+            "app": {"slug": "polestar-2", "structure_week": "202611", "internet_activation": None},
+            "order": {"engine": "Long range", "features": ["A", "B"], "specifications": {"Battery": "82 kWh"}},
+            "c3": {"supportsHonkFlash": True, "propulsion": {"engine_type": "electric"}},
+            "empty": {},
+        }
+    )
+    assert flat == {
+        "app_slug": "polestar-2",
+        "app_structure_week": "202611",
+        "order_engine": "Long range",
+        "order_features": "A, B",
+        "order_specifications_battery": "82 kWh",
+        "c3_supports_honk_flash": True,
+        "c3_propulsion_engine_type": "electric",
+    }
+    assert utils.flatten_attributes(None) == {}
+    src = (ROOT / "sensor.py").read_text()
+    assert "_unrecorded_attributes = frozenset({MATCH_ALL})" in src and "**flatten_attributes(" in src
