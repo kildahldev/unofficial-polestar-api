@@ -81,3 +81,11 @@ def test_charge_timer_switch_is_never_unknown_for_an_unset_timer(utils):
     assert utils.charge_timer_active(NS(timer=NS(activated=False))) is False
     assert utils.charge_timer_active(NS(timer=NS(activated=True))) is True
     assert "is_on_fn=lambda d: charge_timer_active(d.charge_timer)" in (ROOT / "switch.py").read_text()
+
+
+def test_entry_title_matches_volvo_style(utils):
+    assert utils.entry_title("Polestar 2", 2026, "YSMVSFDR8TL421810") == "Polestar 2 2026"
+    assert utils.entry_title("Polestar 2", None, "YSMVSFDR8TL421810") == "Polestar 2 YSMVSFDR8TL421810"
+    assert utils.entry_title(None, None, "V1") == "Polestar V1"
+    src = (ROOT / "config_flow.py").read_text()
+    assert "title=self._titles.get(vin) or entry_title(None, None, vin)" in src

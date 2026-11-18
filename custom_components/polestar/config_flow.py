@@ -14,6 +14,7 @@ from polestar_api import PolestarApi
 from polestar_api.auth import MemoryTokenStore
 from polestar_api.exceptions import AuthError
 
+from .utils import entry_title
 from .const import (
     CONF_DEMO,
     CONF_REGISTRATION_PLATE,
@@ -128,6 +129,7 @@ class PolestarConfigFlow(ConfigFlow, domain=DOMAIN):
         self._email: str | None = None
         self._password: str | None = None
         self._vehicles: dict[str, str] = {}  # vin -> display label
+        self._titles: dict[str, str] = {}  # vin -> config entry title
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -154,7 +156,9 @@ class PolestarConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             else:
                 self._vehicles = {}
+                self._titles = {}
                 for v in vehicles:
+                    self._titles[v.vin] = entry_title(v.model_name, v.model_year, v.vin)
                     label = v.vin
                     if v.model_name:
                         label = f"{v.model_name} ({v.vin})"
@@ -195,7 +199,7 @@ class PolestarConfigFlow(ConfigFlow, domain=DOMAIN):
             self._abort_if_unique_id_configured()
 
             return self.async_create_entry(
-                title=f"Polestar ({vin})",
+                title=self._titles.get(vin) or entry_title(None, None, vin),
                 data={
                     CONF_EMAIL: self._email,
                     CONF_PASSWORD: self._password,

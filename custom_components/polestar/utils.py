@@ -221,3 +221,9 @@ def charge_timer_active(charge_timer: Any) -> bool | None:
     if timer is None:
         return False
     return bool(getattr(timer, "activated", False))
+
+
+def entry_title(model_name: str | None, model_year: int | None, vin: str) -> str:
+    """Config entry title in the Volvo integration's style: "Polestar 2 2026" (VIN when the year is unknown)."""
+    model = model_name or "Polestar"
+    return f"{model} {model_year}" if model_year else f"{model} {vin}"
