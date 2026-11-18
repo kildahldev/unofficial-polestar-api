@@ -85,6 +85,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             configured_vin,
         )
         vehicle = Vehicle(vin=configured_vin, connection=api._connection)
+        # The list lookup skipped this car, so fetch the plate, build week and activation here.
+        await api.async_enrich_vehicle(vehicle)
 
     await vehicle.async_load_car_information()
 

@@ -155,6 +155,9 @@ def _fake_api_class(error: Exception):
         async def async_init(self) -> None:
             return None
 
+        async def async_enrich_vehicle(self, vehicle) -> None:
+            self.enriched = getattr(self, "enriched", []) + [vehicle.vin]
+
         async def get_vehicles(self):
             raise error
 
