@@ -217,6 +217,12 @@ _FETCH_ATTR_LOOKUP = dict(_FETCH_ATTRS)
 _ATTR_FIELDS = {spec.name: spec for spec in fields(PolestarVehicleData)}
 
 
+def _status_words(name: str) -> str:
+    """A command status for a message; "undefined" means the car gave no reason."""
+    word = name.lower()
+    return "the car gave no reason" if word in ("undefined", "unspecified") else word
+
+
 def _attr_default(attr: str) -> Any:
     """Return the empty PolestarVehicleData value for an attribute."""
     spec = _ATTR_FIELDS[attr]
@@ -358,18 +364,18 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         if invocation is not None:
             if invocation.message:
                 return invocation.message
-            return f"{fallback} ({invocation.status.name.lower()})"
+            return f"{fallback} ({_status_words(invocation.status.name)})"
 
         response_status = getattr(response, "response_status", None)
         if response_status is not None:
-            return f"{fallback} ({response_status.status.name.lower()})"
+            return f"{fallback} ({_status_words(response_status.status.name)})"
 
         if isinstance(response, int):
             try:
                 status = ResponseStatusCode(response)
             except ValueError:
                 return f"{fallback} (status={response})"
-            return f"{fallback} ({status.name.lower()})"
+            return f"{fallback} ({_status_words(status.name)})"
 
         return fallback
 
@@ -1083,6 +1089,9 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
 
     async def async_start_charging(self) -> int:
         """Start immediate charging."""
+        battery = self.data.battery if self.data else None
+        if battery is not None and not battery.is_plugged_in:
+            raise HomeAssistantError("The car is not plugged in, so it cannot start charging. Nothing was sent.")
         response = await self.async_run_command(
             self.vehicle.start_charging,
             error_message="Start charging command failed",

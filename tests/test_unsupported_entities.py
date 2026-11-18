@@ -816,3 +816,20 @@ def test_a_coordinator_without_polling_state_is_left_alone(monkeypatch):
     module, _ = _load(monkeypatch, FakeRegistry())
     bare = _coordinator(module, FakeVehicle({}))
     assert bare._adapt_poll_interval(object()) is False
+
+
+@pytest.mark.asyncio
+async def test_start_charging_is_refused_when_not_plugged_in(monkeypatch):
+    coordinator_module, _ = _load(monkeypatch, FakeRegistry())
+    coordinator = _coordinator(coordinator_module, FakeVehicle({}))
+    coordinator.data = SimpleNamespace(battery=SimpleNamespace(is_plugged_in=False))
+
+    with pytest.raises(Exception, match="not plugged in"):
+        await coordinator.async_start_charging()
+    assert "start_charging" not in coordinator.vehicle.calls
+
+
+def test_status_words_never_say_undefined(monkeypatch):
+    coordinator_module, _ = _load(monkeypatch, FakeRegistry())
+    assert coordinator_module._status_words("UNDEFINED") == "the car gave no reason"
+    assert coordinator_module._status_words("TIMEOUT") == "timeout"
