@@ -60,7 +60,7 @@ See the [HA integration README](ha_integration_README.md) for setup, entities, s
 - **Availability** — vehicle online status with unavailable reason
 - **Weather** — temperature at car location
 - **OTA** — software update info, scheduling, install now, cancel *(Appears to be unavailable on Polestar 4)*
-- **Pre-cleaning / Air Purification** — air quality status (PM2.5, AQI) and start/stop cabin pre-cleaning *(Appears to be unavailable on Polestar 4)*. The official app's "Air Purification" control and "Pre-cleaning" control are the same backend feature — `get_air_purification()`/`start_air_purification()`/`stop_air_purification()` are plain aliases of the pre-cleaning calls.
+- **Air Purification** — one switch plus air quality status (PM2.5, AQI) and run status sensors; start/stop cabin air purification (the backend calls it pre-cleaning) *(Appears to be unavailable on Polestar 4)*. The official app's "Air Purification" control and "Pre-cleaning" control are the same backend feature — `get_air_purification()`/`start_air_purification()`/`stop_air_purification()` are plain aliases of the pre-cleaning calls.
 - **Data sharing / privacy consent** — read the overall remote-function data-sharing toggle and per-category privacy settings *(read confirmed against the official app; the write call (`set_privacy_setting`) is schema-accurate but its exact RPC was not directly observed — test before relying on it)*
 
 For the full API reference with all methods, models, and enums, see the [docs](https://kildahldev.github.io/unofficial-polestar-api/).

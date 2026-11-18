@@ -179,3 +179,13 @@ def test_polestar_has_no_sunroof_sensor_and_an_old_one_is_removed():
     binary_src = (ROOT / "binary_sensor.py").read_text()
     assert 'key="sunroof"' not in binary_src
     assert '"sunroof",' in (ROOT / "__init__.py").read_text().split("_REPLACED_ENTITY_SUFFIXES", 1)[1].split(")", 1)[0]
+
+
+def test_there_is_one_air_purification_switch_and_the_old_precleaning_one_is_removed():
+    switch_src = (ROOT / "switch.py").read_text()
+    assert 'key="precleaning"' not in switch_src
+    assert 'key="air_purification"' in switch_src
+    assert "entity_registry_enabled_default=False" not in switch_src.split('key="air_purification"', 1)[1].split("PolestarSwitchDescription(", 1)[0]
+    init_src = (ROOT / "__init__.py").read_text()
+    assert '"precleaning",' in init_src.split("_REPLACED_ENTITY_SUFFIXES", 1)[1].split(")", 1)[0]
+    assert '"switch"' in init_src.split("def _async_remove_replaced_entities", 1)[1]

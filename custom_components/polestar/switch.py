@@ -44,25 +44,13 @@ SWITCHES: tuple[PolestarSwitchDescription, ...] = (
         attrs_fn=lambda d: climate_attributes(d.climate),
     ),
     PolestarSwitchDescription(
-        key="precleaning",
-        fetch_attr="precleaning",
-        translation_key="precleaning",
-        icon="mdi:air-purifier",
-        is_on_fn=lambda d: d.precleaning.is_running if d.precleaning else None,
-        turn_on_fn=lambda c: c.async_start_precleaning(),
-        turn_off_fn=lambda c: c.async_stop_precleaning(),
-        capability="precleaning",
-    ),
-    PolestarSwitchDescription(
-        # Same backend feature as "precleaning" (invocation.InvocationService
-        # /PreCleaning) under the official app's other name for it. Disabled
-        # by default to avoid a confusing duplicate switch for most users;
-        # enable it if you'd rather see "Air Purification" in your UI.
+        # The backend calls this "pre-cleaning" (invocation.InvocationService/PreCleaning); the app
+        # and Volvo call it Air Purification. One switch, under the app's name. The separate
+        # "Pre-cleaning" switch it used to duplicate was removed on 18 Nov 2026.
         key="air_purification",
         fetch_attr="precleaning",
         translation_key="air_purification",
         icon="mdi:air-purifier",
-        entity_registry_enabled_default=False,
         is_on_fn=lambda d: d.precleaning.is_running if d.precleaning else None,
         turn_on_fn=lambda c: c.async_start_precleaning(),
         turn_off_fn=lambda c: c.async_stop_precleaning(),
