@@ -191,6 +191,7 @@ def _coordinator(module, vehicle):
     coordinator._unsupported_fetches = set()
     coordinator._invalid_argument_counts = {}
     coordinator._empty_fetches = set()
+    coordinator._failing_fetches = set()
     coordinator._no_data_fetches = set()
     coordinator._stream_last_data = {}
     coordinator._stream_tasks = {}
@@ -247,18 +248,18 @@ async def test_failed_fetch_warns_once_and_keeps_the_last_value(monkeypatch, cap
     import logging
 
     coordinator_module, _ = _load(monkeypatch, FakeRegistry())
-    vehicle = FakeVehicle({"weather": TimeoutError()})
+    vehicle = FakeVehicle({"amp_limit": TimeoutError()})
     coordinator = _coordinator(coordinator_module, vehicle)
-    previous = coordinator_module.PolestarVehicleData(weather="last good")
+    previous = coordinator_module.PolestarVehicleData(amp_limit="last good")
 
     with caplog.at_level(logging.DEBUG):
-        values, _ = await coordinator._async_fetch_values(("weather",), previous)
-        await coordinator._async_fetch_values(("weather",), previous)
+        values, _ = await coordinator._async_fetch_values(("amp_limit",), previous)
+        await coordinator._async_fetch_values(("amp_limit",), previous)
 
-    assert values["weather"] == "last good"
-    warnings = [r for r in caplog.records if r.levelno == logging.WARNING and "Fetching weather" in r.getMessage()]
+    assert values["amp_limit"] == "last good"
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING and "Fetching amp_limit" in r.getMessage()]
     assert len(warnings) == 1
-    assert "weather" in coordinator._failing_fetches
+    assert "amp_limit" in coordinator._failing_fetches
 
 
 class FakeEntity:
