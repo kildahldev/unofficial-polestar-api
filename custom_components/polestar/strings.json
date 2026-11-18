@@ -3,9 +3,13 @@
     "step": {
       "init": {
         "data": {
-          "update_interval": "Polling interval (seconds)"
+          "update_interval": "Polling interval (seconds)",
+          "registration_plate": "Registration plate (optional)"
         },
-        "description": "How often to poll the Polestar cloud for updates. Lower values give faster updates but may increase server load and 12v battery usage."
+        "description": "How often to poll the Polestar cloud for updates. Lower values give faster updates but may increase server load and 12v battery usage.",
+        "data_description": {
+          "registration_plate": "Shown in the device name. Only needed when Polestar does not supply the plate for your account, for example a secondary or guest login. Leave blank to use the plate Polestar reports."
+        }
       }
     }
   },
@@ -24,7 +28,8 @@
         "description": "Battery, location, climate, and door/lock status are updated in real-time via streaming. The polling interval controls how often other data is fetched: odometer, tyre health, charging settings (target SOC, amp limit, charge timer), charge locations, climate timers, weather, and OTA updates.",
         "data": {
           "vin": "Vehicle",
-          "update_interval": "Polling interval (seconds)"
+          "update_interval": "Polling interval (seconds)",
+          "registration_plate": "Registration plate (optional)"
         }
       },
       "guest_vin": {
@@ -32,7 +37,8 @@
         "description": "No vehicles were found on this account. This is normal for secondary users and guests. Enter the VIN of the vehicle you have access to.\n\nBattery, location, climate, and door/lock status are updated in real-time via streaming. The polling interval controls how often other data is fetched: odometer, tyre health, charging settings, charge locations, climate timers, weather, and OTA updates.",
         "data": {
           "vin": "VIN (Vehicle Identification Number)",
-          "update_interval": "Polling interval (seconds)"
+          "update_interval": "Polling interval (seconds)",
+          "registration_plate": "Registration plate (optional)"
         }
       },
       "demo_vin": {

@@ -112,6 +112,10 @@ _CAPABILITY_FETCHES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("reports_avg_consumption_auto", ("avg_consumption_auto",)),
     ("reports_avg_consumption_since_charge", ("avg_consumption_since_charge",)),
     ("supports_rear_seat_heating", ("rear_seat_heating",)),
+    ("reports_tyre_pressure_warning", ("tyre_warning",)),
+    ("reports_tyre_pressure", ("tyre_pressure",)),
+    ("reports_service_warning", ("service_warning",)),
+    ("supports_air_purification", ("precleaning",)),
 )
 _CLIMATE_TIMER_SLOTS = 3
 
@@ -239,6 +243,8 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
                 f"climate_timer_slot_{slot}" for slot in range(max_timers + 1, _CLIMATE_TIMER_SLOTS + 1)
             )
         self._empty_fetches: set[str] = set()
+        # Attributes whose last fetch failed: warned about once, so a stalled sensor is not silent.
+        self._failing_fetches: set[str] = set()
         self._no_data_fetches: set[str] = set()
         self._climate_started_at: float | None = None
         self._last_started_values: dict[str, Any] = {}
@@ -442,11 +448,21 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
                     # its sensors to a stale snapshot forever.
                     values[attr] = _attr_default(attr)
                     continue
-                _LOGGER.debug("Failed to fetch %s for %s: %s", attr, self.vehicle.vin, result)
+                if attr not in self._failing_fetches:
+                    self._failing_fetches.add(attr)
+                    _LOGGER.warning(
+                        "Fetching %s for %s failed (%s: %s); keeping the last value until it recovers",
+                        attr, self.vehicle.vin, type(result).__name__, result or "no detail",
+                    )
+                else:
+                    _LOGGER.debug("Failed to fetch %s for %s: %s", attr, self.vehicle.vin, result)
                 values[attr] = getattr(previous, attr)
                 continue
 
             self._invalid_argument_counts.pop(attr, None)
+            if attr in self._failing_fetches:
+                self._failing_fetches.discard(attr)
+                _LOGGER.info("Fetching %s for %s recovered", attr, self.vehicle.vin)
             if attr in self._unsupported_fetches:
                 self._unsupported_fetches.discard(attr)
                 _LOGGER.info("Fetch %s is supported again for %s", attr, self.vehicle.vin)

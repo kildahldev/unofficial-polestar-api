@@ -1,0 +1,192 @@
+[
+  {
+    "t": "11:43:16",
+    "kind": "location last known",
+    "note": "no timestamp fields",
+    "fields": [
+      "altitude",
+      "coordinate",
+      "heading",
+      "speed",
+      "timestamp"
+    ]
+  },
+  {
+    "t": "11:43:16",
+    "kind": "location last parked",
+    "note": "no timestamp fields",
+    "fields": [
+      "altitude",
+      "coordinate",
+      "heading",
+      "speed",
+      "timestamp"
+    ]
+  },
+  {
+    "t": "11:43:17",
+    "kind": "climate stream",
+    "running_status": "ACTIVE",
+    "request_type": "NOW_FROM_REMOTE",
+    "time_remaining": 28,
+    "heat_or_cool_action": "VENTILATION_ONLY",
+    "current_temperature_celsius": null,
+    "target_temperature_celsius": 22.0,
+    "front_left_seat": "UNSPECIFIED",
+    "front_right_seat": "UNSPECIFIED",
+    "rear_left_seat": "UNSPECIFIED",
+    "rear_right_seat": "UNSPECIFIED",
+    "steering_wheel": "UNSPECIFIED",
+    "started_at": 1795002050,
+    "ending_at": 1795003842
+  },
+  {
+    "t": "11:43:17",
+    "kind": "weather",
+    "temp_c": 18.5,
+    "report_age": "0.3 h ago (2026-11-18 11:27 UTC)"
+  },
+  {
+    "t": "11:43:17",
+    "kind": "climate poll",
+    "running_status": "ACTIVE",
+    "request_type": "NOW_FROM_REMOTE",
+    "time_remaining": 28,
+    "heat_or_cool_action": "VENTILATION_ONLY",
+    "current_temperature_celsius": null,
+    "target_temperature_celsius": 22.0,
+    "front_left_seat": "UNSPECIFIED",
+    "front_right_seat": "UNSPECIFIED",
+    "rear_left_seat": "UNSPECIFIED",
+    "rear_right_seat": "UNSPECIFIED",
+    "steering_wheel": "UNSPECIFIED",
+    "started_at": 1795002050,
+    "ending_at": 1795003842
+  },
+  {
+    "t": "11:43:43",
+    "kind": "climate stream",
+    "running_status": "ACTIVE",
+    "request_type": "NOW_FROM_REMOTE",
+    "time_remaining": 27,
+    "heat_or_cool_action": "VENTILATION_ONLY",
+    "current_temperature_celsius": null,
+    "target_temperature_celsius": 22.0,
+    "front_left_seat": "UNSPECIFIED",
+    "front_right_seat": "UNSPECIFIED",
+    "rear_left_seat": "UNSPECIFIED",
+    "rear_right_seat": "UNSPECIFIED",
+    "steering_wheel": "UNSPECIFIED",
+    "started_at": 1795002050,
+    "ending_at": 1795003842
+  },
+  {
+    "t": "11:43:47",
+    "kind": "weather",
+    "temp_c": 18.5,
+    "report_age": "0.3 h ago (2026-11-18 11:27 UTC)"
+  },
+  {
+    "t": "11:43:47",
+    "kind": "climate poll",
+    "running_status": "ACTIVE",
+    "request_type": "NOW_FROM_REMOTE",
+    "time_remaining": 27,
+    "heat_or_cool_action": "VENTILATION_ONLY",
+    "current_temperature_celsius": null,
+    "target_temperature_celsius": 22.0,
+    "front_left_seat": "UNSPECIFIED",
+    "front_right_seat": "UNSPECIFIED",
+    "rear_left_seat": "UNSPECIFIED",
+    "rear_right_seat": "UNSPECIFIED",
+    "steering_wheel": "UNSPECIFIED",
+    "started_at": 1795002050,
+    "ending_at": 1795003842
+  },
+  {
+    "t": "11:44:17",
+    "kind": "weather",
+    "temp_c": 18.5,
+    "report_age": "0.3 h ago (2026-11-18 11:27 UTC)"
+  },
+  {
+    "t": "11:44:17",
+    "kind": "climate poll",
+    "running_status": "ACTIVE",
+    "request_type": "NOW_FROM_REMOTE",
+    "time_remaining": 27,
+    "heat_or_cool_action": "VENTILATION_ONLY",
+    "current_temperature_celsius": null,
+    "target_temperature_celsius": 22.0,
+    "front_left_seat": "UNSPECIFIED",
+    "front_right_seat": "UNSPECIFIED",
+    "rear_left_seat": "UNSPECIFIED",
+    "rear_right_seat": "UNSPECIFIED",
+    "steering_wheel": "UNSPECIFIED",
+    "started_at": 1795002050,
+    "ending_at": 1795003842
+  },
+  {
+    "t": "11:44:43",
+    "kind": "climate stream",
+    "running_status": "ACTIVE",
+    "request_type": "NOW_FROM_REMOTE",
+    "time_remaining": 26,
+    "heat_or_cool_action": "VENTILATION_ONLY",
+    "current_temperature_celsius": null,
+    "target_temperature_celsius": 22.0,
+    "front_left_seat": "UNSPECIFIED",
+    "front_right_seat": "UNSPECIFIED",
+    "rear_left_seat": "UNSPECIFIED",
+    "rear_right_seat": "UNSPECIFIED",
+    "steering_wheel": "UNSPECIFIED",
+    "started_at": 1795002050,
+    "ending_at": 1795003842
+  },
+  {
+    "t": "11:44:48",
+    "kind": "weather",
+    "temp_c": 18.5,
+    "report_age": "0.3 h ago (2026-11-18 11:27 UTC)"
+  },
+  {
+    "t": "11:44:48",
+    "kind": "climate poll",
+    "running_status": "ACTIVE",
+    "request_type": "NOW_FROM_REMOTE",
+    "time_remaining": 26,
+    "heat_or_cool_action": "VENTILATION_ONLY",
+    "current_temperature_celsius": null,
+    "target_temperature_celsius": 22.0,
+    "front_left_seat": "UNSPECIFIED",
+    "front_right_seat": "UNSPECIFIED",
+    "rear_left_seat": "UNSPECIFIED",
+    "rear_right_seat": "UNSPECIFIED",
+    "steering_wheel": "UNSPECIFIED",
+    "started_at": 1795002050,
+    "ending_at": 1795003842
+  },
+  {
+    "t": "11:45:18",
+    "kind": "weather",
+    "temp_c": 18.5,
+    "report_age": "0.3 h ago (2026-11-18 11:27 UTC)"
+  },
+  {
+    "t": "11:45:18",
+    "kind": "climate poll",
+    "running_status": "ACTIVE",
+    "request_type": "NOW_FROM_REMOTE",
+    "time_remaining": 26,
+    "heat_or_cool_action": "VENTILATION_ONLY",
+    "current_temperature_celsius": null,
+    "target_temperature_celsius": 22.0,
+    "front_left_seat": "UNSPECIFIED",
+    "front_right_seat": "UNSPECIFIED",
+    "rear_left_seat": "UNSPECIFIED",
+    "rear_right_seat": "UNSPECIFIED",
+    "steering_wheel": "UNSPECIFIED",
+    "started_at": 1795002050,
+    "ending_at": 1795003842
+  }
+]

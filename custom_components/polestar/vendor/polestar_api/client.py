@@ -4,7 +4,14 @@ from __future__ import annotations
 
 from .auth import AuthManager, FileTokenStore, TokenStore
 from .connection import GrpcConnection
-from .discovery import VehicleInfo, discover_c3_endpoint, get_vehicles
+from .discovery import (
+    VehicleInfo,
+    discover_c3_endpoint,
+    get_car_information_by_vins,
+    get_internet_activation,
+    get_order_specification,
+    get_vehicles,
+)
 from .vehicle import Vehicle
 
 
@@ -48,8 +55,21 @@ class PolestarApi:
         """Fetch the user's vehicles."""
         token = await self._auth.ensure_valid_token()
         infos = await get_vehicles(token)
+        # Discovery can return only the VIN; the app's own car-information query has the plate.
+        extra = await get_car_information_by_vins(token, [i.vin for i in infos])
+        for info in infos:
+            found = extra.get(info.vin)
+            if found is None:
+                continue
+            info.registration_no = info.registration_no or found.registration_no
+            info.model_year = info.model_year if info.model_year is not None else found.model_year
+            info.slug = found.slug
+            info.pno34 = found.pno34
+            info.structure_week = found.structure_week
+            info.is_primary_driver = found.is_primary_driver
+            info.is_bst_edition = found.is_bst_edition
         self._vehicle_cache = infos
-        return [
+        vehicles = [
             Vehicle(
                 vin=info.vin,
                 connection=self._connection,
@@ -57,9 +77,18 @@ class PolestarApi:
                 registration_no=info.registration_no,
                 model_year=info.model_year,
                 model_name=info.model_name,
+                slug=info.slug,
+                pno34=info.pno34,
+                structure_week=info.structure_week,
+                is_primary_driver=info.is_primary_driver,
+                is_bst_edition=info.is_bst_edition,
             )
             for info in infos
         ]
+        for vehicle in vehicles:
+            vehicle.internet_activation = await get_internet_activation(token, vehicle.vin)
+            vehicle.order_specification = await get_order_specification(token, vehicle.vin)
+        return vehicles
 
     async def get_vehicle(self, vin: str) -> Vehicle:
         """Get a specific vehicle by VIN."""

@@ -85,6 +85,8 @@ class PolestarEntity(CoordinatorEntity[PolestarCoordinator]):
     _attr_has_entity_name = True
     required_fetch: str | None = None
     required_data: Callable[[Any], bool] | None = None
+    # True for entities that only make sense on a car with a combustion engine (diesel, petrol or hybrid).
+    requires_combustion_engine: bool = False
 
     def __init__(self, coordinator: PolestarCoordinator) -> None:
         super().__init__(coordinator)
@@ -100,11 +102,8 @@ class PolestarEntity(CoordinatorEntity[PolestarCoordinator]):
     @property
     def device_info(self) -> DeviceInfo:
         v = self._vehicle
-        name_parts = [_device_name_prefix(v.model_name)]
-        if v.registration_no:
-            name_parts.append(f"({v.registration_no})")
-        else:
-            name_parts.append(f"({v.vin[-6:]})")
+        # Model + last 6 of the VIN: stable, so entity IDs never depend on the plate.
+        name_parts = [_device_name_prefix(v.model_name), f"({v.vin[-6:]})"]
 
         return DeviceInfo(
             identifiers={(DOMAIN, v.vin)},
@@ -134,6 +133,23 @@ def _device_name_prefix(model_name: str | None) -> str:
     return f"Polestar {model_name}"
 
 
+_COMBUSTION_ENGINE_TYPES = frozenset({"diesel", "petrol", "petrol_hybrid", "diesel_hybrid"})
+
+
+def has_combustion_engine(vehicle: Any) -> bool | None:
+    """Whether the car has a combustion engine, from the C3 powertrain data.
+
+    ``None`` means the car did not say (the car information could not be loaded, or the engine type
+    is unspecified), so callers should keep the entity rather than hide it on a guess.
+    """
+    engine_type = getattr(vehicle, "engine_type", None)
+    if getattr(vehicle, "fuel_tank_volume", 0) or engine_type in _COMBUSTION_ENGINE_TYPES:
+        return True
+    if engine_type == "electric":
+        return False
+    return None
+
+
 @callback
 def async_filter_supported_entities(
     hass: HomeAssistant,
@@ -152,10 +168,13 @@ def async_filter_supported_entities(
     for entity in entities:
         attr = entity.required_fetch
         check = entity.required_data
-        if attr is None and check is None:
+        combustion_only = getattr(entity, "requires_combustion_engine", False)
+        if attr is None and check is None and not combustion_only:
             supported.append(entity)
             continue
         is_supported = attr is None or coordinator.is_fetch_supported(attr)
+        if is_supported and combustion_only:
+            is_supported = has_combustion_engine(getattr(coordinator, "vehicle", None)) is not False
         if is_supported and check is not None and coordinator.data is not None:
             try:
                 is_supported = bool(check(coordinator.data))

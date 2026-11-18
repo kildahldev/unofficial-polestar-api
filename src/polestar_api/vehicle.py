@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator, Callable
 from typing import TYPE_CHECKING
 
 from .models.availability import Availability
+from .naming import model_from_slug
 from .models.battery import Battery
 from .models.charge_location import ChargeLocation
 from .models.consent import PrivacySetting, PrivacySettingDetail, RemoteFunctionDataSharing
@@ -61,6 +62,26 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 
+def _non_default_fields(obj: object) -> dict:
+    """Every field of a decoded message that differs from its empty value, as plain data (no VIN)."""
+    from enum import IntEnum
+
+    result: dict = {}
+    for name, value in vars(obj).items():
+        if name.startswith("_") or name == "vin":
+            continue
+        if hasattr(value, "__dict__") and not isinstance(value, IntEnum):
+            nested = _non_default_fields(value)
+            if nested:
+                result[name] = nested
+        elif isinstance(value, IntEnum):
+            if int(value):
+                result[name] = value.name.lower()
+        elif value not in (None, "", 0, 0.0, False):
+            result[name] = value
+    return result
+
+
 class Vehicle:
     """Represents a single Polestar vehicle."""
 
@@ -73,12 +94,39 @@ class Vehicle:
         registration_no: str | None = None,
         model_year: int | None = None,
         model_name: str | None = None,
+        slug: str | None = None,
+        pno34: str | None = None,
+        structure_week: str | None = None,
+        is_primary_driver: bool | None = None,
+        is_bst_edition: bool | None = None,
     ) -> None:
         self.vin = vin
         self.internal_id = internal_id
         self.registration_no = registration_no
         self.model_year = model_year
-        self.model_name = model_name
+        self.model_name = model_name or model_from_slug(slug)
+        self.slug = slug
+        self.pno34 = pno34
+        self.structure_week = structure_week
+        self.is_primary_driver = is_primary_driver
+        self.is_bst_edition = is_bst_edition
+        # From the app's own queries (None when unavailable)
+        self.internet_activation: dict[str, str | None] | None = None
+        self.order_specification: dict | None = None
+        # From the C3 car-information service
+        self.battery_capacity_kwh: float | None = None
+        self.engine_type: str | None = None
+        self.fuel_tank_volume: int = 0
+        self.drivetrain_type: str | None = None
+        self.digital_key_type: str | None = None
+        self.has_performance_software_upgrade: bool | None = None
+        self.supports_engine_start: bool | None = None
+        # What the car says it reports. None until the car information has loaded.
+        self.reports_tyre_pressure_warning: bool | None = None
+        self.reports_tyre_pressure: bool | None = None  # actual pressures (kPa)
+        self.reports_service_warning: bool | None = None
+        self.supports_air_purification: bool | None = None
+        self.car_capabilities: dict = {}
         self.supports_charge_locations: bool | None = None
         self.supports_window_control: bool | None = None
         self.supports_sunroof_control: bool | None = None
@@ -144,7 +192,22 @@ class Vehicle:
             self.supports_window_control = bool(car.locks.supports_window_control)
             self.supports_sunroof_control = bool(car.locks.supports_sunroof_control)
         if car is not None:
-            self.model_name = self.model_name or car.vehicle_type_name or None
+            if car.propulsion is not None:
+                if car.propulsion.battery_capacity_kwh > 0:
+                    self.battery_capacity_kwh = round(car.propulsion.battery_capacity_kwh, 1)
+                self.engine_type = car.propulsion.engine_type.name.lower()
+                self.fuel_tank_volume = car.propulsion.fuel_tank_volume
+                self.drivetrain_type = car.propulsion.drivetrain_type.name.lower()
+            if car.digital_key is not None:
+                self.digital_key_type = car.digital_key.type.name.lower()
+            self.has_performance_software_upgrade = car.has_performance_software_upgrade
+            self.supports_engine_start = car.supports_engine_start
+            self.reports_tyre_pressure_warning = car.reports_tyre_pressure_warning
+            self.reports_tyre_pressure = car.reports_tyre_pressure_in_kpa
+            self.reports_service_warning = car.reports_service_warning
+            self.supports_air_purification = car.air_purification is not None and car.air_purification.any_supported
+            self.car_capabilities = _non_default_fields(car)
+            self.model_name = self.model_name or car.vehicle_type_name or model_from_slug(self.slug) or None
             if self.model_year is None and car.model_year.isdigit():
                 self.model_year = int(car.model_year)
         self.registration_no = self.registration_no or my_car.registration_plate or None

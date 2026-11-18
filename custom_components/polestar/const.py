@@ -3,6 +3,7 @@
 DOMAIN = "polestar"
 CONF_DEMO = "demo"
 CONF_VIN = "vin"
+CONF_REGISTRATION_PLATE = "registration_plate"
 
 PLATFORMS = [
     "sensor",

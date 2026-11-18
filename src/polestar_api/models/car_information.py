@@ -3,8 +3,55 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import IntEnum
+from typing import Annotated
 
-from ..wire import ProtoMessage
+from ..wire import Float32, ProtoMessage
+
+
+class EngineType(IntEnum):
+    """C3 EngineType (what the car is powered by)."""
+    UNSPECIFIED = 0
+    ELECTRIC = 1
+    DIESEL = 2
+    PETROL = 3
+    PETROL_HYBRID = 4
+    DIESEL_HYBRID = 5
+
+
+class DrivetrainType(IntEnum):
+    UNSPECIFIED = 0
+    AWD = 1
+    RWD = 2
+    FWD = 3
+
+
+class DigitalKeyType(IntEnum):
+    UNSPECIFIED = 0
+    NONE = 1
+    POLESTAR_1 = 2
+    POLESTAR_2 = 3
+    CCC = 4
+
+
+@dataclass(frozen=True)
+class Propulsion(ProtoMessage, schema={
+    1: "drivetrain_type",
+    4: "fuel_tank_volume",
+    5: "battery_capacity_kwh",
+    6: "engine_type",
+}):
+    """Powertrain of the car. A car with no fuel tank volume has no tank."""
+
+    drivetrain_type: DrivetrainType = DrivetrainType.UNSPECIFIED
+    fuel_tank_volume: int = 0
+    battery_capacity_kwh: Annotated[float, Float32] = 0.0
+    engine_type: EngineType = EngineType.UNSPECIFIED
+
+
+@dataclass(frozen=True)
+class DigitalKey(ProtoMessage, schema={1: "type"}):
+    type: DigitalKeyType = DigitalKeyType.UNSPECIFIED
 
 
 @dataclass(frozen=True)
@@ -54,6 +101,24 @@ class LocksCapabilities(ProtoMessage, schema={5: "supports_window_control", 6: "
 
 
 @dataclass(frozen=True)
+class AirPurificationCapabilities(ProtoMessage, schema={
+    1: "supports_remote_start",
+    2: "supports_internal_measurement",
+    3: "supports_external_measurement",
+}):
+    """What the car can do for air purification. Cars without the feature (a Polestar 2 without the
+    Plus pack) do not send this message at all."""
+
+    supports_remote_start: bool = False
+    supports_internal_measurement: bool = False
+    supports_external_measurement: bool = False
+
+    @property
+    def any_supported(self) -> bool:
+        return self.supports_remote_start or self.supports_internal_measurement or self.supports_external_measurement
+
+
+@dataclass(frozen=True)
 class CarDetails(ProtoMessage, schema={
     1: "vin",
     5: "vehicle_type_code",
@@ -62,11 +127,20 @@ class CarDetails(ProtoMessage, schema={
     9: "consumer_software_version",
     10: "market",
     20: "reports_avg_electric_consumption",
+    23: "reports_tyre_pressure_warning",
+    27: "supports_engine_start",
+    34: "air_purification",
     35: "charging",
     36: "locks",
     37: "parking_climatization",
+    39: "digital_key",
+    40: "propulsion",
+    43: "num_doors",
+    70: "has_performance_software_upgrade",
     48: "reports_avg_electric_consumption_last_trip",
     49: "reports_avg_electric_consumption_last_charge",
+    50: "reports_tyre_pressure_in_kpa",
+    87: "reports_service_warning",
 }):
     """Identity of a car. ``vehicle_type_name`` is the model name, e.g. ``Polestar 4``."""
 
@@ -79,9 +153,18 @@ class CarDetails(ProtoMessage, schema={
     reports_avg_electric_consumption: bool = False
     reports_avg_electric_consumption_last_trip: bool = False
     reports_avg_electric_consumption_last_charge: bool = False
+    air_purification: AirPurificationCapabilities | None = None
     charging: ChargingCapabilities | None = None
     locks: LocksCapabilities | None = None
     parking_climatization: ParkingClimatizationCapabilities | None = None
+    supports_engine_start: bool = False
+    digital_key: DigitalKey | None = None
+    propulsion: Propulsion | None = None
+    num_doors: int = 0
+    has_performance_software_upgrade: bool = False
+    reports_tyre_pressure_warning: bool = False
+    reports_tyre_pressure_in_kpa: bool = False
+    reports_service_warning: bool = False
 
 
 @dataclass(frozen=True)

@@ -38,6 +38,24 @@ query GetVDMSCars {
 }
 """
 
+APP_BACKEND_CAR_INFO_OPERATION_NAME = "CarInformationByVins"
+APP_BACKEND_CAR_INFO_QUERY = (
+    "query CarInformationByVins($input: CarInformationByVinsInput) { cars { "
+    "carInformationByVins(input: $input) { isBstEdition isPrimaryDriver modelYear pno34 "
+    "registrationNumber slug structureWeek vin } } }"
+)
+APP_BACKEND_INTERNET_ACTIVATION_QUERY = (
+    "query InternetActivationStatus($vin: String!) { internetActivation { "
+    "status(vin: $vin) { mnoStatus timestamp } } }"
+)
+# Order details (no prices, postcode or order id) matched to a car by its VIN.
+APP_BACKEND_ORDERS_QUERY = (
+    "query GetOrdersV2 { poms { getOrders { data { car { edition engine exterior interior model "
+    "modelYear vin wheels } orderV2 { configuration { specifications { label value } "
+    "features { displayType title } } } } } } }"
+)
+
+
 @dataclass
 class GrpcEndpoint:
     host: str
@@ -52,6 +70,11 @@ class VehicleInfo:
     registration_no: str | None = None
     model_year: int | None = None
     model_name: str | None = None
+    slug: str | None = None
+    pno34: str | None = None
+    structure_week: str | None = None
+    is_primary_driver: bool | None = None
+    is_bst_edition: bool | None = None
 
 
 async def discover_c3_endpoint(access_token: str) -> GrpcEndpoint:
@@ -106,6 +129,126 @@ async def get_vehicles(access_token: str) -> list[VehicleInfo]:
             raise ApiError(f"Vehicle list failed (app-backend: {graphql_error})")
 
         return _extract_app_backend_vehicles(data)
+
+
+async def get_car_information_by_vins(access_token: str, vins: list[str]) -> dict[str, VehicleInfo]:
+    """Look up the registration plate and model year for ``vins``.
+
+    This is the query the mobile app uses for its Specifications screen. Account discovery
+    (``GetVDMSCars``) can return only the VIN for secondary or guest accounts, and the C3
+    car-information service has no plate, but this query does. Any failure returns ``{}``.
+    """
+    if not vins:
+        return {}
+    headers = {
+        **_app_backend_headers(access_token),
+        "X-APOLLO-OPERATION-NAME": APP_BACKEND_CAR_INFO_OPERATION_NAME,
+        "Accept": APP_BACKEND_ACCEPT_HEADER,
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "operationName": APP_BACKEND_CAR_INFO_OPERATION_NAME,
+        "variables": {"input": {"vins": vins}},
+        "query": APP_BACKEND_CAR_INFO_QUERY,
+        "extensions": {"clientLibrary": APP_BACKEND_CLIENT_LIBRARY},
+    }
+    try:
+        async with httpx.AsyncClient(verify=_SSL_CONTEXT, timeout=30) as client:
+            response = await client.post(APP_BACKEND_GRAPHQL_URL, headers=headers, json=payload)
+        if response.status_code != 200:
+            return {}
+        data = response.json()
+    except (httpx.HTTPError, ValueError):
+        return {}
+    if not isinstance(data, dict) or data.get("errors"):
+        return {}
+    return _extract_car_information_by_vins(data)
+
+
+def _extract_car_information_by_vins(data: dict[str, Any]) -> dict[str, VehicleInfo]:
+    cars = (((data.get("data") or {}).get("cars") or {}).get("carInformationByVins")) or []
+    result: dict[str, VehicleInfo] = {}
+    for car in cars:
+        if not isinstance(car, dict):
+            continue
+        vin = car.get("vin")
+        if not isinstance(vin, str) or not vin:
+            continue
+        result[vin] = VehicleInfo(
+            vin=vin,
+            registration_no=_string_or_none(car.get("registrationNumber")),
+            model_year=_parse_model_year(car.get("modelYear")),
+            slug=_string_or_none(car.get("slug")),
+            pno34=_string_or_none(car.get("pno34")),
+            structure_week=_string_or_none(car.get("structureWeek")),
+            is_primary_driver=car.get("isPrimaryDriver") if isinstance(car.get("isPrimaryDriver"), bool) else None,
+            is_bst_edition=car.get("isBstEdition") if isinstance(car.get("isBstEdition"), bool) else None,
+        )
+    return result
+
+
+async def _app_backend_query(
+    access_token: str, operation: str, query: str, variables: dict[str, Any]
+) -> dict[str, Any] | None:
+    """Run a read-only app-backend GraphQL query. Returns the ``data`` object, or ``None`` on any failure."""
+    headers = {
+        **_app_backend_headers(access_token),
+        "X-APOLLO-OPERATION-NAME": operation,
+        "Accept": APP_BACKEND_ACCEPT_HEADER,
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "operationName": operation,
+        "variables": variables,
+        "query": query,
+        "extensions": {"clientLibrary": APP_BACKEND_CLIENT_LIBRARY},
+    }
+    try:
+        async with httpx.AsyncClient(verify=_SSL_CONTEXT, timeout=30) as client:
+            response = await client.post(APP_BACKEND_GRAPHQL_URL, headers=headers, json=payload)
+        if response.status_code != 200:
+            return None
+        data = response.json()
+    except (httpx.HTTPError, ValueError):
+        return None
+    if not isinstance(data, dict) or data.get("errors"):
+        return None
+    result = data.get("data")
+    return result if isinstance(result, dict) else None
+
+
+async def get_internet_activation(access_token: str, vin: str) -> dict[str, str | None] | None:
+    """The car's mobile-network activation status: ``{"status": ..., "timestamp": ...}``, or ``None``."""
+    data = await _app_backend_query(
+        access_token, "InternetActivationStatus", APP_BACKEND_INTERNET_ACTIVATION_QUERY, {"vin": vin}
+    )
+    status = (((data or {}).get("internetActivation") or {}).get("status")) or None
+    if not isinstance(status, dict):
+        return None
+    return {"status": _string_or_none(status.get("mnoStatus")), "timestamp": _string_or_none(status.get("timestamp"))}
+
+
+async def get_order_specification(access_token: str, vin: str) -> dict[str, Any] | None:
+    """The order details (engine, colour, interior, wheels, specifications) of the car with ``vin``."""
+    data = await _app_backend_query(access_token, "GetOrdersV2", APP_BACKEND_ORDERS_QUERY, {})
+    orders = ((((data or {}).get("poms") or {}).get("getOrders") or {}).get("data")) or []
+    for order in orders:
+        car = (order or {}).get("car") if isinstance(order, dict) else None
+        if not isinstance(car, dict) or car.get("vin") != vin:
+            continue
+        config = ((order.get("orderV2") or {}).get("configuration")) or {}
+        return {
+            "edition": car.get("edition"),
+            "engine": car.get("engine"),
+            "exterior": car.get("exterior"),
+            "interior": car.get("interior"),
+            "wheels": car.get("wheels"),
+            "specifications": {
+                str(i.get("label")): i.get("value") for i in config.get("specifications") or [] if isinstance(i, dict)
+            },
+            "features": [i.get("title") for i in config.get("features") or [] if isinstance(i, dict)],
+        }
+    return None
 
 
 def _extract_app_backend_vehicles(data: dict[str, Any]) -> list[VehicleInfo]:
@@ -217,3 +360,4 @@ def _parse_model_year(value: object) -> int | None:
 def _string_or_none(value: object) -> str | None:
     """Return strings unchanged and coerce everything else to None."""
     return value if isinstance(value, str) and value else None
+

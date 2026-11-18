@@ -17,6 +17,7 @@ from homeassistant.const import (
     PERCENTAGE,
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
+    UnitOfEnergy,
     UnitOfEnergyDistance,
     UnitOfLength,
     UnitOfPower,
@@ -53,10 +54,11 @@ from polestar_api.models.health import (
 from polestar_api.models.ota import SoftwareState
 from polestar_api.models.precleaning import PreCleaningErrorType, PreCleaningStartReason
 
-from .const import DOMAIN
+from .const import CONF_REGISTRATION_PLATE, DOMAIN
 from .coordinator import PolestarVehicleData
 from .entity import PolestarEntity, async_filter_supported_entities
 from .utils import (
+    weather_attributes,
     climate_end_time,
     climate_minutes_remaining,
     enum_name,
@@ -120,6 +122,19 @@ def _battery_capacity_kwh(model_name: str | None) -> float:
     return DEFAULT_BATTERY_CAPACITY_KWH
 
 
+def _vehicle_capacity_kwh(vehicle) -> float:
+    """The car's own battery capacity from C3 when it reports one, else the per-model table."""
+    reported = getattr(vehicle, "battery_capacity_kwh", None)
+    return reported if reported else _battery_capacity_kwh(vehicle.model_name)
+
+
+def _build_week(structure_week: str | None) -> str | None:
+    """``202611`` -> ``2026-W11`` (the production structure week); anything else is returned as is."""
+    if structure_week and len(structure_week) == 6 and structure_week.isdigit():
+        return f"{structure_week[:4]}-W{structure_week[4:]}"
+    return structure_week
+
+
 def _energy_needed_kwh(data: PolestarVehicleData, capacity_kwh: float) -> float | None:
     """Energy needed to reach target SOC, estimated from usable capacity and current/target charge levels."""
     if data.battery is None or data.target_soc is None:
@@ -165,6 +180,7 @@ class PolestarSensorDescription(SensorEntityDescription):
     attrs_fn: Callable[[PolestarVehicleData], dict[str, Any]] | None = None
     fetch_attr: str | None = None
     required_data: Callable[[PolestarVehicleData], bool] | None = None
+    requires_combustion_engine: bool = False
 
 
 SENSORS: tuple[PolestarSensorDescription, ...] = (
@@ -375,6 +391,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     PolestarSensorDescription(
         key="engine_hours_to_service",
         name="Engine hours to service",
+        requires_combustion_engine=True,
         native_unit_of_measurement="h",
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:engine",
@@ -382,6 +399,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="service_warning",
+        fetch_attr="service_warning",
         name="Service warning",
         device_class=SensorDeviceClass.ENUM,
         options=enum_options(ServiceWarning),
@@ -422,41 +440,54 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         value_fn=lambda d: d.weather.temperature_celsius if d.weather else None,
+        attrs_fn=lambda d: weather_attributes(d.weather),
     ),
     PolestarSensorDescription(
         key="fl_tyre_pressure",
+        fetch_attr="tyre_pressure",
         icon="mdi:tire",
         name="Front left tyre pressure",
         device_class=SensorDeviceClass.PRESSURE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfPressure.KPA,
+        suggested_unit_of_measurement=UnitOfPressure.PSI,
+        suggested_display_precision=0,
         value_fn=lambda d: d.health.front_left_tyre_pressure_kpa if d.health else None,
     ),
     PolestarSensorDescription(
         key="fr_tyre_pressure",
+        fetch_attr="tyre_pressure",
         icon="mdi:tire",
         name="Front right tyre pressure",
         device_class=SensorDeviceClass.PRESSURE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfPressure.KPA,
+        suggested_unit_of_measurement=UnitOfPressure.PSI,
+        suggested_display_precision=0,
         value_fn=lambda d: d.health.front_right_tyre_pressure_kpa if d.health else None,
     ),
     PolestarSensorDescription(
         key="rl_tyre_pressure",
+        fetch_attr="tyre_pressure",
         icon="mdi:tire",
         name="Rear left tyre pressure",
         device_class=SensorDeviceClass.PRESSURE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfPressure.KPA,
+        suggested_unit_of_measurement=UnitOfPressure.PSI,
+        suggested_display_precision=0,
         value_fn=lambda d: d.health.rear_left_tyre_pressure_kpa if d.health else None,
     ),
     PolestarSensorDescription(
         key="rr_tyre_pressure",
+        fetch_attr="tyre_pressure",
         icon="mdi:tire",
         name="Rear right tyre pressure",
         device_class=SensorDeviceClass.PRESSURE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfPressure.KPA,
+        suggested_unit_of_measurement=UnitOfPressure.PSI,
+        suggested_display_precision=0,
         value_fn=lambda d: d.health.rear_right_tyre_pressure_kpa if d.health else None,
     ),
     PolestarSensorDescription(
@@ -532,14 +563,6 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         options=enum_options(ClimatizationRequestType, exclude_unspecified=False),
         value_fn=lambda d: enum_name(d.climate.request_type, allow_unspecified=True) if d.climate else None,
-    ),
-    PolestarSensorDescription(
-        key="climate_heat_or_cool_action",
-        name="Climate heat or cool action",
-        device_class=SensorDeviceClass.ENUM,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        options=enum_options(HeatOrCoolAction, exclude_unspecified=False),
-        value_fn=lambda d: enum_name(d.climate.heat_or_cool_action, allow_unspecified=True) if d.climate else None,
     ),
     PolestarSensorDescription(
         key="climate_time_remaining",
@@ -664,6 +687,13 @@ async def async_setup_entry(
             for key, name, power_kw in CHARGING_TIME_TIERS
         )
         async_add_entities(async_filter_supported_entities(hass, coordinator, "sensor", entities))
+        info_entities: list[SensorEntity] = [PolestarVinSensor(coordinator), PolestarVehicleInfoSensor(coordinator)]
+        vehicle = coordinator.vehicle
+        if getattr(vehicle, "battery_capacity_kwh", None):
+            info_entities.append(PolestarBatteryCapacitySensor(coordinator))
+        if getattr(vehicle, "internet_activation", None):
+            info_entities.append(PolestarInternetActivationSensor(coordinator))
+        async_add_entities(info_entities)
 
 
 class PolestarSensor(PolestarEntity, SensorEntity):
@@ -676,6 +706,7 @@ class PolestarSensor(PolestarEntity, SensorEntity):
         self.entity_description = description
         self.required_fetch = description.fetch_attr
         self.required_data = description.required_data
+        self.requires_combustion_engine = description.requires_combustion_engine
         self._attr_unique_id = f"{self._vehicle.vin}_{description.key}"
 
     @property
@@ -689,6 +720,121 @@ class PolestarSensor(PolestarEntity, SensorEntity):
         if self.coordinator.data is None or self.entity_description.attrs_fn is None:
             return {}
         return self.entity_description.attrs_fn(self.coordinator.data)
+
+
+class PolestarVinSensor(PolestarEntity, SensorEntity):
+    """The VIN, with the registration plate (if known) as an attribute."""
+
+    _attr_name = "VIN"
+    _attr_icon = "mdi:card-account-details-outline"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{self._vehicle.vin}_vin"
+
+    @property
+    def native_value(self) -> str:
+        return self._vehicle.vin
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        v = self._vehicle
+        plate = self.coordinator.config_entry.options.get(CONF_REGISTRATION_PLATE) or v.registration_no
+        attrs: dict[str, Any] = {
+            "model": v.model_name,
+            "model_year": v.model_year,
+            "structure_week": v.structure_week,
+            "build_week": _build_week(v.structure_week),
+            "powertrain": v.engine_type,
+            "drivetrain": v.drivetrain_type,
+        }
+        if plate:
+            attrs["registration_plate"] = plate
+        return {k: val for k, val in attrs.items() if val}
+
+
+class PolestarBatteryCapacitySensor(PolestarEntity, SensorEntity):
+    """Battery capacity as the car reports it (gross, from the C3 car-information service)."""
+
+    _attr_name = "Battery Capacity"
+    _attr_device_class = SensorDeviceClass.ENERGY_STORAGE
+    _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{self._vehicle.vin}_battery_capacity"
+
+    @property
+    def native_value(self) -> float | None:
+        return getattr(self._vehicle, "battery_capacity_kwh", None)
+
+
+class PolestarInternetActivationSensor(PolestarEntity, SensorEntity):
+    """The car's mobile-network activation status (``acceptance_not_needed``, ...), read when the entry loads."""
+
+    _attr_name = "Internet Activation"
+    _attr_icon = "mdi:sim"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{self._vehicle.vin}_internet_activation"
+
+    @property
+    def native_value(self) -> str | None:
+        info = getattr(self._vehicle, "internet_activation", None) or {}
+        status = info.get("status")
+        return status.lower() if status else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        info = getattr(self._vehicle, "internet_activation", None) or {}
+        return {"as_of": info["timestamp"]} if info.get("timestamp") else {}
+
+
+class PolestarVehicleInfoSensor(PolestarEntity, SensorEntity):
+    """Everything the app and C3 report about the car, as attributes. Disabled by default.
+
+    For testing on other cars and markets (for example whether the performance software
+    upgrade is applied). The VIN, prices, order numbers and addresses are not included.
+    """
+
+    _attr_name = "Vehicle Info"
+    _attr_icon = "mdi:text-box-search-outline"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
+    _unrecorded_attributes = frozenset({"app", "c3_capabilities", "order"})
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{self._vehicle.vin}_vehicle_info"
+
+    @property
+    def native_value(self) -> str:
+        return "ok"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        v = self._vehicle
+        return {
+            "app": {
+                "slug": v.slug,
+                "pno34": v.pno34,
+                "structure_week": v.structure_week,
+                "is_primary_driver": v.is_primary_driver,
+                "is_bst_edition": v.is_bst_edition,
+                "internet_activation": getattr(v, "internet_activation", None),
+            },
+            "order": getattr(v, "order_specification", None),
+            "c3_capabilities": getattr(v, "car_capabilities", None) or {},
+            "powertrain": v.engine_type,
+            "drivetrain": v.drivetrain_type,
+            "digital_key_type": v.digital_key_type,
+            "has_performance_software_upgrade": v.has_performance_software_upgrade,
+            "supports_engine_start": v.supports_engine_start,
+        }
 
 
 class PolestarChargingTimeSensor(PolestarEntity, SensorEntity):
@@ -715,7 +861,7 @@ class PolestarChargingTimeSensor(PolestarEntity, SensorEntity):
     def native_value(self) -> StateType | None:
         if self.coordinator.data is None:
             return None
-        capacity_kwh = _battery_capacity_kwh(self._vehicle.model_name)
+        capacity_kwh = _vehicle_capacity_kwh(self._vehicle)
         energy_kwh = _safe(lambda d: _energy_needed_kwh(d, capacity_kwh), self.coordinator.data)
         if energy_kwh is None:
             return None
@@ -725,5 +871,5 @@ class PolestarChargingTimeSensor(PolestarEntity, SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         return {
             "assumed_power_kw": self._power_kw,
-            "assumed_battery_capacity_kwh": _battery_capacity_kwh(self._vehicle.model_name),
+            "assumed_battery_capacity_kwh": _vehicle_capacity_kwh(self._vehicle),
         }

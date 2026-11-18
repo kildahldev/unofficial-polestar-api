@@ -191,6 +191,7 @@ def _coordinator(module, vehicle):
     coordinator._unsupported_fetches = set()
     coordinator._invalid_argument_counts = {}
     coordinator._empty_fetches = set()
+    coordinator._failing_fetches = set()
     coordinator._no_data_fetches = set()
     coordinator._stream_last_data = {}
     coordinator._stream_tasks = {}
@@ -242,11 +243,33 @@ async def test_other_errors_do_not_mark_fetch_unsupported(monkeypatch):
     assert coordinator.is_fetch_supported("amp_limit")
 
 
+@pytest.mark.asyncio
+async def test_failed_fetch_warns_once_and_keeps_the_last_value(monkeypatch, caplog):
+    import logging
+
+    coordinator_module, _ = _load(monkeypatch, FakeRegistry())
+    vehicle = FakeVehicle({"amp_limit": TimeoutError()})
+    coordinator = _coordinator(coordinator_module, vehicle)
+    previous = coordinator_module.PolestarVehicleData(amp_limit="last good")
+
+    with caplog.at_level(logging.DEBUG):
+        values, _ = await coordinator._async_fetch_values(("amp_limit",), previous)
+        await coordinator._async_fetch_values(("amp_limit",), previous)
+
+    assert values["amp_limit"] == "last good"
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING and "Fetching amp_limit" in r.getMessage()]
+    assert len(warnings) == 1
+    assert "amp_limit" in coordinator._failing_fetches
+
+
 class FakeEntity:
-    def __init__(self, unique_id: str, required_fetch: str | None, required_data=None) -> None:
+    def __init__(
+        self, unique_id: str, required_fetch: str | None, required_data=None, requires_combustion_engine=False
+    ) -> None:
         self.unique_id = unique_id
         self.required_fetch = required_fetch
         self.required_data = required_data
+        self.requires_combustion_engine = requires_combustion_engine
 
 
 def _entry(unique_id: str, disabled_by=None) -> SimpleNamespace:
@@ -635,3 +658,48 @@ def test_odometer_merge_rejects_a_lower_reading(monkeypatch):
 
     assert coordinator_module.PolestarCoordinator._merge_partial_update("odometer", previous, lower) is previous
     assert coordinator_module.PolestarCoordinator._merge_partial_update("odometer", previous, higher) is higher
+
+
+@pytest.mark.parametrize(
+    ("engine_type", "fuel_tank", "kept"),
+    [("electric", 0, False), ("petrol_hybrid", 0, True), ("diesel", 0, True), (None, 0, True), ("electric", 40, True)],
+)
+def test_combustion_only_entities_follow_the_powertrain(monkeypatch, engine_type, fuel_tank, kept):
+    registry = FakeRegistry({"sensor.hours": _entry("v_engine_hours")})
+    _, entity_module = _load(monkeypatch, registry)
+    vehicle = SimpleNamespace(engine_type=engine_type, fuel_tank_volume=fuel_tank)
+    coordinator = SimpleNamespace(is_fetch_supported=lambda attr: True, vehicle=vehicle)
+    entity = FakeEntity("v_engine_hours", None, requires_combustion_engine=True)
+
+    result = entity_module.async_filter_supported_entities(None, coordinator, "sensor", [entity])
+
+    assert (result == [entity]) is kept
+    assert registry.updates == ([] if kept else [("sensor.hours", RegistryEntryDisabler.INTEGRATION)])
+
+
+def test_car_reporting_flags_gate_tyre_and_service_entities(monkeypatch):
+    module, _ = _load(monkeypatch, FakeRegistry())
+    coordinator = _coordinator_for(
+        module, reports_tyre_pressure_warning=False, reports_tyre_pressure=False, reports_service_warning=True
+    )
+
+    assert not coordinator.is_fetch_supported("tyre_warning")
+    assert not coordinator.is_fetch_supported("tyre_pressure")
+    assert coordinator.is_fetch_supported("service_warning")
+
+
+def test_unknown_reporting_flags_keep_the_entities(monkeypatch):
+    module, _ = _load(monkeypatch, FakeRegistry())
+    coordinator = _coordinator_for(module)  # flags never set: car information did not load
+
+    assert coordinator.is_fetch_supported("tyre_pressure")
+    assert coordinator.is_fetch_supported("tyre_warning")
+    assert coordinator.is_fetch_supported("service_warning")
+
+
+def test_car_without_air_purification_hides_the_pre_cleaning_entities(monkeypatch):
+    module, _ = _load(monkeypatch, FakeRegistry())
+
+    assert not _coordinator_for(module, supports_air_purification=False).is_fetch_supported("precleaning")
+    assert _coordinator_for(module, supports_air_purification=True).is_fetch_supported("precleaning")
+    assert _coordinator_for(module).is_fetch_supported("precleaning")  # unknown keeps it

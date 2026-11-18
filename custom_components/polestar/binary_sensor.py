@@ -181,6 +181,7 @@ BINARY_SENSORS: tuple[PolestarBinarySensorDescription, ...] = (
     ),
     PolestarBinarySensorDescription(
         key="tyre_warning",
+        fetch_attr="tyre_warning",
         icon_off="mdi:car-tire-alert",
         icon_on="mdi:alert-circle",
         name="Tyre warning",
@@ -197,6 +198,7 @@ BINARY_SENSORS: tuple[PolestarBinarySensorDescription, ...] = (
     ),
     PolestarBinarySensorDescription(
         key="service_required",
+        fetch_attr="service_warning",
         icon_off="mdi:car-wrench",
         icon_on="mdi:alert-circle",
         name="Service required",
