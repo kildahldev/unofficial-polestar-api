@@ -14,7 +14,14 @@ from polestar_api import PolestarApi
 from polestar_api.auth import MemoryTokenStore
 from polestar_api.exceptions import AuthError
 
-from .const import CONF_DEMO, CONF_UPDATE_INTERVAL, CONF_VIN, DEFAULT_UPDATE_INTERVAL, DOMAIN
+from .const import (
+    CONF_DEMO,
+    CONF_REGISTRATION_PLATE,
+    CONF_UPDATE_INTERVAL,
+    CONF_VIN,
+    DEFAULT_UPDATE_INTERVAL,
+    DOMAIN,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -45,6 +52,7 @@ def _vehicle_options_schema(
     return vol.Schema(
         {
             vol.Required(CONF_VIN): vol.In(options),
+            vol.Optional(CONF_REGISTRATION_PLATE): str,
             vol.Optional(CONF_UPDATE_INTERVAL, default=default_interval): vol.All(
                 int, vol.Range(min=60, max=86400)
             ),
@@ -57,11 +65,26 @@ def _guest_vin_schema(default_interval: int = DEFAULT_UPDATE_INTERVAL) -> vol.Sc
     return vol.Schema(
         {
             vol.Required(CONF_VIN): str,
+            vol.Optional(CONF_REGISTRATION_PLATE): str,
             vol.Optional(CONF_UPDATE_INTERVAL, default=default_interval): vol.All(
                 int, vol.Range(min=60, max=86400)
             ),
         }
     )
+
+
+def _normalise_plate(value: Any) -> str:
+    """Return the plate upper-cased with surrounding whitespace removed ('' when unset)."""
+    return str(value or "").strip().upper()
+
+
+def _clean_options(user_input: dict[str, Any]) -> dict[str, Any]:
+    """Normalise the plate and drop it when blank, so clearing the field removes the override."""
+    options = dict(user_input)
+    plate = _normalise_plate(options.pop(CONF_REGISTRATION_PLATE, ""))
+    if plate:
+        options[CONF_REGISTRATION_PLATE] = plate
+    return options
 
 
 class PolestarOptionsFlow(OptionsFlow):
@@ -71,11 +94,12 @@ class PolestarOptionsFlow(OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            return self.async_create_entry(title="", data=_clean_options(user_input))
 
         current = self.config_entry.options.get(
             CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
         )
+        current_plate = self.config_entry.options.get(CONF_REGISTRATION_PLATE, "")
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
@@ -83,6 +107,9 @@ class PolestarOptionsFlow(OptionsFlow):
                     vol.Optional(CONF_UPDATE_INTERVAL, default=current): vol.All(
                         int, vol.Range(min=60, max=86400)
                     ),
+                    vol.Optional(
+                        CONF_REGISTRATION_PLATE, description={"suggested_value": current_plate}
+                    ): str,
                 }
             ),
         )
@@ -159,6 +186,7 @@ class PolestarConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             vin = user_input[CONF_VIN]
             interval = user_input.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
+            plate = _normalise_plate(user_input.get(CONF_REGISTRATION_PLATE))
 
             if vin == _GUEST_SENTINEL:
                 return await self.async_step_guest_vin()
@@ -173,7 +201,7 @@ class PolestarConfigFlow(ConfigFlow, domain=DOMAIN):
                     CONF_PASSWORD: self._password,
                     CONF_VIN: vin,
                 },
-                options={CONF_UPDATE_INTERVAL: interval},
+                options={CONF_UPDATE_INTERVAL: interval, **({CONF_REGISTRATION_PLATE: plate} if plate else {})},
             )
 
         return self.async_show_form(
@@ -188,6 +216,7 @@ class PolestarConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             vin = user_input[CONF_VIN].upper().strip()
             interval = user_input.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
+            plate = _normalise_plate(user_input.get(CONF_REGISTRATION_PLATE))
 
             await self.async_set_unique_id(vin)
             self._abort_if_unique_id_configured()
@@ -199,7 +228,7 @@ class PolestarConfigFlow(ConfigFlow, domain=DOMAIN):
                     CONF_PASSWORD: self._password,
                     CONF_VIN: vin,
                 },
-                options={CONF_UPDATE_INTERVAL: interval},
+                options={CONF_UPDATE_INTERVAL: interval, **({CONF_REGISTRATION_PLATE: plate} if plate else {})},
             )
 
         return self.async_show_form(

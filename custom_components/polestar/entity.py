@@ -100,11 +100,8 @@ class PolestarEntity(CoordinatorEntity[PolestarCoordinator]):
     @property
     def device_info(self) -> DeviceInfo:
         v = self._vehicle
-        name_parts = [_device_name_prefix(v.model_name)]
-        if v.registration_no:
-            name_parts.append(f"({v.registration_no})")
-        else:
-            name_parts.append(f"({v.vin[-6:]})")
+        # Model + last 6 of the VIN: stable, so entity IDs never depend on the plate.
+        name_parts = [_device_name_prefix(v.model_name), f"({v.vin[-6:]})"]
 
         return DeviceInfo(
             identifiers={(DOMAIN, v.vin)},

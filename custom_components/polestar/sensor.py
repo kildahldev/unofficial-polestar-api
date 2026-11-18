@@ -53,7 +53,7 @@ from polestar_api.models.health import (
 from polestar_api.models.ota import SoftwareState
 from polestar_api.models.precleaning import PreCleaningErrorType, PreCleaningStartReason
 
-from .const import DOMAIN
+from .const import CONF_REGISTRATION_PLATE, DOMAIN
 from .coordinator import PolestarVehicleData
 from .entity import PolestarEntity, async_filter_supported_entities
 from .utils import (
@@ -664,6 +664,7 @@ async def async_setup_entry(
             for key, name, power_kw in CHARGING_TIME_TIERS
         )
         async_add_entities(async_filter_supported_entities(hass, coordinator, "sensor", entities))
+        async_add_entities([PolestarVinSensor(coordinator)])
 
 
 class PolestarSensor(PolestarEntity, SensorEntity):
@@ -689,6 +690,31 @@ class PolestarSensor(PolestarEntity, SensorEntity):
         if self.coordinator.data is None or self.entity_description.attrs_fn is None:
             return {}
         return self.entity_description.attrs_fn(self.coordinator.data)
+
+
+class PolestarVinSensor(PolestarEntity, SensorEntity):
+    """The VIN, with the registration plate (if known) as an attribute."""
+
+    _attr_name = "VIN"
+    _attr_icon = "mdi:card-account-details-outline"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{self._vehicle.vin}_vin"
+
+    @property
+    def native_value(self) -> str:
+        return self._vehicle.vin
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        v = self._vehicle
+        plate = self.coordinator.config_entry.options.get(CONF_REGISTRATION_PLATE) or v.registration_no
+        attrs: dict[str, Any] = {"model": v.model_name, "model_year": v.model_year}
+        if plate:
+            attrs["registration_plate"] = plate
+        return {k: val for k, val in attrs.items() if val}
 
 
 class PolestarChargingTimeSensor(PolestarEntity, SensorEntity):
