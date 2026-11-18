@@ -55,6 +55,9 @@ class OtaServiceClient:
                     raw = decode(data, {1: ("info", "message")})
                     if raw.get("info"):
                         return CarSoftwareInfo.from_bytes(raw["info"])
+                    # An empty first message means the backend has no record right now (seen on
+                    # 18 Nov 2026). Do not wait out the timeout; the next poll asks again.
+                    return None
         except TimeoutError:
             pass
         return None

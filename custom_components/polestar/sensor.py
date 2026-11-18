@@ -665,7 +665,10 @@ class PolestarSensor(PolestarEntity, SensorEntity):
     def native_value(self) -> StateType | None:
         if self.coordinator.data is None:
             return None
-        return _safe(self.entity_description.value_fn, self.coordinator.data)
+        value = _safe(self.entity_description.value_fn, self.coordinator.data)
+        if value is None and self.entity_description.key == "software_version":
+            return self.coordinator.installed_version_cache  # OTA service empty: use the car record
+        return value
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

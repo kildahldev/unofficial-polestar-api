@@ -231,7 +231,8 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         )
         self.vehicle = vehicle
         self.climate_preferences = ClimateCommandPreferences()
-        self._installed_version_cache: str | None = None
+        # Seeded from the car record; real OTA info replaces it when the backend has some.
+        self._installed_version_cache: str | None = getattr(vehicle, "installed_software_version", None) or None
         self._stream_tasks: dict[str, asyncio.Task[None]] = {}
         self._availability_task: asyncio.Task[None] | None = None
         self._unsupported_streams: set[str] = set()

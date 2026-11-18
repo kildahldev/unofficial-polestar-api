@@ -116,6 +116,8 @@ class Vehicle:
         # From the C3 car-information service
         self.battery_capacity_kwh: float | None = None
         self.engine_type: str | None = None
+        # Installed software version from the car record; the OTA service can answer with nothing.
+        self.installed_software_version: str | None = None
         self.fuel_tank_volume: int = 0
         self.drivetrain_type: str | None = None
         self.digital_key_type: str | None = None
@@ -207,6 +209,7 @@ class Vehicle:
             self.reports_service_warning = car.reports_service_warning
             self.supports_air_purification = car.air_purification is not None and car.air_purification.any_supported
             self.car_capabilities = _non_default_fields(car)
+            self.installed_software_version = car.consumer_software_version or None
             self.model_name = self.model_name or car.vehicle_type_name or model_from_slug(self.slug) or None
             if self.model_year is None and car.model_year.isdigit():
                 self.model_year = int(car.model_year)

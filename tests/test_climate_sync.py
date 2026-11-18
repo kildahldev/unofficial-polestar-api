@@ -154,3 +154,22 @@ def test_old_warning_entities_are_gone_and_removed_from_the_registry():
     assert 'key="in_use"' in binary_src and 'name="Light status"' in binary_src
     init_src = (ROOT / "__init__.py").read_text()
     assert "_async_remove_replaced_entities(hass, vehicle.vin)" in init_src
+
+
+def test_software_stream_returns_at_once_on_an_empty_first_message():
+    from pathlib import Path
+
+    source = Path("src/polestar_api/services/ota.py").read_text()
+    after_info = source.split('return CarSoftwareInfo.from_bytes(raw["info"])', 1)[1]
+    assert after_info.lstrip().startswith("# An empty first message")
+    assert "return None" in after_info.split("except", 1)[0]
+
+
+def test_installed_software_version_comes_from_the_car_record():
+    from pathlib import Path
+
+    assert "self.installed_software_version = car.consumer_software_version or None" in Path(
+        "src/polestar_api/vehicle.py"
+    ).read_text()
+    coordinator = Path("custom_components/polestar/coordinator.py").read_text()
+    assert 'getattr(vehicle, "installed_software_version", None)' in coordinator
