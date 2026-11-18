@@ -95,9 +95,6 @@
       "climate_active": {
         "name": "Climate active"
       },
-      "connected": {
-        "name": "Connected"
-      },
       "door_front_left": {
         "name": "Front left door"
       },
@@ -116,9 +113,6 @@
       "in_use": {
         "name": "In use"
       },
-      "is_charging": {
-        "name": "Charging"
-      },
       "is_plugged_in": {
         "name": "Plugged in"
       },
@@ -127,9 +121,6 @@
       },
       "low_voltage_battery": {
         "name": "Low-voltage battery"
-      },
-      "precleaning_running": {
-        "name": "Air purification running"
       },
       "remote_function_data_sharing": {
         "name": "Remote function data sharing"
@@ -305,35 +296,11 @@
       "charging_voltage": {
         "name": "Charging voltage"
       },
-      "climate_current_temperature": {
-        "name": "Climate current temperature"
-      },
-      "climate_ends_at": {
-        "name": "Climate ends at"
-      },
-      "climate_front_left_seat": {
-        "name": "Climate front left seat"
-      },
-      "climate_front_right_seat": {
-        "name": "Climate front right seat"
-      },
-      "climate_rear_left_seat": {
-        "name": "Climate rear left seat"
-      },
-      "climate_rear_right_seat": {
-        "name": "Climate rear right seat"
-      },
       "climate_request_type": {
         "name": "Climate request type"
       },
       "climate_running_status": {
         "name": "Climate running status"
-      },
-      "climate_steering_wheel": {
-        "name": "Climate steering wheel"
-      },
-      "climate_target_temperature": {
-        "name": "Climate target temperature"
       },
       "climate_time_remaining": {
         "name": "Climate time remaining"
@@ -380,15 +347,6 @@
       "pm25": {
         "name": "PM2.5"
       },
-      "precleaning_error": {
-        "name": "Air purification error"
-      },
-      "precleaning_runtime_left": {
-        "name": "Air purification runtime left"
-      },
-      "precleaning_start_reason": {
-        "name": "Air purification start reason"
-      },
       "range": {
         "name": "Range"
       },
@@ -406,9 +364,6 @@
       },
       "speed": {
         "name": "Speed"
-      },
-      "target_soc": {
-        "name": "Target SOC"
       },
       "time_to_full": {
         "name": "Time to full charge"

@@ -60,7 +60,7 @@ from polestar_api.models.precleaning import PreCleaningErrorType, PreCleaningSta
 
 from .const import CONF_REGISTRATION_PLATE, DOMAIN
 from .coordinator import PolestarVehicleData
-from .entity import PolestarEntity, async_filter_supported_entities
+from .entity import PolestarEntity, async_filter_supported_entities, async_remove_registered_entities
 from . import geocode
 from .utils import (
     connection_text,
@@ -186,15 +186,6 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
         value_fn=lambda d: d.battery.range_km if d.battery else None,
-    ),
-    PolestarSensorDescription(
-        key="target_soc",
-        translation_key="target_soc",
-        icon="mdi:battery-charging-high",
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=PERCENTAGE,
-        value_fn=lambda d: d.target_soc.target_level if d.target_soc else None,
-        attrs_fn=lambda d: {"mode": enum_name(d.target_soc.setting_type)} if d.target_soc else {},
     ),
     PolestarSensorDescription(
         key="charging_power",
@@ -459,33 +450,6 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         value_fn=lambda d: d.precleaning.measured_particulate_matter_2_5 if d.precleaning else None,
     ),
     PolestarSensorDescription(
-        key="precleaning_runtime_left",
-        fetch_attr="precleaning",
-        translation_key="precleaning_runtime_left",
-        device_class=SensorDeviceClass.DURATION,
-        native_unit_of_measurement=UnitOfTime.MINUTES,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda d: d.precleaning.runtime_left_minutes if d.precleaning else None,
-    ),
-    PolestarSensorDescription(
-        key="precleaning_start_reason",
-        fetch_attr="precleaning",
-        translation_key="precleaning_start_reason",
-        device_class=SensorDeviceClass.ENUM,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        options=enum_options(PreCleaningStartReason),
-        value_fn=lambda d: enum_name(d.precleaning.start_reason) if d.precleaning else None,
-    ),
-    PolestarSensorDescription(
-        key="precleaning_error",
-        fetch_attr="precleaning",
-        translation_key="precleaning_error",
-        device_class=SensorDeviceClass.ENUM,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        options=enum_options(PreCleaningErrorType),
-        value_fn=lambda d: enum_name(d.precleaning.error) if d.precleaning else None,
-    ),
-    PolestarSensorDescription(
         key="software_version",
         translation_key="software_version",
         icon="mdi:update",
@@ -522,71 +486,6 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfTime.MINUTES,
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d: climate_minutes_remaining(d.climate, dt_util.utcnow().timestamp()),
-    ),
-    PolestarSensorDescription(
-        key="climate_ends_at",
-        translation_key="climate_ends_at",
-        device_class=SensorDeviceClass.TIMESTAMP,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda d: _timestamp_or_none(climate_end_time(d.climate)),
-    ),
-    PolestarSensorDescription(
-        key="climate_current_temperature",
-        translation_key="climate_current_temperature",
-        device_class=SensorDeviceClass.TEMPERATURE,
-        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-        state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda d: d.climate.current_temperature_celsius if d.climate else None,
-    ),
-    PolestarSensorDescription(
-        key="climate_target_temperature",
-        translation_key="climate_target_temperature",
-        device_class=SensorDeviceClass.TEMPERATURE,
-        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-        state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda d: d.climate.target_temperature_celsius if d.climate else None,
-    ),
-    PolestarSensorDescription(
-        key="climate_front_left_seat",
-        translation_key="climate_front_left_seat",
-        device_class=SensorDeviceClass.ENUM,
-        options=["off", "level1", "level2", "level3"],
-        icon="mdi:car-seat-heater",
-        value_fn=lambda d: _heating_intensity_name(d.climate.front_left_seat) if d.climate else None,
-    ),
-    PolestarSensorDescription(
-        key="climate_front_right_seat",
-        translation_key="climate_front_right_seat",
-        device_class=SensorDeviceClass.ENUM,
-        options=["off", "level1", "level2", "level3"],
-        icon="mdi:car-seat-heater",
-        value_fn=lambda d: _heating_intensity_name(d.climate.front_right_seat) if d.climate else None,
-    ),
-    PolestarSensorDescription(
-        key="climate_rear_left_seat",
-        fetch_attr="rear_seat_heating",
-        translation_key="climate_rear_left_seat",
-        device_class=SensorDeviceClass.ENUM,
-        options=["off", "level1", "level2", "level3"],
-        icon="mdi:car-seat-heater",
-        value_fn=lambda d: _heating_intensity_name(d.climate.rear_left_seat) if d.climate else None,
-    ),
-    PolestarSensorDescription(
-        key="climate_rear_right_seat",
-        fetch_attr="rear_seat_heating",
-        translation_key="climate_rear_right_seat",
-        device_class=SensorDeviceClass.ENUM,
-        options=["off", "level1", "level2", "level3"],
-        icon="mdi:car-seat-heater",
-        value_fn=lambda d: _heating_intensity_name(d.climate.rear_right_seat) if d.climate else None,
-    ),
-    PolestarSensorDescription(
-        key="climate_steering_wheel",
-        translation_key="climate_steering_wheel",
-        device_class=SensorDeviceClass.ENUM,
-        options=["off", "level1", "level2", "level3"],
-        icon="mdi:steering",
-        value_fn=lambda d: _heating_intensity_name(d.climate.steering_wheel) if d.climate else None,
     ),
     PolestarSensorDescription(
         key="connection",
@@ -639,6 +538,23 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
 )
 
 
+# Sensors replaced by other entities or attributes (19 Nov 2026); their registry entries are removed at setup.
+REMOVED_SENSOR_KEYS = (
+    "target_soc",  # the Target SOC number shows it
+    "precleaning_runtime_left",  # attributes of the Air Purification switch
+    "precleaning_start_reason",
+    "precleaning_error",
+    "climate_ends_at",  # attributes of the Climate switch
+    "climate_current_temperature",
+    "climate_target_temperature",  # the Climate target temperature number shows it
+    "climate_front_left_seat",  # the heat selects show the choice
+    "climate_front_right_seat",
+    "climate_rear_left_seat",
+    "climate_rear_right_seat",
+    "climate_steering_wheel",
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -647,6 +563,9 @@ async def async_setup_entry(
     """Set up Polestar sensors."""
     data = hass.data[DOMAIN][entry.entry_id]
     for coordinator in data["coordinators"].values():
+        async_remove_registered_entities(
+            hass, "sensor", [f"{coordinator.vehicle.vin}_{key}" for key in REMOVED_SENSOR_KEYS]
+        )
         entities = [PolestarSensor(coordinator, desc) for desc in SENSORS]
         async_add_entities(async_filter_supported_entities(hass, coordinator, "sensor", entities))
         info_entities: list[SensorEntity] = [PolestarVinSensor(coordinator), PolestarVehicleInfoSensor(coordinator)]

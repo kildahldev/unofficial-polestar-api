@@ -196,6 +196,26 @@ def climate_attributes(climate: Any) -> dict[str, Any]:
     target = getattr(climate, "target_temperature_celsius", None)
     if target is not None:
         attrs["target_temperature"] = target
+    current = getattr(climate, "current_temperature_celsius", None)
+    if current is not None:
+        attrs["current_temperature"] = current
+    end = climate_end_time(climate)
+    if end is not None:
+        attrs["ends_at"] = datetime.fromtimestamp(end, tz=dt_util.UTC).isoformat()
+    return attrs
+
+
+def precleaning_attributes(precleaning: Any) -> dict[str, Any]:
+    """Attributes for the Air Purification switch: what the separate pre-cleaning sensors used to show."""
+    if precleaning is None:
+        return {}
+    attrs: dict[str, Any] = {
+        "runtime_left_minutes": getattr(precleaning, "runtime_left_minutes", None),
+        "start_reason": enum_name(getattr(precleaning, "start_reason", None)),
+    }
+    error = enum_name(getattr(precleaning, "error", None))
+    if error:
+        attrs["error"] = error
     return attrs
 
 

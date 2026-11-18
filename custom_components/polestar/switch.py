@@ -15,7 +15,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import DOMAIN
 from .coordinator import PolestarCoordinator, PolestarVehicleData
 from .entity import OptimisticStateMixin, PolestarEntity, async_filter_supported_entities
-from .utils import charge_timer_active, climate_attributes
+from .utils import charge_timer_active, climate_attributes, precleaning_attributes
 
 PARALLEL_UPDATES = 1
 
@@ -55,6 +55,7 @@ SWITCHES: tuple[PolestarSwitchDescription, ...] = (
         turn_on_fn=lambda c: c.async_start_precleaning(),
         turn_off_fn=lambda c: c.async_stop_precleaning(),
         capability="precleaning",
+        attrs_fn=lambda d: precleaning_attributes(d.precleaning),
     ),
     PolestarSwitchDescription(
         key="charging",

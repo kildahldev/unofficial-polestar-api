@@ -263,3 +263,28 @@ def test_flatten_attributes_makes_raw_bytes_json_safe(utils):
     flat = utils.flatten_attributes({"reportsLightWarnings": b"\x01\x02\x15"})
     assert flat == {"reports_light_warnings": "1, 2, 21"}
     json.dumps(flat)
+
+
+def test_switch_attributes_carry_what_the_removed_sensors_showed(utils):
+    from types import SimpleNamespace
+
+    climate = SimpleNamespace(
+        time_remaining=10,
+        request_type=None,
+        heat_or_cool_action=None,
+        target_temperature_celsius=22.0,
+        current_temperature_celsius=18.5,
+        is_active=True,
+        ending_at=1_800_000_000,
+    )
+    attrs = utils.climate_attributes(climate)
+    assert attrs["current_temperature"] == 18.5
+    assert attrs["ends_at"].startswith("2027-01-15")
+
+    idle = SimpleNamespace(**{**climate.__dict__, "is_active": False})
+    assert "ends_at" not in utils.climate_attributes(idle)
+
+    pre = SimpleNamespace(runtime_left_minutes=7, start_reason=None, error=None)
+    assert utils.precleaning_attributes(pre)["runtime_left_minutes"] == 7
+    assert "error" not in utils.precleaning_attributes(pre)
+    assert utils.precleaning_attributes(None) == {}

@@ -20,7 +20,7 @@ from polestar_api.models.health import LowVoltageBatteryWarning, ServiceWarning
 
 from .const import DOMAIN
 from .coordinator import PolestarVehicleData
-from .entity import PolestarEntity, async_filter_supported_entities
+from .entity import PolestarEntity, async_filter_supported_entities, async_remove_registered_entities
 from .utils import alarm_triggered, in_use, level_problem as _level_problem, light_attributes, state_icon
 
 PARALLEL_UPDATES = 0
@@ -52,12 +52,6 @@ class PolestarBinarySensorDescription(BinarySensorEntityDescription):
 
 
 BINARY_SENSORS: tuple[PolestarBinarySensorDescription, ...] = (
-    PolestarBinarySensorDescription(
-        key="is_charging",
-        translation_key="is_charging",
-        device_class=BinarySensorDeviceClass.BATTERY_CHARGING,
-        value_fn=lambda d: d.battery.is_charging if d.battery else None,
-    ),
     PolestarBinarySensorDescription(
         key="is_plugged_in",
         translation_key="is_plugged_in",
@@ -153,13 +147,6 @@ BINARY_SENSORS: tuple[PolestarBinarySensorDescription, ...] = (
         value_fn=lambda d: _is_open(d.exterior.tank_lid.open_status),
     ),
     PolestarBinarySensorDescription(
-        key="connected",
-        fetch_attr="connectivity",
-        translation_key="connected",
-        device_class=BinarySensorDeviceClass.CONNECTIVITY,
-        value_fn=lambda d: d.connectivity.is_connected if d.connectivity else None,
-    ),
-    PolestarBinarySensorDescription(
         key="available",
         translation_key="available",
         device_class=BinarySensorDeviceClass.CONNECTIVITY,
@@ -242,13 +229,6 @@ BINARY_SENSORS: tuple[PolestarBinarySensorDescription, ...] = (
         value_fn=lambda d: d.climate.is_active if d.climate else None,
     ),
     PolestarBinarySensorDescription(
-        key="precleaning_running",
-        fetch_attr="precleaning",
-        translation_key="precleaning_running",
-        device_class=BinarySensorDeviceClass.RUNNING,
-        value_fn=lambda d: d.precleaning.is_running if d.precleaning else None,
-    ),
-    PolestarBinarySensorDescription(
         # Read-only: the official app's "SetPrivacySettingState" write path
         # was not directly observed, so this integration does not expose a
         # way to change this from Home Assistant — see the library docs.
@@ -259,6 +239,10 @@ BINARY_SENSORS: tuple[PolestarBinarySensorDescription, ...] = (
 )
 
 
+# Replaced by the Charging and Air Purification switches and by Available / Connection (19 Nov 2026).
+REMOVED_BINARY_SENSOR_KEYS = ("is_charging", "precleaning_running", "connected")
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -267,6 +251,9 @@ async def async_setup_entry(
     """Set up Polestar binary sensors."""
     data = hass.data[DOMAIN][entry.entry_id]
     for coordinator in data["coordinators"].values():
+        async_remove_registered_entities(
+            hass, "binary_sensor", [f"{coordinator.vehicle.vin}_{key}" for key in REMOVED_BINARY_SENSOR_KEYS]
+        )
         entities = [PolestarBinarySensor(coordinator, desc) for desc in BINARY_SENSORS]
         async_add_entities(async_filter_supported_entities(hass, coordinator, "binary_sensor", entities))
 
