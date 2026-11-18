@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import time
+
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -27,7 +29,8 @@ from homeassistant.const import (
     UnitOfTemperature,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
@@ -58,7 +61,10 @@ from polestar_api.models.precleaning import PreCleaningErrorType, PreCleaningSta
 from .const import CONF_REGISTRATION_PLATE, DOMAIN
 from .coordinator import PolestarVehicleData
 from .entity import PolestarEntity, async_filter_supported_entities
+from . import geocode
 from .utils import (
+    connection_text,
+    last_seen,
     flatten_attributes,
     weather_attributes,
     climate_end_time,
@@ -125,17 +131,6 @@ def _build_week(structure_week: str | None) -> str | None:
     if structure_week and len(structure_week) == 6 and structure_week.isdigit():
         return f"{structure_week[:4]}-W{structure_week[4:]}"
     return structure_week
-
-
-def _energy_needed_kwh(data: PolestarVehicleData, capacity_kwh: float) -> float | None:
-    """Energy needed to reach target SOC, estimated from usable capacity and current/target charge levels."""
-    if data.battery is None or data.target_soc is None:
-        return None
-    current = data.battery.charge_level
-    target = data.target_soc.target_level
-    if target <= current:
-        return None
-    return capacity_kwh * (target - current) / 100
 
 
 def _current_charge_location_state(data: PolestarVehicleData) -> str | None:
@@ -594,6 +589,21 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         value_fn=lambda d: _heating_intensity_name(d.climate.steering_wheel) if d.climate else None,
     ),
     PolestarSensorDescription(
+        key="connection",
+        translation_key="connection",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:car-connected",
+        value_fn=lambda d: connection_text(d, lambda moment: dt_util.as_local(moment).strftime("%H:%M"))[:255],
+    ),
+    PolestarSensorDescription(
+        key="last_seen",
+        translation_key="last_seen",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        device_class=SensorDeviceClass.TIMESTAMP,
+        icon="mdi:car-wireless",
+        value_fn=last_seen,
+    ),
+    PolestarSensorDescription(
         key="availability_unavailable_reason",
         translation_key="availability_unavailable_reason",
         device_class=SensorDeviceClass.ENUM,
@@ -646,6 +656,7 @@ async def async_setup_entry(
         if getattr(vehicle, "internet_activation", None):
             info_entities.append(PolestarInternetActivationSensor(coordinator))
         async_add_entities(info_entities)
+        async_add_entities([PolestarLocationAddress(coordinator)])
 
 
 class PolestarSensor(PolestarEntity, SensorEntity):
@@ -796,3 +807,89 @@ class PolestarVehicleInfoSensor(PolestarEntity, SensorEntity):
         }
 
 
+
+
+class PolestarLocationAddress(PolestarEntity, SensorEntity):
+    """Street address of the car's position (OpenStreetMap Nominatim); a Home Assistant zone it is inside wins."""
+
+    _attr_translation_key = "location_address"
+    _attr_icon = "mdi:map-marker"
+    _MIN_SECONDS_BETWEEN_LOOKUPS = 60  # Nominatim asks for at most one request a second; a moving car changes often
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{self._vehicle.vin}_location_address"
+        self._last_key: tuple[float, float] | None = None
+        self._last_lookup = 0.0
+        self._cached: str | None = None
+        self._cached_attrs: dict[str, Any] = {}
+
+    @property
+    def native_value(self) -> str | None:
+        return self._cached
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return self._cached_attrs
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        await self._maybe_geocode()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self.hass.async_create_background_task(self._maybe_geocode(), name="polestar-geocode")
+        super()._handle_coordinator_update()
+
+    def _position(self) -> tuple[float, float] | None:
+        data = self.coordinator.data
+        for attr in ("location", "parked_location"):
+            coord = getattr(getattr(data, attr, None), "coordinate", None)
+            lat, lon = getattr(coord, "latitude", None), getattr(coord, "longitude", None)
+            if lat is not None and lon is not None and (lat or lon):
+                return lat, lon
+        return None
+
+    def _zones(self) -> list[dict[str, Any]]:
+        zones = []
+        for state in self.hass.states.async_all("zone"):
+            attrs = state.attributes
+            zones.append({
+                "name": attrs.get("friendly_name") or state.name,
+                "latitude": attrs.get("latitude"), "longitude": attrs.get("longitude"),
+                "radius": attrs.get("radius"), "passive": attrs.get("passive"),
+                "is_home": state.entity_id == "zone.home",
+            })
+        return zones
+
+    async def _maybe_geocode(self) -> None:
+        position = self._position()
+        if position is None:
+            return
+        lat, lon = position
+        key = (round(lat, 4), round(lon, 4))  # about 10 m: ignore GPS jitter
+        if key == self._last_key and self._cached is not None:
+            return
+        zone = geocode.zone_name(lat, lon, self._zones())
+        if zone is not None:
+            self._last_key, self._cached, self._cached_attrs = key, zone, {"zone": zone}
+            self.async_write_ha_state()
+            return
+        now = time.monotonic()
+        if self._cached is not None and now - self._last_lookup < self._MIN_SECONDS_BETWEEN_LOOKUPS:
+            return
+        self._last_lookup = now
+        params = {"format": "jsonv2", "lat": f"{lat:.6f}", "lon": f"{lon:.6f}", "zoom": "18", "addressdetails": "1"}
+        try:
+            async with async_get_clientsession(self.hass).get(
+                geocode.NOMINATIM_URL, params=params, headers={"User-Agent": "polestar-ha-integration/1.0"}, timeout=15
+            ) as resp:
+                if resp.status != 200:
+                    return
+                reply = await resp.json()
+        except Exception:  # noqa: BLE001 - an address is a nicety; never let it break the sensor
+            return
+        text, details = geocode.pretty_address(reply)
+        self._last_key, self._cached = key, text
+        self._cached_attrs = {**details, "display_name": reply.get("display_name")}
+        self.async_write_ha_state()

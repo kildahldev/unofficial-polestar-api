@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from polestar_api.codec import encode, encode_message
+from polestar_api.codec import encode, encode_int32, encode_message, encode_packed_varints
 from polestar_api.models.car_information import MyCar
 from polestar_api.services import car_information as service_module
 from polestar_api.services.car_information import CarInformationServiceClient
@@ -24,7 +24,8 @@ MY_CAR_SCHEMA = {"linked": (2, "bool"), "owner": (3, "bool"), "plate": (4, "stri
 
 
 def _my_car(
-    vin: str, name: str, *, plate: str | None = None, year: str = "2025", charging: bytes | None = None
+    vin: str, name: str, *, plate: str | None = None, year: str = "2025", charging: bytes | None = None,
+    extra: bytes = b"",
 ) -> bytes:
     car = encode(
         CAR_SCHEMA,
@@ -32,6 +33,7 @@ def _my_car(
     )
     if charging is not None:
         car += encode_message(35, charging)
+    car += extra
     values = {"linked": True, "owner": True}
     if plate is not None:
         values["plate"] = plate
@@ -308,3 +310,60 @@ async def test_target_charge_presets_unknown_without_a_settings_block(monkeypatc
     await vehicle.async_load_car_information()
 
     assert vehicle.supports_target_soc_presets is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("honk_type", "honk", "flash", "both"),
+    [(3, True, True, True), (2, True, True, True), (4, False, True, False), (5, True, False, False), (1, False, False, False)],
+)
+async def test_honk_and_flash_support_comes_from_the_car(monkeypatch, honk_type, honk, flash, both):
+    extra = encode_int32(16, honk_type)
+    vehicle = _vehicle(monkeypatch, _response(_my_car("VIN0000000000001", "Polestar 2", extra=extra)))
+
+    await vehicle.async_load_car_information()
+
+    assert (vehicle.supports_honk, vehicle.supports_flash, vehicle.supports_honk_and_flash) == (honk, flash, both)
+
+
+@pytest.mark.asyncio
+async def test_honk_type_not_sent_means_unknown_not_unsupported(monkeypatch):
+    vehicle = _vehicle(monkeypatch, _response(_my_car("VIN0000000000001", "Polestar 2")))
+
+    await vehicle.async_load_car_information()
+
+    assert vehicle.supports_honk is None and vehicle.supports_flash is None and vehicle.supports_honk_and_flash is None
+
+
+@pytest.mark.asyncio
+async def test_light_warnings_flag_follows_the_packed_list(monkeypatch):
+    with_lights = _vehicle(monkeypatch, _response(_my_car("VIN0000000000001", "P", extra=encode_packed_varints(73, [1, 2, 3]))))
+    await with_lights.async_load_car_information()
+    without = _vehicle(monkeypatch, _response(_my_car("VIN0000000000001", "P")))
+    await without.async_load_car_information()
+
+    assert with_lights.reports_light_warnings is True
+    assert without.reports_light_warnings is False
+
+
+@pytest.mark.asyncio
+async def test_other_capability_flags_are_kept_for_diagnostics(monkeypatch):
+    extra = encode_int32(26, 1) + encode_int32(33, 1) + encode_int32(57, 1)
+    vehicle = _vehicle(monkeypatch, _response(_my_car("VIN0000000000001", "P", extra=extra)))
+
+    await vehicle.async_load_car_information()
+
+    caps = vehicle.car_capabilities
+    assert caps["supports_driving_journal"] and caps["supports_remote_ota_install_schedule"] and caps["supports_full_ota_updates"]
+    assert "supports_update_status" not in caps
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("lock_type", "expected"), [(3, True), (2, False), (1, False), (None, None)])
+async def test_reduced_alarm_lock_support_comes_from_the_car(monkeypatch, lock_type, expected):
+    extra = encode_message(36, encode_int32(1, lock_type) + encode_int32(5, 1)) if lock_type is not None else b""
+    vehicle = _vehicle(monkeypatch, _response(_my_car("VIN0000000000001", "Polestar 2", extra=extra)))
+
+    await vehicle.async_load_car_information()
+
+    assert vehicle.supports_reduced_alarm_lock is expected

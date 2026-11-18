@@ -14,12 +14,14 @@ from grpclib.const import Status as GrpcStatus
 from grpclib.exceptions import GRPCError
 from homeassistant.components import persistent_notification
 from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
+from homeassistant.util import dt as dt_util
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from polestar_api.exceptions import AuthError, TokenExpiredError, is_unsupported_feature_error
 from polestar_api.models.availability import Availability
 from polestar_api.models.battery import Battery
 from polestar_api.models.charge_location import ChargeLocation
+from polestar_api.models.locks import LockAlarmLevel
 from polestar_api.models.charging import (
     AmpLimitResponse,
     BatteryChargeTimer,
@@ -57,7 +59,7 @@ from .const import (
     STREAM_MIN_RESUBSCRIBE_INTERVAL,
     STREAM_RETRY_DELAY,
 )
-from .utils import driving, local_utc_offset_minutes, poll_is_active
+from .utils import command_blocker, in_use, local_utc_offset_minutes, poll_is_active
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -116,6 +118,7 @@ _CAPABILITY_FETCHES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("supports_charge_locations", ("charge_locations", "current_charge_location")),
     ("supports_window_control", ("window_control",)),
     ("supports_sunroof_control", ("sunroof",)),
+    ("supports_reduced_alarm_lock", ("lock_reduced_alarm_button",)),
     ("supports_target_soc_presets", ("target_soc_presets",)),
     ("reports_avg_consumption", ("avg_consumption",)),
     ("reports_avg_consumption_auto", ("avg_consumption_auto",)),
@@ -125,6 +128,10 @@ _CAPABILITY_FETCHES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("reports_tyre_pressure", ("tyre_pressure",)),
     ("reports_service_warning", ("service_warning",)),
     ("supports_air_purification", ("precleaning",)),
+    ("supports_honk", ("honk_button",)),
+    ("supports_flash", ("flash_button",)),
+    ("supports_honk_and_flash", ("honk_flash_button",)),
+    ("reports_light_warnings", ("light_warnings",)),
 )
 _CLIMATE_TIMER_SLOTS = 3
 
@@ -368,6 +375,7 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         error_message: str = "Command failed",
         timeout: int = 30,
         capability: str | None = None,
+        require_online: bool = True,
     ) -> Any:
         """Run a remote command and validate its response.
 
@@ -375,6 +383,12 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         UNIMPLEMENTED, the capability is marked as unsupported so entities can
         become unavailable instead of repeatedly failing.
         """
+        if require_online:
+            blocker = command_blocker(
+                self.data, lambda moment: dt_util.as_local(moment).strftime("%H:%M")
+            )
+            if blocker:
+                raise HomeAssistantError(blocker)
         try:
             response = await asyncio.wait_for(command(), timeout=timeout)
         except TimeoutError:
@@ -575,7 +589,7 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
             return False
         now = time.monotonic()
         availability = data.availability
-        driving_now = bool(availability is not None and driving(availability.usage_mode))
+        driving_now = bool(in_use(availability))
         if self._was_driving and not driving_now:
             self._post_trip_until = now + POST_TRIP_SECONDS
         self._was_driving = driving_now
@@ -1031,6 +1045,15 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         )
         self._schedule_background_refresh("amp_limit")
         return response
+
+    async def async_lock_reduced_alarm(self) -> None:
+        """Lock the car with the reduced alarm level (the cabin sensors stay off, for example with a pet inside)."""
+        await self.async_run_command(
+            lambda: self.vehicle.lock(alarm_level=LockAlarmLevel.REDUCED),
+            error_message="Lock with reduced alarm failed",
+            capability="lock_reduced_alarm",
+        )
+        self.async_refresh_exterior_after_command()
 
     async def async_start_precleaning(self) -> None:
         """Start air purification (the backend calls it pre-cleaning)."""

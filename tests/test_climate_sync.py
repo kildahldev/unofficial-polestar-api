@@ -202,3 +202,56 @@ def test_alarm_triggered_sensor(utils):
         front_left=DoorStatus(alarm_status=AlarmStatus.OFF), rear_right=DoorStatus(alarm_status=AlarmStatus.TRIGGERED)
     )
     assert utils.alarm_triggered(ExteriorStatus(doors=fired)) is True
+
+
+def _data(available, reason="UNSPECIFIED", seconds=1_794_990_000):
+    from types import SimpleNamespace as NS
+
+    return NS(
+        availability=NS(is_available=available, unavailable_reason=NS(name=reason), timestamp=NS(seconds=seconds)),
+        battery=NS(timestamp=NS(seconds=seconds - 500)),
+        odometer=None, health=None, precleaning=None, connectivity=None,
+    )
+
+
+def test_last_seen_is_the_newest_car_timestamp(utils):
+    seen = utils.last_seen(_data(True, seconds=1_794_990_000))
+    assert int(seen.timestamp()) == 1_794_990_000
+    from types import SimpleNamespace as NS
+
+    assert utils.last_seen(NS(availability=None, battery=None, odometer=None, health=None, precleaning=None, connectivity=None)) is None
+
+
+def test_connection_text(utils):
+    fmt = lambda moment: "19:32"  # noqa: E731
+    assert utils.connection_text(_data(True), fmt).startswith("Online")
+    off = utils.connection_text(_data(False, "NO_INTERNET"), fmt)
+    assert off.startswith("Offline since 19:32: the car has no mobile internet")
+    assert utils.connection_text(type("D", (), {"availability": None})(), fmt).startswith("Unknown")
+
+
+def test_commands_are_only_refused_when_they_cannot_reach_the_car(utils):
+    fmt = lambda moment: "19:32"  # noqa: E731
+    assert utils.command_blocker(_data(True), fmt) is None
+    assert utils.command_blocker(_data(False, "POWER_SAVING_MODE"), fmt) is None  # the car wakes for a command
+    assert utils.command_blocker(_data(False, "UNSPECIFIED"), fmt) is None  # no reason: let it through
+    assert utils.command_blocker(type("D", (), {"availability": None})(), fmt) is None
+    blocked = utils.command_blocker(_data(False, "NO_INTERNET"), fmt)
+    assert "offline since 19:32" in blocked and "Nothing was sent" in blocked
+    assert "in use" in utils.command_blocker(_data(False, "CAR_IN_USE"), fmt)
+    assert utils.command_blocker(_data(False, "OTA_INSTALLATION_IN_PROGRESS"), fmt)
+
+
+def test_in_use_follows_driving_or_the_car_in_use_reason(utils):
+    from types import SimpleNamespace as NS
+
+    def avail(available, reason, mode):
+        return NS(is_available=available, unavailable_reason=NS(name=reason), usage_mode=mode)
+
+    from polestar_api.models.availability import UsageMode
+
+    assert utils.in_use(None) is None
+    assert utils.in_use(avail(True, "UNSPECIFIED", UsageMode.DRIVING)) is True
+    assert utils.in_use(avail(False, "CAR_IN_USE", UsageMode.ACTIVE)) is True  # what the app shows as "In use"
+    assert utils.in_use(avail(True, "CAR_IN_USE", UsageMode.INACTIVE)) is False  # a stale reason on an available car
+    assert utils.in_use(avail(False, "NO_INTERNET", UsageMode.INACTIVE)) is False

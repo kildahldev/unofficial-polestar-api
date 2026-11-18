@@ -175,6 +175,9 @@
       "honk_flash": {
         "name": "Honk and flash"
       },
+      "lock_reduced_alarm": {
+        "name": "Lock with reduced alarm"
+      },
       "open_windows": {
         "name": "Open windows"
       },
@@ -335,6 +338,9 @@
       "climate_time_remaining": {
         "name": "Climate time remaining"
       },
+      "connection": {
+        "name": "Connection"
+      },
       "current_charge_location": {
         "name": "Current charge location"
       },
@@ -358,6 +364,12 @@
       },
       "internet_activation": {
         "name": "Internet Activation"
+      },
+      "last_seen": {
+        "name": "Last seen"
+      },
+      "location_address": {
+        "name": "Location address"
       },
       "odometer": {
         "name": "Odometer"

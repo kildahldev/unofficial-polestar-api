@@ -128,10 +128,15 @@ class Vehicle:
         self.reports_tyre_pressure: bool | None = None  # actual pressures (kPa)
         self.reports_service_warning: bool | None = None
         self.supports_air_purification: bool | None = None
+        self.supports_honk: bool | None = None
+        self.supports_flash: bool | None = None
+        self.supports_honk_and_flash: bool | None = None
+        self.reports_light_warnings: bool | None = None
         self.car_capabilities: dict = {}
         self.supports_charge_locations: bool | None = None
         self.supports_window_control: bool | None = None
         self.supports_sunroof_control: bool | None = None
+        self.supports_reduced_alarm_lock: bool | None = None
         self.supports_target_soc_presets: bool | None = None
         self.reports_avg_consumption: bool | None = None
         self.reports_avg_consumption_auto: bool | None = None
@@ -193,6 +198,7 @@ class Vehicle:
         if car is not None and car.locks is not None:
             self.supports_window_control = bool(car.locks.supports_window_control)
             self.supports_sunroof_control = bool(car.locks.supports_sunroof_control)
+            self.supports_reduced_alarm_lock = car.locks.supports_reduced_alarm_lock
         if car is not None:
             if car.propulsion is not None:
                 if car.propulsion.battery_capacity_kwh > 0:
@@ -208,6 +214,10 @@ class Vehicle:
             self.reports_tyre_pressure = car.reports_tyre_pressure_in_kpa
             self.reports_service_warning = car.reports_service_warning
             self.supports_air_purification = car.air_purification is not None and car.air_purification.any_supported
+            self.supports_honk = car.honk_flash_type.can_honk
+            self.supports_flash = car.honk_flash_type.can_flash
+            self.supports_honk_and_flash = car.honk_flash_type.can_honk_and_flash
+            self.reports_light_warnings = bool(car.reports_light_warnings)
             self.car_capabilities = _non_default_fields(car)
             self.installed_software_version = car.consumer_software_version or None
             self.model_name = self.model_name or car.vehicle_type_name or model_from_slug(self.slug) or None
