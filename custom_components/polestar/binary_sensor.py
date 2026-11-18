@@ -75,7 +75,7 @@ BINARY_SENSORS: tuple[PolestarBinarySensorDescription, ...] = (
     PolestarBinarySensorDescription(
         key="alarm_triggered",
         translation_key="alarm_triggered",
-        device_class=BinarySensorDeviceClass.SAFETY,
+        device_class=BinarySensorDeviceClass.PROBLEM,  # shows OK / Problem
         value_fn=lambda d: alarm_triggered(d.exterior),
     ),
     PolestarBinarySensorDescription(

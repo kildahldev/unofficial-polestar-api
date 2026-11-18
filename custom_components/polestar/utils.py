@@ -334,7 +334,8 @@ def poll_is_active(data: Any) -> bool:
 def alarm_triggered(exterior: Any) -> bool | None:
     """True when any door, the hood or the tailgate reports a triggered alarm.
 
-    The car reports the alarm per closure. None until at least one of them says something.
+    The car reports the alarm per closure and the Polestar 2 sends none, so a car that has reported its doors but says
+    nothing about an alarm counts as not triggered (shown as OK). None only before any exterior data has arrived.
     """
     if exterior is None:
         return None
@@ -346,8 +347,6 @@ def alarm_triggered(exterior: Any) -> bool | None:
     if exterior.tailgate is not None:
         parts.append(exterior.tailgate.status)
     states = [p.alarm_status for p in parts if p is not None and p.alarm_status != AlarmStatus.UNSPECIFIED]
-    if not states:
-        return None
     return any(state == AlarmStatus.TRIGGERED for state in states)
 
 

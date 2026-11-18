@@ -195,7 +195,7 @@ def test_alarm_triggered_sensor(utils):
     from polestar_api.models.exterior import AlarmStatus, DoorsStatus, DoorStatus, ExteriorStatus
 
     assert utils.alarm_triggered(None) is None
-    assert utils.alarm_triggered(ExteriorStatus()) is None
+    assert utils.alarm_triggered(ExteriorStatus()) is False  # nothing reported means no alarm
     idle = DoorsStatus(front_left=DoorStatus(alarm_status=AlarmStatus.OFF))
     assert utils.alarm_triggered(ExteriorStatus(doors=idle)) is False
     fired = DoorsStatus(
