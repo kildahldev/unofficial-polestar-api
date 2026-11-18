@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from .auth import AuthManager, FileTokenStore, TokenStore
 from .connection import GrpcConnection
+from .naming import model_from_slug
 from .discovery import (
     VehicleInfo,
     discover_c3_endpoint,
@@ -89,6 +90,27 @@ class PolestarApi:
             vehicle.internet_activation = await get_internet_activation(token, vehicle.vin)
             vehicle.order_specification = await get_order_specification(token, vehicle.vin)
         return vehicles
+
+    async def async_enrich_vehicle(self, vehicle: Vehicle) -> None:
+        """Add the app-backend details (plate, build week, activation, order) to a vehicle.
+
+        ``get_vehicles`` does this only for cars in the account's own list. A guest or linked car is
+        created directly from its VIN, so it needs this call. Every lookup fails soft.
+        """
+        token = await self._auth.ensure_valid_token()
+        found = (await get_car_information_by_vins(token, [vehicle.vin])).get(vehicle.vin)
+        if found is not None:
+            vehicle.registration_no = vehicle.registration_no or found.registration_no
+            if vehicle.model_year is None:
+                vehicle.model_year = found.model_year
+            vehicle.slug = vehicle.slug or found.slug
+            vehicle.model_name = vehicle.model_name or model_from_slug(vehicle.slug)
+            vehicle.pno34 = vehicle.pno34 or found.pno34
+            vehicle.structure_week = vehicle.structure_week or found.structure_week
+            vehicle.is_primary_driver = found.is_primary_driver
+            vehicle.is_bst_edition = found.is_bst_edition
+        vehicle.internet_activation = await get_internet_activation(token, vehicle.vin)
+        vehicle.order_specification = await get_order_specification(token, vehicle.vin)
 
     async def get_vehicle(self, vin: str) -> Vehicle:
         """Get a specific vehicle by VIN."""

@@ -227,3 +227,74 @@ def entry_title(model_name: str | None, model_year: int | None, vin: str) -> str
     """Config entry title in the Volvo integration's style: "Polestar 2 2026" (VIN when the year is unknown)."""
     model = model_name or "Polestar"
     return f"{model} {model_year}" if model_year else f"{model} {vin}"
+
+
+def flatten_attributes(data: Any, prefix: str = "") -> dict[str, Any]:
+    """Turn nested data into flat snake_case attributes so Home Assistant lists them one per row.
+
+    Empty values are left out and lists of simple values become one comma-separated string.
+    """
+    import re
+
+    out: dict[str, Any] = {}
+    if not isinstance(data, dict):
+        return out
+    for key, value in data.items():
+        name = re.sub(r"[^0-9a-z]+", "_", re.sub(r"(?<=[a-z0-9])([A-Z])", r"_\1", f"{prefix}{key}").lower()).strip("_")
+        if value is None or value == "" or value == [] or value == {}:
+            continue
+        if isinstance(value, dict):
+            out.update(flatten_attributes(value, f"{name}_"))
+        elif isinstance(value, (list, tuple)):
+            out[name] = ", ".join(str(item) for item in value)
+        else:
+            out[name] = value
+    return out
+
+
+def driving(usage_mode: Any) -> bool | None:
+    """True only while the car reports Driving (not merely recently used); None when it says nothing."""
+    name = enum_name(usage_mode)
+    if name is None:
+        return None
+    return name == "driving"
+
+
+def level_problem(warning: Any) -> bool | None:
+    """A fluid-level warning as a problem flag: off for "no warning", on for too low / critically low."""
+    name = enum_name(warning)
+    if name is None:
+        return None
+    return name != "no_warning"
+
+
+_LIGHT_LABELS = {
+    "turn_indication": "turn indicator",
+    "position_light": "position light",
+    "high_beam": "high beam",
+    "low_beam": "low beam",
+    "daytime_running_light": "daytime running light",
+    "fog_light": "fog light",
+    "brake_light": "brake light",
+    "registration_plate_light": "registration plate light",
+    "side_mark_lights": "side marker lights",
+}
+
+
+def light_attributes(health: Any) -> dict[str, str]:
+    """Status of every light the car reports: ``ok``, ``failure`` or ``unknown`` (one attribute per light)."""
+    out: dict[str, str] = {}
+    schema = getattr(health, "_schema", None) or {}
+    for field in schema.values():
+        if not field.endswith("_warning"):
+            continue
+        base = field[: -len("_warning")]
+        label = next((label for prefix, label in _LIGHT_LABELS.items() if base.startswith(prefix)), None)
+        if label is None:
+            continue
+        position = base[len(next(p for p in _LIGHT_LABELS if base.startswith(p))) :].strip("_").replace("_", " ")
+        name = f"{position} {label}".strip().replace(" ", "_")
+        value = getattr(health, field, None)
+        state = enum_name(value)
+        out[name] = "ok" if state == "no_warning" else "unknown" if state is None else state
+    return out

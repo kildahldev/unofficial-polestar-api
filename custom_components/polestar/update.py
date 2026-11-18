@@ -50,7 +50,7 @@ class PolestarOtaUpdate(PolestarEntity, UpdateEntity, RestoreEntity):
     """OTA update entity backed by the Polestar software info API."""
 
     _attr_device_class = UpdateDeviceClass.FIRMWARE
-    _attr_name = "Software update"
+    _attr_translation_key = "software_update"
     _attr_supported_features = UpdateEntityFeature.INSTALL
 
     def __init__(self, coordinator: PolestarCoordinator) -> None:
@@ -72,7 +72,9 @@ class PolestarOtaUpdate(PolestarEntity, UpdateEntity, RestoreEntity):
 
     @property
     def available(self) -> bool:
-        return super().available and self.coordinator.data is not None and self.coordinator.data.software is not None
+        return super().available and self.coordinator.data is not None and (
+            self.coordinator.data.software is not None or bool(self.coordinator.installed_version_cache)
+        )
 
     @property
     def installed_version(self) -> str | None:
@@ -94,7 +96,7 @@ class PolestarOtaUpdate(PolestarEntity, UpdateEntity, RestoreEntity):
     def latest_version(self) -> str | None:
         if self.coordinator.data and self.coordinator.data.software:
             return self.coordinator.data.software.new_sw_version or None
-        return None
+        return self.installed_version  # no OTA record: nothing newer is known
 
     @property
     def in_progress(self) -> bool | int:

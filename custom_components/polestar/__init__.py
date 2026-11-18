@@ -85,6 +85,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             configured_vin,
         )
         vehicle = Vehicle(vin=configured_vin, connection=api._connection)
+        # The list lookup skipped this car, so fetch the plate, build week and activation here.
+        await api.async_enrich_vehicle(vehicle)
 
     await vehicle.async_load_car_information()
 
@@ -99,10 +101,39 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "coordinators": coordinators,
     }
 
+    _async_remove_replaced_entities(hass, vehicle.vin)
     await _async_register_static_path(hass)
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
+
+
+# Entities replaced by binary problem sensors (and the Lock entity): their unique ID suffixes.
+_REPLACED_ENTITY_SUFFIXES = (
+    "service_warning",
+    "brake_fluid_warning",
+    "washer_fluid_warning",
+    "low_voltage_battery_warning",
+    "is_locked",
+    "sunroof",  # no Polestar has a sunroof
+    "charging_time_domestic_power",
+    "charging_time_low_power",
+    "charging_time_fast_power",
+    "charging_time_ultrafast_power",
+)
+
+
+def _async_remove_replaced_entities(hass: HomeAssistant, vin: str) -> None:
+    """Remove the old enum warning sensors and the Locked binary sensor from the registry."""
+    from homeassistant.helpers import entity_registry as er
+
+    registry = er.async_get(hass)
+    for domain in ("sensor", "binary_sensor"):
+        for suffix in _REPLACED_ENTITY_SUFFIXES:
+            entity_id = registry.async_get_entity_id(domain, DOMAIN, f"{vin}_{suffix}")
+            if entity_id:
+                registry.async_remove(entity_id)
+                _LOGGER.info("Removed replaced entity %s", entity_id)
 
 
 async def _async_options_updated(hass: HomeAssistant, entry: ConfigEntry) -> None:

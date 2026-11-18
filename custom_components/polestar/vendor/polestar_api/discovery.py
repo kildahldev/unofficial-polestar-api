@@ -7,9 +7,13 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
+import logging
+
 import httpx
 
 from .exceptions import ApiError
+
+_LOGGER = logging.getLogger(__name__)
 
 _SSL_CONTEXT = ssl.create_default_context()
 
@@ -156,13 +160,29 @@ async def get_car_information_by_vins(access_token: str, vins: list[str]) -> dic
         async with httpx.AsyncClient(verify=_SSL_CONTEXT, timeout=30) as client:
             response = await client.post(APP_BACKEND_GRAPHQL_URL, headers=headers, json=payload)
         if response.status_code != 200:
+            _log_app_backend_failure(APP_BACKEND_CAR_INFO_OPERATION_NAME, response.status_code)
             return {}
         data = response.json()
-    except (httpx.HTTPError, ValueError):
+    except (httpx.HTTPError, ValueError) as err:
+        _log_app_backend_failure(APP_BACKEND_CAR_INFO_OPERATION_NAME, None, error=err)
         return {}
     if not isinstance(data, dict) or data.get("errors"):
+        _log_app_backend_failure(APP_BACKEND_CAR_INFO_OPERATION_NAME, 200, (data or {}).get("errors") if isinstance(data, dict) else None)
         return {}
     return _extract_car_information_by_vins(data)
+
+
+
+def _log_app_backend_failure(operation: str, status: int | None, errors: Any = None, error: Exception | None = None) -> None:
+    """One warning when an app-backend query fails (no tokens or personal data in the message)."""
+    if error is not None:
+        detail = type(error).__name__
+    elif status is not None and status != 200:
+        detail = f"HTTP {status}"
+    else:
+        messages = [e.get("message") for e in errors if isinstance(e, dict)] if isinstance(errors, list) else []
+        detail = f"GraphQL errors: {messages[:2]}"
+    _LOGGER.warning("Polestar app-backend query %s failed (%s); its details (plate, build week, ...) will be missing", operation, detail)
 
 
 def _extract_car_information_by_vins(data: dict[str, Any]) -> dict[str, VehicleInfo]:
@@ -207,11 +227,14 @@ async def _app_backend_query(
         async with httpx.AsyncClient(verify=_SSL_CONTEXT, timeout=30) as client:
             response = await client.post(APP_BACKEND_GRAPHQL_URL, headers=headers, json=payload)
         if response.status_code != 200:
+            _log_app_backend_failure(operation, response.status_code)
             return None
         data = response.json()
-    except (httpx.HTTPError, ValueError):
+    except (httpx.HTTPError, ValueError) as err:
+        _log_app_backend_failure(operation, None, error=err)
         return None
     if not isinstance(data, dict) or data.get("errors"):
+        _log_app_backend_failure(operation, 200, data.get("errors") if isinstance(data, dict) else None)
         return None
     result = data.get("data")
     return result if isinstance(result, dict) else None

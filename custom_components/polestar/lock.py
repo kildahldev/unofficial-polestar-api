@@ -40,7 +40,7 @@ async def async_setup_entry(
 class PolestarLock(PolestarEntity, LockEntity):
     """Polestar central lock."""
 
-    _attr_name = "Lock"
+    _attr_translation_key = "lock"
 
     def __init__(self, coordinator) -> None:
         super().__init__(coordinator)
@@ -137,7 +137,7 @@ class PolestarTailgateLock(PolestarLock):
     locking this entity locks the whole car.
     """
 
-    _attr_name = "Boot lock"
+    _attr_translation_key = "boot_lock"
 
     def __init__(self, coordinator) -> None:
         super().__init__(coordinator)

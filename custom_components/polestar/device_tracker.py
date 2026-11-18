@@ -24,8 +24,8 @@ class PolestarTrackerDescription(EntityDescription):
 
 
 TRACKERS: tuple[PolestarTrackerDescription, ...] = (
-    PolestarTrackerDescription(key="location", name="Location", data_attr="location"),
-    PolestarTrackerDescription(key="parked_location", name="Parked location", data_attr="parked_location"),
+    PolestarTrackerDescription(key="location", translation_key="location", data_attr="location"),
+    PolestarTrackerDescription(key="parked_location", translation_key="parked_location", data_attr="parked_location"),
 )
 
 
@@ -49,7 +49,7 @@ class PolestarDeviceTracker(PolestarEntity, TrackerEntity):
     def __init__(self, coordinator, description: PolestarTrackerDescription) -> None:
         super().__init__(coordinator)
         self.entity_description = description
-        self._attr_name = description.name
+        self._attr_translation_key = description.key
         self._attr_unique_id = f"{self._vehicle.vin}_{description.key}"
 
     @property

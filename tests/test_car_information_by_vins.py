@@ -40,3 +40,33 @@ def test_model_name_falls_back_to_the_slug():
     assert model_from_slug(None) is None and model_from_slug("") is None
     assert Vehicle(vin="YSMVSFDR8TL421810", connection=None, slug="polestar-2").model_name == "Polestar 2"
     assert Vehicle(vin="X", connection=None, model_name="Polestar 3", slug="polestar-2").model_name == "Polestar 3"
+
+
+def test_failed_app_backend_query_logs_a_warning(monkeypatch, caplog):
+    import asyncio
+    import logging
+
+    import httpx
+
+    from polestar_api import discovery
+
+    class FakeClient:
+        def __init__(self, *a, **k): ...
+        async def __aenter__(self): return self
+        async def __aexit__(self, *a): return None
+        async def post(self, *a, **k):
+            return httpx.Response(401, json={})
+
+    monkeypatch.setattr(discovery.httpx, "AsyncClient", FakeClient)
+    with caplog.at_level(logging.WARNING):
+        assert asyncio.run(discovery.get_car_information_by_vins("tok", ["V1"])) == {}
+    messages = [r.getMessage() for r in caplog.records]
+    assert any("HTTP 401" in m and "CarInformationByVins" in m for m in messages) or any("HTTP 401" in m for m in messages)
+    assert not any("tok" == m for m in messages)
+
+
+def test_vin_sensor_model_year_is_text():
+    from pathlib import Path
+
+    src = (Path(__file__).parents[1] / "custom_components" / "polestar" / "sensor.py").read_text()
+    assert '"model_year": str(v.model_year) if v.model_year else None' in src

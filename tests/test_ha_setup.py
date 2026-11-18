@@ -98,6 +98,11 @@ def _load_component(monkeypatch):
     _stub_module(monkeypatch, "homeassistant.helpers")
     _stub_module(
         monkeypatch,
+        "homeassistant.helpers.entity_registry",
+        async_get=lambda hass: types.SimpleNamespace(async_get_entity_id=lambda *a: None, async_remove=lambda e: None),
+    )
+    _stub_module(
+        monkeypatch,
         "homeassistant.helpers.config_validation",
         config_entry_only_config_schema=lambda domain: (lambda config: config),
     )
@@ -149,6 +154,9 @@ def _fake_api_class(error: Exception):
 
         async def async_init(self) -> None:
             return None
+
+        async def async_enrich_vehicle(self, vehicle) -> None:
+            self.enriched = getattr(self, "enriched", []) + [vehicle.vin]
 
         async def get_vehicles(self):
             raise error

@@ -31,7 +31,7 @@ class PolestarButtonDescription(ButtonEntityDescription):
 BUTTONS: tuple[PolestarButtonDescription, ...] = (
     PolestarButtonDescription(
         key="flash",
-        name="Flash lights",
+        translation_key="flash",
         icon="mdi:car-light-high",
         press_fn=lambda button: button.coordinator.async_run_command(
             lambda: button._vehicle.honk_flash(action=HonkFlashAction.FLASH),
@@ -42,7 +42,7 @@ BUTTONS: tuple[PolestarButtonDescription, ...] = (
     ),
     PolestarButtonDescription(
         key="honk",
-        name="Honk",
+        translation_key="honk",
         icon="mdi:bugle",
         press_fn=lambda button: button.coordinator.async_run_command(
             lambda: button._vehicle.honk_flash(action=HonkFlashAction.HONK),
@@ -53,7 +53,7 @@ BUTTONS: tuple[PolestarButtonDescription, ...] = (
     ),
     PolestarButtonDescription(
         key="honk_flash",
-        name="Honk and flash",
+        translation_key="honk_flash",
         icon="mdi:bugle",
         press_fn=lambda button: button.coordinator.async_run_command(
             lambda: button._vehicle.honk_flash(action=HonkFlashAction.HONK_AND_FLASH),
@@ -64,14 +64,14 @@ BUTTONS: tuple[PolestarButtonDescription, ...] = (
     ),
     PolestarButtonDescription(
         key="wakeup",
-        name="Refresh",
+        translation_key="wakeup",
         icon="mdi:refresh",
         press_fn=lambda button: button.coordinator.async_request_refresh(),
     ),
     PolestarButtonDescription(
         key="open_windows",
         fetch_attr="window_control",
-        name="Open windows",
+        translation_key="open_windows",
         icon="mdi:window-open",
         press_fn=lambda button: button.coordinator.async_open_windows(),
         capability="open_windows",
@@ -79,7 +79,7 @@ BUTTONS: tuple[PolestarButtonDescription, ...] = (
     PolestarButtonDescription(
         key="close_windows",
         fetch_attr="window_control",
-        name="Close windows",
+        translation_key="close_windows",
         icon="mdi:window-closed",
         press_fn=lambda button: button.coordinator.async_close_windows(),
         capability="close_windows",
