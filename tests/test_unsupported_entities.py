@@ -242,6 +242,25 @@ async def test_other_errors_do_not_mark_fetch_unsupported(monkeypatch):
     assert coordinator.is_fetch_supported("amp_limit")
 
 
+@pytest.mark.asyncio
+async def test_failed_fetch_warns_once_and_keeps_the_last_value(monkeypatch, caplog):
+    import logging
+
+    coordinator_module, _ = _load(monkeypatch, FakeRegistry())
+    vehicle = FakeVehicle({"weather": TimeoutError()})
+    coordinator = _coordinator(coordinator_module, vehicle)
+    previous = coordinator_module.PolestarVehicleData(weather="last good")
+
+    with caplog.at_level(logging.DEBUG):
+        values, _ = await coordinator._async_fetch_values(("weather",), previous)
+        await coordinator._async_fetch_values(("weather",), previous)
+
+    assert values["weather"] == "last good"
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING and "Fetching weather" in r.getMessage()]
+    assert len(warnings) == 1
+    assert "weather" in coordinator._failing_fetches
+
+
 class FakeEntity:
     def __init__(
         self, unique_id: str, required_fetch: str | None, required_data=None, requires_combustion_engine=False
