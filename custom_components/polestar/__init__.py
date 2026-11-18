@@ -2,24 +2,34 @@
 
 from __future__ import annotations
 
-import logging
+import sys
 from pathlib import Path
 
-from homeassistant.components.http import StaticPathConfig
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+# The polestar_api library is vendored under vendor/ rather than installed
+# from PyPI, so this integration's fixes don't depend on a release of the
+# separate unofficial-polestar-api project. Must run before any import
+# (direct or transitive, e.g. via .coordinator) resolves "polestar_api".
+_VENDOR_DIR = Path(__file__).parent / "vendor"
+if str(_VENDOR_DIR) not in sys.path:
+    sys.path.insert(0, str(_VENDOR_DIR))
 
-from .const import CONF_DEMO, CONF_VIN, DOMAIN, PLATFORMS
-from .coordinator import PolestarCoordinator
-from .demo import DemoVehicle
-from polestar_api import PolestarApi, Vehicle
-from polestar_api.exceptions import ApiError, AuthError
-from .services import async_register_services
-from .token_store import HassTokenStore
+import logging  # noqa: E402
+
+from homeassistant.components.http import StaticPathConfig  # noqa: E402
+from homeassistant.config_entries import ConfigEntry  # noqa: E402
+from homeassistant.const import CONF_EMAIL, CONF_PASSWORD  # noqa: E402
+from homeassistant.core import HomeAssistant  # noqa: E402
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady  # noqa: E402
+from homeassistant.helpers import config_validation as cv  # noqa: E402
+from homeassistant.helpers.typing import ConfigType  # noqa: E402
+
+from .const import CONF_DEMO, CONF_VIN, DOMAIN, PLATFORMS  # noqa: E402
+from .coordinator import PolestarCoordinator  # noqa: E402
+from .demo import DemoVehicle  # noqa: E402
+from polestar_api import PolestarApi, Vehicle  # noqa: E402
+from polestar_api.exceptions import ApiError, AuthError  # noqa: E402
+from .services import async_register_services  # noqa: E402
+from .token_store import HassTokenStore  # noqa: E402
 
 _LOGGER = logging.getLogger(__name__)
 STATIC_DIR = Path(__file__).parent / "static"
