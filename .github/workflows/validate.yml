@@ -14,3 +14,13 @@ jobs:
         uses: hacs/action@main
         with:
           category: integration
+
+  vendor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check vendored polestar_api is in sync with src/polestar_api
+        run: python scripts/sync_vendor.py --check

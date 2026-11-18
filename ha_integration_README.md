@@ -1,9 +1,10 @@
 # Polestar C3 for Home Assistant
 
-Unofficial Home Assistant custom integration for Polestar vehicles. Communicates with Polestar's gRPC backend directly via [`unofficial-polestar-api`](https://pypi.org/project/unofficial-polestar-api/).
+Unofficial Home Assistant custom integration for Polestar vehicles. Communicates with Polestar's gRPC backend directly via a bundled fork of [`unofficial-polestar-api`](https://pypi.org/project/unofficial-polestar-api/) (this fork vendors the library rather than depending on it from PyPI, so you always get this repo's fixes — see "What's new" below).
 
 ## What's new
 
+- **No more PyPI dependency**: the API library is now bundled directly with this integration instead of being installed separately from PyPI. Previously, HACS installs silently kept using an older, unpatched version of the library regardless of what was fixed here — that's resolved now.
 - **Diagnostics**: download a diagnostics report from **Settings → Devices & Services → Polestar → ⋮ → Download diagnostics**. It includes each vehicle's data snapshot, stream health, and a count of API calls made per endpoint (redacted — no VIN, email, or GPS coordinates).
 - **Charging-time sensors**: four new diagnostic sensors estimate the time to reach your target charge level at domestic (7kW), low (22kW), fast (100kW), and ultrafast (300kW) charging power, based on your model's battery capacity. They have a value whether or not the car is actually plugged in.
 - **Commands no longer look "undone"**: locking, unlocking, and starting/stopping climate used to sometimes show the new state, revert, then correct itself minutes later. Fixed by making sure a slower background refresh can no longer overwrite a more recent one, and by holding the shown state until the car actually confirms the change.
