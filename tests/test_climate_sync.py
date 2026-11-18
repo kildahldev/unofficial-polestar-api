@@ -255,3 +255,11 @@ def test_in_use_follows_driving_or_the_car_in_use_reason(utils):
     assert utils.in_use(avail(False, "CAR_IN_USE", UsageMode.ACTIVE)) is True  # what the app shows as "In use"
     assert utils.in_use(avail(True, "CAR_IN_USE", UsageMode.INACTIVE)) is False  # a stale reason on an available car
     assert utils.in_use(avail(False, "NO_INTERNET", UsageMode.INACTIVE)) is False
+
+
+def test_flatten_attributes_makes_raw_bytes_json_safe(utils):
+    import json
+
+    flat = utils.flatten_attributes({"reportsLightWarnings": b"\x01\x02\x15"})
+    assert flat == {"reports_light_warnings": "1, 2, 21"}
+    json.dumps(flat)

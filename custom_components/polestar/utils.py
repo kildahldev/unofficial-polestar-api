@@ -244,7 +244,10 @@ def flatten_attributes(data: Any, prefix: str = "") -> dict[str, Any]:
         name = re.sub(r"[^0-9a-z]+", "_", re.sub(r"(?<=[a-z0-9])([A-Z])", r"_\1", f"{prefix}{key}").lower()).strip("_")
         if value is None or value == "" or value == [] or value == {}:
             continue
-        if isinstance(value, dict):
+        if isinstance(value, (bytes, bytearray)):
+            # Packed lists (such as light warnings) arrive as raw bytes, which Home Assistant cannot store as JSON.
+            out[name] = ", ".join(str(b) for b in value)
+        elif isinstance(value, dict):
             out.update(flatten_attributes(value, f"{name}_"))
         elif isinstance(value, (list, tuple)):
             out[name] = ", ".join(str(item) for item in value)
