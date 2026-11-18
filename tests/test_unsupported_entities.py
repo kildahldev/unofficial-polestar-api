@@ -683,7 +683,8 @@ def test_car_reporting_flags_gate_tyre_and_service_entities(monkeypatch):
         module, reports_tyre_pressure_warning=False, reports_tyre_pressure=False, reports_service_warning=True
     )
 
-    assert not coordinator.is_fetch_supported("tyre_warning")
+    # The tyre warning is never hidden by the flag: the Polestar 2 omits it but still reports warnings.
+    assert coordinator.is_fetch_supported("tyre_warning")
     assert not coordinator.is_fetch_supported("tyre_pressure")
     assert coordinator.is_fetch_supported("service_warning")
 
