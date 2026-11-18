@@ -998,19 +998,19 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         return response
 
     async def async_start_precleaning(self) -> None:
-        """Start cabin pre-cleaning."""
+        """Start air purification (the backend calls it pre-cleaning)."""
         await self.async_run_command(
             self.vehicle.start_precleaning,
-            error_message="Start pre-cleaning command failed",
+            error_message="Start air purification command failed",
             capability="precleaning",
         )
         self._schedule_background_refresh("precleaning")
 
     async def async_stop_precleaning(self) -> None:
-        """Stop cabin pre-cleaning."""
+        """Stop air purification (the backend calls it pre-cleaning)."""
         await self.async_run_command(
             self.vehicle.stop_precleaning,
-            error_message="Stop pre-cleaning command failed",
+            error_message="Stop air purification command failed",
             capability="precleaning",
         )
         self._schedule_background_refresh("precleaning")

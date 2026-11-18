@@ -124,7 +124,7 @@
         "name": "Low-voltage battery"
       },
       "precleaning_running": {
-        "name": "Pre-cleaning running"
+        "name": "Air purification running"
       },
       "remote_function_data_sharing": {
         "name": "Remote function data sharing"
@@ -364,13 +364,13 @@
         "name": "PM2.5"
       },
       "precleaning_error": {
-        "name": "Pre-cleaning error"
+        "name": "Air purification error"
       },
       "precleaning_runtime_left": {
-        "name": "Pre-cleaning runtime left"
+        "name": "Air purification runtime left"
       },
       "precleaning_start_reason": {
-        "name": "Pre-cleaning start reason"
+        "name": "Air purification start reason"
       },
       "range": {
         "name": "Range"
@@ -427,9 +427,6 @@
       },
       "climate": {
         "name": "Climate"
-      },
-      "precleaning": {
-        "name": "Pre-cleaning"
       }
     },
     "time": {

@@ -116,6 +116,7 @@ _REPLACED_ENTITY_SUFFIXES = (
     "low_voltage_battery_warning",
     "is_locked",
     "sunroof",  # no Polestar has a sunroof
+    "precleaning",  # the switch duplicated Air Purification
     "charging_time_domestic_power",
     "charging_time_low_power",
     "charging_time_fast_power",
@@ -128,7 +129,7 @@ def _async_remove_replaced_entities(hass: HomeAssistant, vin: str) -> None:
     from homeassistant.helpers import entity_registry as er
 
     registry = er.async_get(hass)
-    for domain in ("sensor", "binary_sensor"):
+    for domain in ("sensor", "binary_sensor", "switch"):
         for suffix in _REPLACED_ENTITY_SUFFIXES:
             entity_id = registry.async_get_entity_id(domain, DOMAIN, f"{vin}_{suffix}")
             if entity_id:
