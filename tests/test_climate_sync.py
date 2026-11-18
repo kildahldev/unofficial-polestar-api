@@ -112,3 +112,45 @@ def test_flatten_attributes_one_row_per_field(utils):
     assert utils.flatten_attributes(None) == {}
     src = (ROOT / "sensor.py").read_text()
     assert "_unrecorded_attributes = frozenset({MATCH_ALL})" in src and "**flatten_attributes(" in src
+
+
+def test_in_use_is_driving_only_and_fluids_are_problem_flags(utils):
+    from polestar_api.models.availability import UsageMode
+    from polestar_api.models.health import BrakeFluidLevelWarning, WasherFluidLevelWarning
+
+    assert utils.driving(UsageMode.DRIVING) is True
+    for mode in (UsageMode.INACTIVE, UsageMode.ABANDONED, UsageMode.ACTIVE, UsageMode.CONVENIENCE):
+        assert utils.driving(mode) is False
+    assert utils.driving(UsageMode.UNSPECIFIED) is None
+    assert utils.level_problem(BrakeFluidLevelWarning.NO_WARNING) is False
+    assert utils.level_problem(BrakeFluidLevelWarning.TOO_LOW) is True
+    assert utils.level_problem(BrakeFluidLevelWarning.CRITICALLY_LOW) is True
+    assert utils.level_problem(WasherFluidLevelWarning.UNSPECIFIED) is None
+
+
+def test_light_status_lists_every_light(utils):
+    from polestar_api.models.health import ExteriorLightWarning, Health
+
+    health = Health(
+        turn_indication_front_left_warning=ExteriorLightWarning.NO_WARNING,
+        low_beam_right_warning=ExteriorLightWarning.FAILURE,
+        registration_plate_light_warning=ExteriorLightWarning.NO_WARNING,
+        brake_light_center_warning=ExteriorLightWarning.UNSPECIFIED,
+    )
+    attrs = utils.light_attributes(health)
+    assert attrs["front_left_turn_indicator"] == "ok"
+    assert attrs["right_low_beam"] == "failure"
+    assert attrs["registration_plate_light"] == "ok"
+    assert attrs["center_brake_light"] == "unknown"
+    assert health.any_light_failure is True
+
+
+def test_old_warning_entities_are_gone_and_removed_from_the_registry():
+    sensor_src = (ROOT / "sensor.py").read_text()
+    binary_src = (ROOT / "binary_sensor.py").read_text()
+    for key in ("service_warning", "brake_fluid_warning", "washer_fluid_warning", "low_voltage_battery_warning"):
+        assert f'key="{key}"' not in sensor_src
+    assert 'key="is_locked"' not in binary_src
+    assert 'key="in_use"' in binary_src and 'name="Light status"' in binary_src
+    init_src = (ROOT / "__init__.py").read_text()
+    assert "_async_remove_replaced_entities(hass, vehicle.vin)" in init_src

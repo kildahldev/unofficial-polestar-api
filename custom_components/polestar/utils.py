@@ -250,3 +250,51 @@ def flatten_attributes(data: Any, prefix: str = "") -> dict[str, Any]:
         else:
             out[name] = value
     return out
+
+
+def driving(usage_mode: Any) -> bool | None:
+    """True only while the car reports Driving (not merely recently used); None when it says nothing."""
+    name = enum_name(usage_mode)
+    if name is None:
+        return None
+    return name == "driving"
+
+
+def level_problem(warning: Any) -> bool | None:
+    """A fluid-level warning as a problem flag: off for "no warning", on for too low / critically low."""
+    name = enum_name(warning)
+    if name is None:
+        return None
+    return name != "no_warning"
+
+
+_LIGHT_LABELS = {
+    "turn_indication": "turn indicator",
+    "position_light": "position light",
+    "high_beam": "high beam",
+    "low_beam": "low beam",
+    "daytime_running_light": "daytime running light",
+    "fog_light": "fog light",
+    "brake_light": "brake light",
+    "registration_plate_light": "registration plate light",
+    "side_mark_lights": "side marker lights",
+}
+
+
+def light_attributes(health: Any) -> dict[str, str]:
+    """Status of every light the car reports: ``ok``, ``failure`` or ``unknown`` (one attribute per light)."""
+    out: dict[str, str] = {}
+    schema = getattr(health, "_schema", None) or {}
+    for field in schema.values():
+        if not field.endswith("_warning"):
+            continue
+        base = field[: -len("_warning")]
+        label = next((label for prefix, label in _LIGHT_LABELS.items() if base.startswith(prefix)), None)
+        if label is None:
+            continue
+        position = base[len(next(p for p in _LIGHT_LABELS if base.startswith(p))) :].strip("_").replace("_", " ")
+        name = f"{position} {label}".strip().replace(" ", "_")
+        value = getattr(health, field, None)
+        state = enum_name(value)
+        out[name] = "ok" if state == "no_warning" else "unknown" if state is None else state
+    return out

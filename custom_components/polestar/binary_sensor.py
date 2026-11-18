@@ -21,7 +21,7 @@ from polestar_api.models.health import LowVoltageBatteryWarning, ServiceWarning
 from .const import DOMAIN
 from .coordinator import PolestarVehicleData
 from .entity import PolestarEntity, async_filter_supported_entities
-from .utils import state_icon
+from .utils import driving, level_problem as _level_problem, light_attributes, state_icon
 
 PARALLEL_UPDATES = 0
 
@@ -47,6 +47,8 @@ class PolestarBinarySensorDescription(BinarySensorEntityDescription):
     icon_on: str | None = None
     icon_off: str | None = None
     fetch_attr: str | None = None
+    attrs_fn: Callable[[PolestarVehicleData], dict[str, Any]] | None = None
+    required_data: Callable[[PolestarVehicleData], bool] | None = None
 
 
 BINARY_SENSORS: tuple[PolestarBinarySensorDescription, ...] = (
@@ -61,12 +63,6 @@ BINARY_SENSORS: tuple[PolestarBinarySensorDescription, ...] = (
         name="Plugged in",
         device_class=BinarySensorDeviceClass.PLUG,
         value_fn=lambda d: d.battery.is_plugged_in if d.battery else None,
-    ),
-    PolestarBinarySensorDescription(
-        key="is_locked",
-        name="Locked",
-        device_class=BinarySensorDeviceClass.LOCK,
-        value_fn=lambda d: not d.exterior.is_locked if d.exterior else None,
     ),
     PolestarBinarySensorDescription(
         key="any_door_open",
@@ -192,9 +188,35 @@ BINARY_SENSORS: tuple[PolestarBinarySensorDescription, ...] = (
         key="light_failure",
         icon_off="mdi:car-light-alert",
         icon_on="mdi:alert-circle",
-        name="Light failure",
+        name="Light status",
         device_class=BinarySensorDeviceClass.PROBLEM,
         value_fn=lambda d: d.health.any_light_failure if d.health else None,
+        attrs_fn=lambda d: light_attributes(d.health) if d.health else {},
+    ),
+    PolestarBinarySensorDescription(
+        key="brake_fluid_problem",
+        icon_off="mdi:car-brake-fluid-level",
+        icon_on="mdi:alert-circle",
+        name="Brake fluid",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        value_fn=lambda d: _level_problem(d.health.brake_fluid_level_warning) if d.health else None,
+    ),
+    PolestarBinarySensorDescription(
+        key="washer_fluid_problem",
+        # Hidden when the car answers the health request but never reports a washer fluid level.
+        required_data=lambda d: d.health is None
+        or d.health.washer_fluid_level_warning.name != "UNSPECIFIED",
+        icon_off="mdi:wiper-wash",
+        icon_on="mdi:alert-circle",
+        name="Washer fluid",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        value_fn=lambda d: _level_problem(d.health.washer_fluid_level_warning) if d.health else None,
+    ),
+    PolestarBinarySensorDescription(
+        key="in_use",
+        name="In use",
+        device_class=BinarySensorDeviceClass.MOVING,
+        value_fn=lambda d: driving(d.availability.usage_mode) if d.availability else None,
     ),
     PolestarBinarySensorDescription(
         key="service_required",
@@ -210,7 +232,7 @@ BINARY_SENSORS: tuple[PolestarBinarySensorDescription, ...] = (
         icon_off="mdi:car-battery",
         icon_on="mdi:battery-alert",
         name="Low-voltage battery",
-        device_class=BinarySensorDeviceClass.BATTERY,
+        device_class=BinarySensorDeviceClass.PROBLEM,
         value_fn=lambda d: d.health.low_voltage_battery_warning == LowVoltageBatteryWarning.TOO_LOW if d.health else None,
     ),
     PolestarBinarySensorDescription(
@@ -258,7 +280,15 @@ class PolestarBinarySensor(PolestarEntity, BinarySensorEntity):
         super().__init__(coordinator)
         self.entity_description = description
         self.required_fetch = description.fetch_attr
+        self.required_data = description.required_data
         self._attr_unique_id = f"{self._vehicle.vin}_{description.key}"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        fn = self.entity_description.attrs_fn
+        if fn is None or self.coordinator.data is None:
+            return None
+        return fn(self.coordinator.data) or None
 
     @property
     def is_on(self) -> bool | None:

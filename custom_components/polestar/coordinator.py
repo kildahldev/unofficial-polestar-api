@@ -85,6 +85,8 @@ _INVALID_ARGUMENT_UNSUPPORTED_AFTER = 3
 # A stream that stops pushing without erroring is indistinguishable from a healthy
 # idle one, so resubscribe after this many poll intervals of silence.
 _STREAM_STALE_POLL_INTERVALS = 3
+# Availability (usage mode) has no stream: refresh it this often between the full polls.
+_AVAILABILITY_REFRESH_SECONDS = 60.0
 _COMMAND_INVOCATION_SUCCESS = {
     InvocationStatus.SENT,
     InvocationStatus.DELIVERED,
@@ -227,6 +229,7 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         self.climate_preferences = ClimateCommandPreferences()
         self._installed_version_cache: str | None = None
         self._stream_tasks: dict[str, asyncio.Task[None]] = {}
+        self._availability_task: asyncio.Task[None] | None = None
         self._unsupported_streams: set[str] = set()
         self._unsupported_commands: set[str] = set()
         self._unsupported_fetches: set[str] = set()
@@ -628,6 +631,26 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
                     name=f"polestar-{self.vehicle.vin}-{attr}-stream",
                 )
 
+        if self._availability_task is None:
+            self._availability_task = asyncio.create_task(
+                self._async_availability_loop(),
+                name=f"polestar-{self.vehicle.vin}-availability-refresh",
+            )
+
+    async def _async_availability_loop(self, interval: float = _AVAILABILITY_REFRESH_SECONDS) -> None:
+        """Refresh availability (and so usage mode) once a minute, without touching the poll timer.
+
+        Usage mode has no stream, so on the 10 minute poll a whole trip can pass unseen.
+        """
+        while True:
+            await asyncio.sleep(interval)
+            try:
+                await self.async_request_attrs_refresh("availability")
+            except asyncio.CancelledError:
+                raise
+            except Exception as err:  # noqa: BLE001
+                _LOGGER.debug("Availability refresh failed for %s: %s", self.vehicle.vin, err)
+
     def _stream_running(self, attr: str) -> bool:
         task = self._stream_tasks.get(attr)
         return task is not None and not task.done()
@@ -673,6 +696,10 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         cancel_follow_ups = getattr(self.vehicle, "cancel_invocation_follow_ups", None)
         if cancel_follow_ups is not None:
             await cancel_follow_ups()
+        if self._availability_task is not None:
+            self._availability_task.cancel()
+            await asyncio.gather(self._availability_task, return_exceptions=True)
+            self._availability_task = None
         for task in self._stream_tasks.values():
             task.cancel()
         if self._stream_tasks:

@@ -98,6 +98,11 @@ def _load_component(monkeypatch):
     _stub_module(monkeypatch, "homeassistant.helpers")
     _stub_module(
         monkeypatch,
+        "homeassistant.helpers.entity_registry",
+        async_get=lambda hass: types.SimpleNamespace(async_get_entity_id=lambda *a: None, async_remove=lambda e: None),
+    )
+    _stub_module(
+        monkeypatch,
         "homeassistant.helpers.config_validation",
         config_entry_only_config_schema=lambda domain: (lambda config: config),
     )

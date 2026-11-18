@@ -400,42 +400,6 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         value_fn=lambda d: d.health.engine_hours_to_service if d.health else None,
     ),
     PolestarSensorDescription(
-        key="service_warning",
-        fetch_attr="service_warning",
-        name="Service warning",
-        device_class=SensorDeviceClass.ENUM,
-        options=enum_options(ServiceWarning),
-        value_fn=lambda d: enum_name(d.health.service_warning) if d.health else None,
-    ),
-    PolestarSensorDescription(
-        key="brake_fluid_warning",
-        name="Brake fluid warning",
-        device_class=SensorDeviceClass.ENUM,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        options=enum_options(BrakeFluidLevelWarning),
-        value_fn=lambda d: enum_name(d.health.brake_fluid_level_warning) if d.health else None,
-    ),
-    PolestarSensorDescription(
-        key="washer_fluid_warning",
-        # Disabled when the car answers the health request but never reports a washer fluid level.
-        required_data=lambda d: d.health is None
-        or d.health.washer_fluid_level_warning != WasherFluidLevelWarning.UNSPECIFIED,
-        name="Washer fluid warning",
-        device_class=SensorDeviceClass.ENUM,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        options=enum_options(WasherFluidLevelWarning, exclude_unspecified=False),
-        value_fn=lambda d: enum_name(d.health.washer_fluid_level_warning, allow_unspecified=True) if d.health else None,
-    ),
-    PolestarSensorDescription(
-        key="low_voltage_battery_warning",
-        icon="mdi:car-battery",
-        name="Low-voltage battery warning",
-        device_class=SensorDeviceClass.ENUM,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        options=enum_options(LowVoltageBatteryWarning),
-        value_fn=lambda d: enum_name(d.health.low_voltage_battery_warning) if d.health else None,
-    ),
-    PolestarSensorDescription(
         key="outside_temperature",
         name="Outside temperature",
         device_class=SensorDeviceClass.TEMPERATURE,
