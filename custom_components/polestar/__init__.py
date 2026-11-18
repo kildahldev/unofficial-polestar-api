@@ -115,6 +115,10 @@ _REPLACED_ENTITY_SUFFIXES = (
     "washer_fluid_warning",
     "low_voltage_battery_warning",
     "is_locked",
+    "charging_time_domestic_power",
+    "charging_time_low_power",
+    "charging_time_fast_power",
+    "charging_time_ultrafast_power",
 )
 
 

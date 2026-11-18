@@ -105,16 +105,6 @@ BATTERY_CAPACITY_KWH_BY_MODEL: dict[str, float] = {
 }
 DEFAULT_BATTERY_CAPACITY_KWH = 94.0
 
-# (key, name, assumed power in kW) for the "time to reach target SOC" sensors below.
-# Names are kept short and punctuation-free so the generated entity_id matches the key.
-CHARGING_TIME_TIERS: tuple[tuple[str, str, float], ...] = (
-    ("charging_time_domestic_power", "Charging time domestic power", 7.0),
-    ("charging_time_low_power", "Charging time low power", 22.0),
-    ("charging_time_fast_power", "Charging time fast power", 100.0),
-    ("charging_time_ultrafast_power", "Charging time ultrafast power", 300.0),
-)
-
-
 def _battery_capacity_kwh(model_name: str | None) -> float:
     if model_name:
         name = model_name.casefold()
@@ -648,10 +638,6 @@ async def async_setup_entry(
     data = hass.data[DOMAIN][entry.entry_id]
     for coordinator in data["coordinators"].values():
         entities = [PolestarSensor(coordinator, desc) for desc in SENSORS]
-        entities.extend(
-            PolestarChargingTimeSensor(coordinator, key, name, power_kw)
-            for key, name, power_kw in CHARGING_TIME_TIERS
-        )
         async_add_entities(async_filter_supported_entities(hass, coordinator, "sensor", entities))
         info_entities: list[SensorEntity] = [PolestarVinSensor(coordinator), PolestarVehicleInfoSensor(coordinator)]
         vehicle = coordinator.vehicle
@@ -807,39 +793,3 @@ class PolestarVehicleInfoSensor(PolestarEntity, SensorEntity):
         }
 
 
-class PolestarChargingTimeSensor(PolestarEntity, SensorEntity):
-    """Estimated time to reach the target SOC at a fixed assumed charging power.
-
-    Uses the vehicle's usable battery capacity (looked up by model, since the
-    API never reports it) rather than an active charging session, so it has a
-    value whether or not the car is currently plugged in.
-    """
-
-    _attr_device_class = SensorDeviceClass.DURATION
-    _attr_native_unit_of_measurement = UnitOfTime.MINUTES
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-    _attr_icon = "mdi:ev-station"
-    required_fetch = "target_soc"
-
-    def __init__(self, coordinator, key: str, name: str, power_kw: float) -> None:
-        super().__init__(coordinator)
-        self._attr_unique_id = f"{self._vehicle.vin}_{key}"
-        self._attr_name = name
-        self._power_kw = power_kw
-
-    @property
-    def native_value(self) -> StateType | None:
-        if self.coordinator.data is None:
-            return None
-        capacity_kwh = _vehicle_capacity_kwh(self._vehicle)
-        energy_kwh = _safe(lambda d: _energy_needed_kwh(d, capacity_kwh), self.coordinator.data)
-        if energy_kwh is None:
-            return None
-        return round(energy_kwh / self._power_kw * 60)
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        return {
-            "assumed_power_kw": self._power_kw,
-            "assumed_battery_capacity_kwh": _vehicle_capacity_kwh(self._vehicle),
-        }
