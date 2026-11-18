@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from .auth import AuthManager, FileTokenStore, TokenStore
 from .connection import GrpcConnection
-from .discovery import VehicleInfo, discover_c3_endpoint, get_vehicles
+from .discovery import VehicleInfo, discover_c3_endpoint, get_car_information_by_vins, get_vehicles
 from .vehicle import Vehicle
 
 
@@ -48,6 +48,15 @@ class PolestarApi:
         """Fetch the user's vehicles."""
         token = await self._auth.ensure_valid_token()
         infos = await get_vehicles(token)
+        # Discovery can return only the VIN; the app's own car-information query has the plate.
+        missing = [i.vin for i in infos if not i.registration_no or i.model_year is None]
+        if missing:
+            extra = await get_car_information_by_vins(token, missing)
+            for info in infos:
+                found = extra.get(info.vin)
+                if found is not None:
+                    info.registration_no = info.registration_no or found.registration_no
+                    info.model_year = info.model_year if info.model_year is not None else found.model_year
         self._vehicle_cache = infos
         return [
             Vehicle(

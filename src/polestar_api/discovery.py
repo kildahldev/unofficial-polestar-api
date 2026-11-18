@@ -38,6 +38,13 @@ query GetVDMSCars {
 }
 """
 
+APP_BACKEND_CAR_INFO_OPERATION_NAME = "CarInformationByVins"
+APP_BACKEND_CAR_INFO_QUERY = (
+    "query CarInformationByVins($input: CarInformationByVinsInput) { cars { "
+    "carInformationByVins(input: $input) { modelYear registrationNumber slug vin } } }"
+)
+
+
 @dataclass
 class GrpcEndpoint:
     host: str
@@ -106,6 +113,57 @@ async def get_vehicles(access_token: str) -> list[VehicleInfo]:
             raise ApiError(f"Vehicle list failed (app-backend: {graphql_error})")
 
         return _extract_app_backend_vehicles(data)
+
+
+async def get_car_information_by_vins(access_token: str, vins: list[str]) -> dict[str, VehicleInfo]:
+    """Look up the registration plate and model year for ``vins``.
+
+    This is the query the mobile app uses for its Specifications screen. Account discovery
+    (``GetVDMSCars``) can return only the VIN for secondary or guest accounts, and the C3
+    car-information service has no plate, but this query does. Any failure returns ``{}``.
+    """
+    if not vins:
+        return {}
+    headers = {
+        **_app_backend_headers(access_token),
+        "X-APOLLO-OPERATION-NAME": APP_BACKEND_CAR_INFO_OPERATION_NAME,
+        "Accept": APP_BACKEND_ACCEPT_HEADER,
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "operationName": APP_BACKEND_CAR_INFO_OPERATION_NAME,
+        "variables": {"input": {"vins": vins}},
+        "query": APP_BACKEND_CAR_INFO_QUERY,
+        "extensions": {"clientLibrary": APP_BACKEND_CLIENT_LIBRARY},
+    }
+    try:
+        async with httpx.AsyncClient(verify=_SSL_CONTEXT, timeout=30) as client:
+            response = await client.post(APP_BACKEND_GRAPHQL_URL, headers=headers, json=payload)
+        if response.status_code != 200:
+            return {}
+        data = response.json()
+    except (httpx.HTTPError, ValueError):
+        return {}
+    if not isinstance(data, dict) or data.get("errors"):
+        return {}
+    return _extract_car_information_by_vins(data)
+
+
+def _extract_car_information_by_vins(data: dict[str, Any]) -> dict[str, VehicleInfo]:
+    cars = (((data.get("data") or {}).get("cars") or {}).get("carInformationByVins")) or []
+    result: dict[str, VehicleInfo] = {}
+    for car in cars:
+        if not isinstance(car, dict):
+            continue
+        vin = car.get("vin")
+        if not isinstance(vin, str) or not vin:
+            continue
+        result[vin] = VehicleInfo(
+            vin=vin,
+            registration_no=_string_or_none(car.get("registrationNumber")),
+            model_year=_parse_model_year(car.get("modelYear")),
+        )
+    return result
 
 
 def _extract_app_backend_vehicles(data: dict[str, Any]) -> list[VehicleInfo]:
