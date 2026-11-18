@@ -377,6 +377,33 @@ async def test_precleaning_with_no_data_on_first_poll_is_disabled(monkeypatch):
     assert coordinator.is_fetch_supported("battery")
 
 
+class ChargeLocationVehicle(FakeVehicle):
+    def __init__(self, locations) -> None:
+        super().__init__({})
+        self._locations = locations
+
+    async def get_charge_locations(self):
+        return self._locations
+
+    async def is_at_charge_location(self):
+        return {}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("locations", "kept"), [([], False), (["home"], True)])
+async def test_charge_locations_hidden_together_when_none_are_saved(monkeypatch, locations, kept):
+    coordinator_module, _ = _load(monkeypatch, FakeRegistry())
+    coordinator = _coordinator(coordinator_module, ChargeLocationVehicle(locations))
+
+    await coordinator._async_fetch_values(
+        ("charge_locations", "current_charge_location"), coordinator_module.PolestarVehicleData()
+    )
+    coordinator._record_no_data_fetches()
+
+    assert coordinator.is_fetch_supported("charge_locations") is kept
+    assert coordinator.is_fetch_supported("current_charge_location") is kept
+
+
 @pytest.mark.asyncio
 async def test_precleaning_with_data_stays_enabled(monkeypatch):
     coordinator_module, _ = _load(monkeypatch, FakeRegistry())

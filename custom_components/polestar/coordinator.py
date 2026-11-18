@@ -137,7 +137,11 @@ _CAPABILITY_FETCHES: tuple[tuple[str, tuple[str, ...]], ...] = (
 _CLIMATE_TIMER_SLOTS = 3
 
 # Attributes whose entities are disabled when the first poll succeeds but returns no data at all.
-_DISABLE_WHEN_EMPTY = ("precleaning",)
+# Charge locations are per-location charge settings; a car with none saved (the Polestar 2 has no such feature in
+# practice) gets neither the list, the current location nor the "at charge location" sensor.
+_DISABLE_WHEN_EMPTY = ("precleaning", "charge_locations")
+# Entities that only make sense next to another one: hidden together with it.
+_HIDDEN_WITH = {"charge_locations": ("current_charge_location",)}
 
 _COMMAND_RESPONSE_STATUS_SUCCESS = {
     ResponseStatusCode.SUCCESS,
@@ -408,7 +412,10 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
 
     def _record_no_data_fetches(self) -> None:
         """After the first poll, remember attributes the car answered with no data at all."""
-        self._no_data_fetches = {attr for attr in _DISABLE_WHEN_EMPTY if attr in self._empty_fetches}
+        empty = {attr for attr in _DISABLE_WHEN_EMPTY if attr in self._empty_fetches}
+        for attr in tuple(empty):
+            empty.update(_HIDDEN_WITH.get(attr, ()))
+        self._no_data_fetches = empty
 
     def is_command_supported(self, capability: str) -> bool:
         """Return whether a command capability is supported by the car."""
@@ -500,7 +507,7 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
                 self._unsupported_fetches.discard(attr)
                 _LOGGER.info("Fetch %s is supported again for %s", attr, self.vehicle.vin)
 
-            if result is None:
+            if result is None or (isinstance(result, (list, tuple, dict)) and not result):
                 self._empty_fetches.add(attr)
             else:
                 self._empty_fetches.discard(attr)
