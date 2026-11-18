@@ -392,7 +392,7 @@
         "name": "Air Purification"
       },
       "charge_timer": {
-        "name": "Charge timer"
+        "name": "Charging schedule"
       },
       "charging": {
         "name": "Charging"
@@ -403,10 +403,10 @@
     },
     "time": {
       "charge_timer_start": {
-        "name": "Charge timer start"
+        "name": "Charging schedule start"
       },
       "charge_timer_stop": {
-        "name": "Charge timer stop"
+        "name": "Charging schedule end"
       }
     },
     "update": {
