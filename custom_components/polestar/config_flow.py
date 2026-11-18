@@ -312,3 +312,48 @@ class PolestarConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=REAUTH_SCHEMA,
             errors=errors,
         )
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Change the account (email and password) of an existing entry.
+
+        The VIN, the unique ID and so every entity ID and its history stay as they are. This is how a
+        car moves from a main account to a guest account, or back.
+        """
+        entry = self._get_reconfigure_entry()
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            email = user_input[CONF_EMAIL].strip()
+            password = user_input[CONF_PASSWORD]
+            api = PolestarApi(email, password, token_store=MemoryTokenStore())
+            try:
+                await api.async_init()
+            except AuthError:
+                errors["base"] = "invalid_auth"
+            except Exception:
+                _LOGGER.exception("Unexpected error during reconfigure")
+                errors["base"] = "cannot_connect"
+            else:
+                return self.async_update_reload_and_abort(
+                    entry,
+                    data_updates={CONF_EMAIL: email, CONF_PASSWORD: password},
+                )
+            finally:
+                try:
+                    await api.close()
+                except Exception:
+                    pass
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_EMAIL, default=entry.data.get(CONF_EMAIL, "")): str,
+                    vol.Required(CONF_PASSWORD): str,
+                }
+            ),
+            description_placeholders={"vin": entry.data.get(CONF_VIN, "")},
+            errors=errors,
+        )

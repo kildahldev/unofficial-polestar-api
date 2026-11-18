@@ -28,14 +28,14 @@ class PolestarTimeDescription(TimeEntityDescription):
 TIMES: tuple[PolestarTimeDescription, ...] = (
     PolestarTimeDescription(
         key="charge_timer_start",
-        name="Charge timer start",
+        translation_key="charge_timer_start",
         icon="mdi:clock-start",
         entity_category=EntityCategory.CONFIG,
         value_attr="start",
     ),
     PolestarTimeDescription(
         key="charge_timer_stop",
-        name="Charge timer stop",
+        translation_key="charge_timer_stop",
         icon="mdi:clock-end",
         entity_category=EntityCategory.CONFIG,
         value_attr="stop",

@@ -53,6 +53,14 @@
         "data": {
           "password": "Password"
         }
+      },
+      "reconfigure": {
+        "title": "Change the Polestar account",
+        "description": "Sign in with the account that has access to {vin}. For example, switch from the main account to a guest account. The vehicle, its entities and their history are kept.",
+        "data": {
+          "email": "Email",
+          "password": "Password"
+        }
       }
     },
     "error": {
@@ -61,7 +69,381 @@
     },
     "abort": {
       "already_configured": "This vehicle is already configured",
-      "reauth_successful": "Re-authentication successful"
+      "reauth_successful": "Re-authentication successful",
+      "reconfigure_successful": "Account updated"
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "any_door_open": {
+        "name": "Any door open"
+      },
+      "at_charge_location": {
+        "name": "At charge location"
+      },
+      "available": {
+        "name": "Available"
+      },
+      "brake_fluid_problem": {
+        "name": "Brake fluid"
+      },
+      "climate_active": {
+        "name": "Climate active"
+      },
+      "connected": {
+        "name": "Connected"
+      },
+      "door_front_left": {
+        "name": "Front left door"
+      },
+      "door_front_right": {
+        "name": "Front right door"
+      },
+      "door_rear_left": {
+        "name": "Rear left door"
+      },
+      "door_rear_right": {
+        "name": "Rear right door"
+      },
+      "hood": {
+        "name": "Hood"
+      },
+      "in_use": {
+        "name": "In use"
+      },
+      "is_charging": {
+        "name": "Charging"
+      },
+      "is_plugged_in": {
+        "name": "Plugged in"
+      },
+      "light_failure": {
+        "name": "Light status"
+      },
+      "low_voltage_battery": {
+        "name": "Low-voltage battery"
+      },
+      "precleaning_running": {
+        "name": "Pre-cleaning running"
+      },
+      "remote_function_data_sharing": {
+        "name": "Remote function data sharing"
+      },
+      "service_required": {
+        "name": "Service required"
+      },
+      "tailgate": {
+        "name": "Tailgate"
+      },
+      "tank_lid": {
+        "name": "Charging lid"
+      },
+      "tyre_warning": {
+        "name": "Tyre warning"
+      },
+      "washer_fluid_problem": {
+        "name": "Washer fluid"
+      },
+      "window_front_left": {
+        "name": "Front left window"
+      },
+      "window_front_right": {
+        "name": "Front right window"
+      },
+      "window_rear_left": {
+        "name": "Rear left window"
+      },
+      "window_rear_right": {
+        "name": "Rear right window"
+      }
+    },
+    "button": {
+      "close_windows": {
+        "name": "Close windows"
+      },
+      "flash": {
+        "name": "Flash lights"
+      },
+      "honk": {
+        "name": "Honk"
+      },
+      "honk_flash": {
+        "name": "Honk and flash"
+      },
+      "open_windows": {
+        "name": "Open windows"
+      },
+      "wakeup": {
+        "name": "Refresh"
+      }
+    },
+    "device_tracker": {
+      "location": {
+        "name": "Location"
+      },
+      "parked_location": {
+        "name": "Parked location"
+      }
+    },
+    "lock": {
+      "boot_lock": {
+        "name": "Boot lock"
+      },
+      "lock": {
+        "name": "Lock"
+      }
+    },
+    "number": {
+      "amp_limit": {
+        "name": "Charging amp limit"
+      },
+      "climate_target_temperature": {
+        "name": "Climate target temperature"
+      },
+      "target_soc": {
+        "name": "Target SOC"
+      },
+      "timer_target_temperature": {
+        "name": "Timer target temperature"
+      }
+    },
+    "select": {
+      "climate_front_left_seat": {
+        "name": "Climate front left seat heat"
+      },
+      "climate_front_right_seat": {
+        "name": "Climate front right seat heat"
+      },
+      "climate_rear_left_seat": {
+        "name": "Climate rear left seat heat"
+      },
+      "climate_rear_right_seat": {
+        "name": "Climate rear right seat heat"
+      },
+      "climate_steering_wheel": {
+        "name": "Climate steering wheel heat"
+      },
+      "target_soc_setting_type": {
+        "name": "Target SOC mode"
+      },
+      "timer_battery_preconditioning": {
+        "name": "Timer battery preconditioning"
+      },
+      "timer_front_left_seat": {
+        "name": "Timer front left seat heat"
+      },
+      "timer_front_right_seat": {
+        "name": "Timer front right seat heat"
+      },
+      "timer_rear_left_seat": {
+        "name": "Timer rear left seat heat"
+      },
+      "timer_rear_right_seat": {
+        "name": "Timer rear right seat heat"
+      },
+      "timer_steering_wheel": {
+        "name": "Timer steering wheel heat"
+      }
+    },
+    "sensor": {
+      "air_quality_index": {
+        "name": "Air quality index"
+      },
+      "altitude": {
+        "name": "Altitude"
+      },
+      "availability_unavailable_reason": {
+        "name": "Unavailable reason"
+      },
+      "availability_usage_mode": {
+        "name": "Usage mode"
+      },
+      "avg_consumption": {
+        "name": "Average consumption"
+      },
+      "avg_consumption_auto": {
+        "name": "Average consumption (auto)"
+      },
+      "avg_consumption_since_charge": {
+        "name": "Average consumption since charge"
+      },
+      "battery_capacity": {
+        "name": "Battery Capacity"
+      },
+      "battery_level": {
+        "name": "Battery level"
+      },
+      "charge_locations": {
+        "name": "Charge locations"
+      },
+      "charger_connection": {
+        "name": "Charger connection"
+      },
+      "charger_power_status": {
+        "name": "Charger power status"
+      },
+      "charging_current": {
+        "name": "Charging current"
+      },
+      "charging_power": {
+        "name": "Charging power"
+      },
+      "charging_status": {
+        "name": "Charging status"
+      },
+      "charging_type": {
+        "name": "Charging type"
+      },
+      "charging_voltage": {
+        "name": "Charging voltage"
+      },
+      "climate_current_temperature": {
+        "name": "Climate current temperature"
+      },
+      "climate_ends_at": {
+        "name": "Climate ends at"
+      },
+      "climate_front_left_seat": {
+        "name": "Climate front left seat"
+      },
+      "climate_front_right_seat": {
+        "name": "Climate front right seat"
+      },
+      "climate_rear_left_seat": {
+        "name": "Climate rear left seat"
+      },
+      "climate_rear_right_seat": {
+        "name": "Climate rear right seat"
+      },
+      "climate_request_type": {
+        "name": "Climate request type"
+      },
+      "climate_running_status": {
+        "name": "Climate running status"
+      },
+      "climate_steering_wheel": {
+        "name": "Climate steering wheel"
+      },
+      "climate_target_temperature": {
+        "name": "Climate target temperature"
+      },
+      "climate_time_remaining": {
+        "name": "Climate time remaining"
+      },
+      "current_charge_location": {
+        "name": "Current charge location"
+      },
+      "days_to_service": {
+        "name": "Days to service"
+      },
+      "distance_to_service": {
+        "name": "Distance to service"
+      },
+      "engine_hours_to_service": {
+        "name": "Engine hours to service"
+      },
+      "fl_tyre_pressure": {
+        "name": "Front left tyre pressure"
+      },
+      "fr_tyre_pressure": {
+        "name": "Front right tyre pressure"
+      },
+      "heading": {
+        "name": "Heading"
+      },
+      "internet_activation": {
+        "name": "Internet Activation"
+      },
+      "odometer": {
+        "name": "Odometer"
+      },
+      "outside_temperature": {
+        "name": "Outside temperature"
+      },
+      "pm25": {
+        "name": "PM2.5"
+      },
+      "precleaning_error": {
+        "name": "Pre-cleaning error"
+      },
+      "precleaning_runtime_left": {
+        "name": "Pre-cleaning runtime left"
+      },
+      "precleaning_start_reason": {
+        "name": "Pre-cleaning start reason"
+      },
+      "range": {
+        "name": "Range"
+      },
+      "rl_tyre_pressure": {
+        "name": "Rear left tyre pressure"
+      },
+      "rr_tyre_pressure": {
+        "name": "Rear right tyre pressure"
+      },
+      "software_state": {
+        "name": "Software state"
+      },
+      "software_version": {
+        "name": "Software version"
+      },
+      "speed": {
+        "name": "Speed"
+      },
+      "target_soc": {
+        "name": "Target SOC"
+      },
+      "time_to_full": {
+        "name": "Time to full charge"
+      },
+      "time_to_min_soc": {
+        "name": "Time to minimum SoC"
+      },
+      "time_to_target": {
+        "name": "Time to target charge"
+      },
+      "trip_meter_auto": {
+        "name": "Trip meter (auto)"
+      },
+      "trip_meter_manual": {
+        "name": "Trip meter (manual)"
+      },
+      "vehicle_info": {
+        "name": "Vehicle Info"
+      },
+      "vin": {
+        "name": "VIN"
+      }
+    },
+    "switch": {
+      "air_purification": {
+        "name": "Air Purification"
+      },
+      "charge_timer": {
+        "name": "Charge timer"
+      },
+      "charging": {
+        "name": "Charging"
+      },
+      "climate": {
+        "name": "Climate"
+      },
+      "precleaning": {
+        "name": "Pre-cleaning"
+      }
+    },
+    "time": {
+      "charge_timer_start": {
+        "name": "Charge timer start"
+      },
+      "charge_timer_stop": {
+        "name": "Charge timer stop"
+      }
+    },
+    "update": {
+      "software_update": {
+        "name": "Software update"
+      }
     }
   }
 }

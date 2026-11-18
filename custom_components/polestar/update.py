@@ -50,7 +50,7 @@ class PolestarOtaUpdate(PolestarEntity, UpdateEntity, RestoreEntity):
     """OTA update entity backed by the Polestar software info API."""
 
     _attr_device_class = UpdateDeviceClass.FIRMWARE
-    _attr_name = "Software update"
+    _attr_translation_key = "software_update"
     _attr_supported_features = UpdateEntityFeature.INSTALL
 
     def __init__(self, coordinator: PolestarCoordinator) -> None:

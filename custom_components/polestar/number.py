@@ -36,7 +36,7 @@ class PolestarNumberDescription(NumberEntityDescription):
 NUMBERS: tuple[PolestarNumberDescription, ...] = (
     PolestarNumberDescription(
         key="target_soc",
-        name="Target SOC",
+        translation_key="target_soc",
         icon="mdi:battery-charging-high",
         native_unit_of_measurement=PERCENTAGE,
         native_min_value=20,
@@ -48,7 +48,7 @@ NUMBERS: tuple[PolestarNumberDescription, ...] = (
     PolestarNumberDescription(
         key="amp_limit",
         fetch_attr="amp_limit",
-        name="Charging amp limit",
+        translation_key="amp_limit",
         icon="mdi:current-ac",
         native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
         native_min_value=6,
@@ -59,7 +59,7 @@ NUMBERS: tuple[PolestarNumberDescription, ...] = (
     ),
     PolestarNumberDescription(
         key="climate_target_temperature",
-        name="Climate target temperature",
+        translation_key="climate_target_temperature",
         icon="mdi:thermometer-auto",
         device_class=NumberDeviceClass.TEMPERATURE,
         entity_category=EntityCategory.CONFIG,
@@ -160,7 +160,7 @@ class PolestarNumber(OptimisticStateMixin, PolestarEntity, RestoreEntity, Number
 class PolestarTimerTemperatureNumber(OptimisticStateMixin, PolestarEntity, NumberEntity):
     """API-backed number entity for parking climate timer target temperature."""
 
-    _attr_name = "Timer target temperature"
+    _attr_translation_key = "timer_target_temperature"
     _attr_icon = "mdi:thermometer-auto"
     _attr_device_class = NumberDeviceClass.TEMPERATURE
     _attr_entity_category = EntityCategory.CONFIG

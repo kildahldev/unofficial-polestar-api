@@ -35,7 +35,7 @@ class PolestarSwitchDescription(SwitchEntityDescription):
 SWITCHES: tuple[PolestarSwitchDescription, ...] = (
     PolestarSwitchDescription(
         key="climate",
-        name="Climate",
+        translation_key="climate",
         icon="mdi:air-conditioner",
         is_on_fn=lambda d: d.climate.is_active if d.climate else None,
         turn_on_fn=lambda c: c.async_start_climate(),
@@ -46,7 +46,7 @@ SWITCHES: tuple[PolestarSwitchDescription, ...] = (
     PolestarSwitchDescription(
         key="precleaning",
         fetch_attr="precleaning",
-        name="Pre-cleaning",
+        translation_key="precleaning",
         icon="mdi:air-purifier",
         is_on_fn=lambda d: d.precleaning.is_running if d.precleaning else None,
         turn_on_fn=lambda c: c.async_start_precleaning(),
@@ -60,7 +60,7 @@ SWITCHES: tuple[PolestarSwitchDescription, ...] = (
         # enable it if you'd rather see "Air Purification" in your UI.
         key="air_purification",
         fetch_attr="precleaning",
-        name="Air Purification",
+        translation_key="air_purification",
         icon="mdi:air-purifier",
         entity_registry_enabled_default=False,
         is_on_fn=lambda d: d.precleaning.is_running if d.precleaning else None,
@@ -70,7 +70,7 @@ SWITCHES: tuple[PolestarSwitchDescription, ...] = (
     ),
     PolestarSwitchDescription(
         key="charging",
-        name="Charging",
+        translation_key="charging",
         icon="mdi:ev-station",
         is_on_fn=lambda d: d.battery.is_charging if d.battery else None,
         turn_on_fn=lambda c: c.async_start_charging(),
@@ -79,7 +79,7 @@ SWITCHES: tuple[PolestarSwitchDescription, ...] = (
     ),
     PolestarSwitchDescription(
         key="charge_timer",
-        name="Charge timer",
+        translation_key="charge_timer",
         icon="mdi:clock-outline",
         entity_category=EntityCategory.CONFIG,
         is_on_fn=lambda d: charge_timer_active(d.charge_timer),
