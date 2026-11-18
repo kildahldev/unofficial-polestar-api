@@ -109,6 +109,7 @@ class CarDetails(ProtoMessage, schema={
     9: "consumer_software_version",
     10: "market",
     20: "reports_avg_electric_consumption",
+    23: "reports_tyre_pressure_warning",
     27: "supports_engine_start",
     35: "charging",
     36: "locks",
@@ -119,6 +120,8 @@ class CarDetails(ProtoMessage, schema={
     70: "has_performance_software_upgrade",
     48: "reports_avg_electric_consumption_last_trip",
     49: "reports_avg_electric_consumption_last_charge",
+    50: "reports_tyre_pressure_in_kpa",
+    87: "reports_service_warning",
 }):
     """Identity of a car. ``vehicle_type_name`` is the model name, e.g. ``Polestar 4``."""
 
@@ -139,6 +142,9 @@ class CarDetails(ProtoMessage, schema={
     propulsion: Propulsion | None = None
     num_doors: int = 0
     has_performance_software_upgrade: bool = False
+    reports_tyre_pressure_warning: bool = False
+    reports_tyre_pressure_in_kpa: bool = False
+    reports_service_warning: bool = False
 
 
 @dataclass(frozen=True)

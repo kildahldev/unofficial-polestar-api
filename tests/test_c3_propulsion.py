@@ -41,3 +41,13 @@ def test_propulsion_digital_key_and_flags_decode():
     assert decoded.num_doors == 4
     assert decoded.has_performance_software_upgrade is True
     assert decoded.supports_engine_start is False
+
+
+def test_reporting_flags_decode_and_default_to_false():
+    car = CarDetails.from_bytes(
+        _ld(1, b"VIN") + _field(23, 0, _varint(1)) + _field(50, 0, _varint(1)) + _field(87, 0, _varint(1))
+    )
+    assert car.reports_tyre_pressure_warning and car.reports_tyre_pressure_in_kpa and car.reports_service_warning
+    bare = CarDetails.from_bytes(_ld(1, b"VIN"))
+    # A Polestar 2 sends neither tyre flag, so they decode as False (the car says it does not report them).
+    assert not bare.reports_tyre_pressure_warning and not bare.reports_tyre_pressure_in_kpa

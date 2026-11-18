@@ -398,6 +398,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="service_warning",
+        fetch_attr="service_warning",
         name="Service warning",
         device_class=SensorDeviceClass.ENUM,
         options=enum_options(ServiceWarning),
@@ -441,6 +442,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="fl_tyre_pressure",
+        fetch_attr="tyre_pressure",
         icon="mdi:tire",
         name="Front left tyre pressure",
         device_class=SensorDeviceClass.PRESSURE,
@@ -450,6 +452,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="fr_tyre_pressure",
+        fetch_attr="tyre_pressure",
         icon="mdi:tire",
         name="Front right tyre pressure",
         device_class=SensorDeviceClass.PRESSURE,
@@ -459,6 +462,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="rl_tyre_pressure",
+        fetch_attr="tyre_pressure",
         icon="mdi:tire",
         name="Rear left tyre pressure",
         device_class=SensorDeviceClass.PRESSURE,
@@ -468,6 +472,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
     ),
     PolestarSensorDescription(
         key="rr_tyre_pressure",
+        fetch_attr="tyre_pressure",
         icon="mdi:tire",
         name="Rear right tyre pressure",
         device_class=SensorDeviceClass.PRESSURE,

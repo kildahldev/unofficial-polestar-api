@@ -655,3 +655,25 @@ def test_combustion_only_entities_follow_the_powertrain(monkeypatch, engine_type
 
     assert (result == [entity]) is kept
     assert registry.updates == ([] if kept else [("sensor.hours", RegistryEntryDisabler.INTEGRATION)])
+
+
+def test_car_reporting_flags_gate_tyre_and_service_entities(monkeypatch):
+    coordinator_module, _ = _load(monkeypatch, FakeRegistry())
+    vehicle = FakeVehicle({})
+    vehicle.reports_tyre_pressure_warning = False
+    vehicle.reports_tyre_pressure = False
+    vehicle.reports_service_warning = True
+    coordinator = _coordinator(coordinator_module, vehicle)
+
+    assert not coordinator.is_fetch_supported("tyre_warning")
+    assert not coordinator.is_fetch_supported("tyre_pressure")
+    assert coordinator.is_fetch_supported("service_warning")
+
+
+def test_unknown_reporting_flags_keep_the_entities(monkeypatch):
+    coordinator_module, _ = _load(monkeypatch, FakeRegistry())
+    coordinator = _coordinator(coordinator_module, FakeVehicle({}))  # flags never set: car info did not load
+
+    assert coordinator.is_fetch_supported("tyre_pressure")
+    assert coordinator.is_fetch_supported("tyre_warning")
+    assert coordinator.is_fetch_supported("service_warning")

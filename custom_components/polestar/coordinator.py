@@ -112,6 +112,9 @@ _CAPABILITY_FETCHES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("reports_avg_consumption_auto", ("avg_consumption_auto",)),
     ("reports_avg_consumption_since_charge", ("avg_consumption_since_charge",)),
     ("supports_rear_seat_heating", ("rear_seat_heating",)),
+    ("reports_tyre_pressure_warning", ("tyre_warning",)),
+    ("reports_tyre_pressure", ("tyre_pressure",)),
+    ("reports_service_warning", ("service_warning",)),
 )
 _CLIMATE_TIMER_SLOTS = 3
 

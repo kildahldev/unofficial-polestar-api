@@ -120,6 +120,10 @@ class Vehicle:
         self.digital_key_type: str | None = None
         self.has_performance_software_upgrade: bool | None = None
         self.supports_engine_start: bool | None = None
+        # What the car says it reports. None until the car information has loaded.
+        self.reports_tyre_pressure_warning: bool | None = None
+        self.reports_tyre_pressure: bool | None = None  # actual pressures (kPa)
+        self.reports_service_warning: bool | None = None
         self.car_capabilities: dict = {}
         self.supports_charge_locations: bool | None = None
         self.supports_window_control: bool | None = None
@@ -196,6 +200,9 @@ class Vehicle:
                 self.digital_key_type = car.digital_key.type.name.lower()
             self.has_performance_software_upgrade = car.has_performance_software_upgrade
             self.supports_engine_start = car.supports_engine_start
+            self.reports_tyre_pressure_warning = car.reports_tyre_pressure_warning
+            self.reports_tyre_pressure = car.reports_tyre_pressure_in_kpa
+            self.reports_service_warning = car.reports_service_warning
             self.car_capabilities = _non_default_fields(car)
             self.model_name = self.model_name or car.vehicle_type_name or None
             if self.model_year is None and car.model_year.isdigit():
