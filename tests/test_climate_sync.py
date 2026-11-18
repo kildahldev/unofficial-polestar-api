@@ -189,3 +189,16 @@ def test_there_is_one_air_purification_switch_and_the_old_precleaning_one_is_rem
     init_src = (ROOT / "__init__.py").read_text()
     assert '"precleaning",' in init_src.split("_REPLACED_ENTITY_SUFFIXES", 1)[1].split(")", 1)[0]
     assert '"switch"' in init_src.split("def _async_remove_replaced_entities", 1)[1]
+
+
+def test_alarm_triggered_sensor(utils):
+    from polestar_api.models.exterior import AlarmStatus, DoorsStatus, DoorStatus, ExteriorStatus
+
+    assert utils.alarm_triggered(None) is None
+    assert utils.alarm_triggered(ExteriorStatus()) is None
+    idle = DoorsStatus(front_left=DoorStatus(alarm_status=AlarmStatus.OFF))
+    assert utils.alarm_triggered(ExteriorStatus(doors=idle)) is False
+    fired = DoorsStatus(
+        front_left=DoorStatus(alarm_status=AlarmStatus.OFF), rear_right=DoorStatus(alarm_status=AlarmStatus.TRIGGERED)
+    )
+    assert utils.alarm_triggered(ExteriorStatus(doors=fired)) is True

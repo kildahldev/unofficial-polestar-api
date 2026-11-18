@@ -9,6 +9,7 @@ from typing import Any
 from homeassistant.util import dt as dt_util
 
 from polestar_api.models.charge_location import ChargeLocation
+from polestar_api.models.exterior import AlarmStatus
 from polestar_api.models.common import Timestamp, Weekday
 from polestar_api.models.parking_climate_timer import ParkingClimateTimer
 
@@ -310,3 +311,23 @@ def poll_is_active(data: Any) -> bool:
         return True
     availability = getattr(data, "availability", None)
     return availability is not None and driving(getattr(availability, "usage_mode", None)) is True
+
+
+def alarm_triggered(exterior: Any) -> bool | None:
+    """True when any door, the hood or the tailgate reports a triggered alarm.
+
+    The car reports the alarm per closure. None until at least one of them says something.
+    """
+    if exterior is None:
+        return None
+    parts = []
+    if exterior.doors is not None:
+        parts.extend((exterior.doors.front_left, exterior.doors.front_right, exterior.doors.rear_left, exterior.doors.rear_right))
+    if exterior.hood is not None:
+        parts.append(exterior.hood.status)
+    if exterior.tailgate is not None:
+        parts.append(exterior.tailgate.status)
+    states = [p.alarm_status for p in parts if p is not None and p.alarm_status != AlarmStatus.UNSPECIFIED]
+    if not states:
+        return None
+    return any(state == AlarmStatus.TRIGGERED for state in states)

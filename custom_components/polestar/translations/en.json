@@ -77,6 +77,9 @@
   },
   "entity": {
     "binary_sensor": {
+      "alarm_triggered": {
+        "name": "Alarm triggered"
+      },
       "any_door_open": {
         "name": "Any door open"
       },

@@ -21,7 +21,7 @@ from polestar_api.models.health import LowVoltageBatteryWarning, ServiceWarning
 from .const import DOMAIN
 from .coordinator import PolestarVehicleData
 from .entity import PolestarEntity, async_filter_supported_entities
-from .utils import driving, level_problem as _level_problem, light_attributes, state_icon
+from .utils import alarm_triggered, driving, level_problem as _level_problem, light_attributes, state_icon
 
 PARALLEL_UPDATES = 0
 
@@ -71,6 +71,12 @@ BINARY_SENSORS: tuple[PolestarBinarySensorDescription, ...] = (
         translation_key="any_door_open",
         device_class=BinarySensorDeviceClass.DOOR,
         value_fn=lambda d: d.exterior.any_door_open if d.exterior else None,
+    ),
+    PolestarBinarySensorDescription(
+        key="alarm_triggered",
+        translation_key="alarm_triggered",
+        device_class=BinarySensorDeviceClass.SAFETY,
+        value_fn=lambda d: alarm_triggered(d.exterior),
     ),
     PolestarBinarySensorDescription(
         key="door_front_left",
