@@ -122,9 +122,6 @@
       "low_voltage_battery": {
         "name": "Low-voltage battery"
       },
-      "remote_function_data_sharing": {
-        "name": "Remote function data sharing"
-      },
       "service_required": {
         "name": "Service required"
       },

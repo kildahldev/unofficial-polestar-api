@@ -734,7 +734,7 @@ def test_car_without_air_purification_hides_the_pre_cleaning_entities(monkeypatc
 
 
 @pytest.mark.asyncio
-async def test_background_loop_reads_privacy_first_then_only_availability(monkeypatch):
+async def test_availability_loop_only_refreshes_availability(monkeypatch):
     import asyncio
 
     coordinator_module, _ = _load(monkeypatch, FakeRegistry())
@@ -748,18 +748,9 @@ async def test_background_loop_reads_privacy_first_then_only_availability(monkey
 
     coordinator.async_request_attrs_refresh = fake_refresh
     with pytest.raises(asyncio.CancelledError):
-        await coordinator._async_availability_loop(interval=0.001, background_interval=3600)
+        await coordinator._async_availability_loop(interval=0.001)
 
-    assert calls[0] == ("availability", "remote_function_data_sharing")
-    assert calls[1:] == [("availability",), ("availability",)]
-
-
-def test_privacy_read_is_not_part_of_the_main_poll():
-    from pathlib import Path
-
-    source = Path("custom_components/polestar/coordinator.py").read_text()
-    assert '_BACKGROUND_ATTRS = ("remote_function_data_sharing",)' in source
-    assert "if a not in _BACKGROUND_ATTRS" in source
+    assert calls == [("availability",)] * 3
 
 
 def _adaptive(monkeypatch, idle=600.0, active=120.0):

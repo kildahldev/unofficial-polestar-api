@@ -64,7 +64,6 @@ from polestar_api.models.health import (
     ServiceWarning,
     WasherFluidLevelWarning,
 )
-from polestar_api.models.consent import RemoteFunctionDataSharing
 from polestar_api.models.ota import CarSoftwareInfo, ScheduleInfo, ScheduleSetBy, ScheduleStatus, Scheduler, SoftwareState
 from polestar_api.models.parking_climate_timer import (
     BatteryPreconditioning,
@@ -584,9 +583,6 @@ class DemoVehicle:
         _LOGGER.info("Demo: set climate timer settings %s", settings)
         self._climate_timer_settings = settings
         return 1
-
-    async def get_remote_function_data_sharing(self) -> RemoteFunctionDataSharing:
-        return RemoteFunctionDataSharing(enabled=True, car_in_sync=True, read_only=False)
 
     def __repr__(self) -> str:
         return f"DemoVehicle(vin={self.vin!r})"

@@ -228,19 +228,11 @@ BINARY_SENSORS: tuple[PolestarBinarySensorDescription, ...] = (
         device_class=BinarySensorDeviceClass.RUNNING,
         value_fn=lambda d: d.climate.is_active if d.climate else None,
     ),
-    PolestarBinarySensorDescription(
-        # Read-only: the official app's "SetPrivacySettingState" write path
-        # was not directly observed, so this integration does not expose a
-        # way to change this from Home Assistant — see the library docs.
-        key="remote_function_data_sharing",
-        translation_key="remote_function_data_sharing",
-        value_fn=lambda d: d.remote_function_data_sharing.enabled if d.remote_function_data_sharing else None,
-    ),
 )
 
 
 # Replaced by the Charging and Air Purification switches and by Available / Connection (19 Nov 2026).
-REMOVED_BINARY_SENSOR_KEYS = ("is_charging", "precleaning_running", "connected")
+REMOVED_BINARY_SENSOR_KEYS = ("is_charging", "precleaning_running", "connected", "remote_function_data_sharing")
 
 
 async def async_setup_entry(

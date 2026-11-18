@@ -34,7 +34,6 @@ from polestar_api.models.charging import (
 from polestar_api.models.climate import ClimatizationInfo
 from polestar_api.models.climatization import HeatingIntensity
 from polestar_api.models.common import Location, ResponseStatusCode
-from polestar_api.models.consent import RemoteFunctionDataSharing
 from polestar_api.models.connectivity import ConnectivityInfo
 from polestar_api.models.dashboard import DashboardStatus
 from polestar_api.models.exterior import ExteriorStatus
@@ -92,10 +91,6 @@ _INVALID_ARGUMENT_UNSUPPORTED_AFTER = 3
 _STREAM_STALE_POLL_INTERVALS = 3
 # Availability (usage mode) has no stream: refresh it this often between the full polls.
 _AVAILABILITY_REFRESH_SECONDS = 60.0
-# Read in the background (first right after setup, then hourly), never in the main poll. The privacy
-# service can take 15 s to time out, which used to stall every refresh and the first setup.
-_BACKGROUND_ATTRS = ("remote_function_data_sharing",)
-_BACKGROUND_REFRESH_SECONDS = 3600.0
 _COMMAND_INVOCATION_SUCCESS = {
     InvocationStatus.SENT,
     InvocationStatus.DELIVERED,
@@ -186,7 +181,6 @@ class PolestarVehicleData:
     current_charge_location: dict[str, Any] | None = None
     climate_timers: list[ParkingClimateTimer] = field(default_factory=list)
     climate_timer_settings: ParkingClimateTimerSettings | None = None
-    remote_function_data_sharing: RemoteFunctionDataSharing | None = None
 
 
 _FETCH_ATTRS: tuple[tuple[str, str], ...] = (
@@ -211,7 +205,6 @@ _FETCH_ATTRS: tuple[tuple[str, str], ...] = (
     ("current_charge_location", "is_at_charge_location"),
     ("climate_timers", "get_climate_timers"),
     ("climate_timer_settings", "get_climate_timer_settings"),
-    ("remote_function_data_sharing", "get_remote_function_data_sharing"),
 )
 _FETCH_ATTR_LOOKUP = dict(_FETCH_ATTRS)
 _ATTR_FIELDS = {spec.name: spec for spec in fields(PolestarVehicleData)}
@@ -560,7 +553,7 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         self._poll_count += 1
         generation = self.next_fetch_generation()
         values, successful_fetches = await self._async_fetch_values(
-            tuple(a for a in _FETCH_ATTR_LOOKUP if a not in _BACKGROUND_ATTRS),
+            tuple(_FETCH_ATTR_LOOKUP),
             previous,
             probe_unsupported=self._claim_unsupported_probe(),
         )
@@ -569,9 +562,6 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
             if self.data is not None:
                 return self.data
             raise UpdateFailed("All API calls failed")
-
-        for attr in _BACKGROUND_ATTRS:
-            values[attr] = getattr(previous, attr)
 
         if self.data is None:
             self._record_no_data_fetches()
@@ -711,22 +701,14 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
     async def _async_availability_loop(
         self,
         interval: float = _AVAILABILITY_REFRESH_SECONDS,
-        background_interval: float = _BACKGROUND_REFRESH_SECONDS,
     ) -> None:
         """Refresh availability (and so usage mode) once a minute, without touching the poll timer.
 
-        Usage mode has no stream, so on the 10 minute poll a whole trip can pass unseen. The slow
-        background reads (privacy) run first right away, then every ``background_interval``.
+        Usage mode has no stream, so on the 10 minute poll a whole trip can pass unseen.
         """
-        next_background = 0.0
-        loop = asyncio.get_running_loop()
         while True:
-            attrs = ["availability"]
-            if loop.time() >= next_background:
-                attrs.extend(_BACKGROUND_ATTRS)
-                next_background = loop.time() + background_interval
             try:
-                await self.async_request_attrs_refresh(*attrs)
+                await self.async_request_attrs_refresh("availability")
             except asyncio.CancelledError:
                 raise
             except Exception as err:  # noqa: BLE001
