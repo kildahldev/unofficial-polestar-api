@@ -58,6 +58,7 @@ from .const import CONF_REGISTRATION_PLATE, DOMAIN
 from .coordinator import PolestarVehicleData
 from .entity import PolestarEntity, async_filter_supported_entities
 from .utils import (
+    weather_attributes,
     climate_end_time,
     climate_minutes_remaining,
     enum_name,
@@ -439,6 +440,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         value_fn=lambda d: d.weather.temperature_celsius if d.weather else None,
+        attrs_fn=lambda d: weather_attributes(d.weather),
     ),
     PolestarSensorDescription(
         key="fl_tyre_pressure",
@@ -448,6 +450,8 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         device_class=SensorDeviceClass.PRESSURE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfPressure.KPA,
+        suggested_unit_of_measurement=UnitOfPressure.PSI,
+        suggested_display_precision=0,
         value_fn=lambda d: d.health.front_left_tyre_pressure_kpa if d.health else None,
     ),
     PolestarSensorDescription(
@@ -458,6 +462,8 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         device_class=SensorDeviceClass.PRESSURE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfPressure.KPA,
+        suggested_unit_of_measurement=UnitOfPressure.PSI,
+        suggested_display_precision=0,
         value_fn=lambda d: d.health.front_right_tyre_pressure_kpa if d.health else None,
     ),
     PolestarSensorDescription(
@@ -468,6 +474,8 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         device_class=SensorDeviceClass.PRESSURE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfPressure.KPA,
+        suggested_unit_of_measurement=UnitOfPressure.PSI,
+        suggested_display_precision=0,
         value_fn=lambda d: d.health.rear_left_tyre_pressure_kpa if d.health else None,
     ),
     PolestarSensorDescription(
@@ -478,6 +486,8 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         device_class=SensorDeviceClass.PRESSURE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfPressure.KPA,
+        suggested_unit_of_measurement=UnitOfPressure.PSI,
+        suggested_display_precision=0,
         value_fn=lambda d: d.health.rear_right_tyre_pressure_kpa if d.health else None,
     ),
     PolestarSensorDescription(
@@ -553,14 +563,6 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         options=enum_options(ClimatizationRequestType, exclude_unspecified=False),
         value_fn=lambda d: enum_name(d.climate.request_type, allow_unspecified=True) if d.climate else None,
-    ),
-    PolestarSensorDescription(
-        key="climate_heat_or_cool_action",
-        name="Climate heat or cool action",
-        device_class=SensorDeviceClass.ENUM,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        options=enum_options(HeatOrCoolAction, exclude_unspecified=False),
-        value_fn=lambda d: enum_name(d.climate.heat_or_cool_action, allow_unspecified=True) if d.climate else None,
     ),
     PolestarSensorDescription(
         key="climate_time_remaining",

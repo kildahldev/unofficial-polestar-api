@@ -164,3 +164,46 @@ def normalise_steering_wheel_option(option: str) -> str:
 def climate_timer_label(slot: int, max_timers: int | None, prefix: str) -> str:
     """Name of a climate timer slot, without a number when the car has only one timer."""
     return prefix if max_timers == 1 else f"{prefix} {slot + 1}"
+
+
+_CLIMATE_ACTIONS = {
+    "heating": "heating",
+    "cooling": "cooling",
+    "cooling_fast": "cooling",
+    "ventilation_only": "ventilating",
+    "not_required": "not_required",
+}
+
+
+def climate_action(climate: Any) -> str | None:
+    """Heating, cooling, ventilating or not_required (same words as the Volvo integration)."""
+    name = enum_name(getattr(climate, "heat_or_cool_action", None))
+    return _CLIMATE_ACTIONS.get(name) if name else None
+
+
+def climate_attributes(climate: Any) -> dict[str, Any]:
+    """Attributes for the Climate switch, matching the Volvo integration's names."""
+    if climate is None:
+        return {}
+    attrs: dict[str, Any] = {
+        "runtime_left_minutes": getattr(climate, "time_remaining", None),
+        "start_reason": enum_name(getattr(climate, "request_type", None)),
+    }
+    action = climate_action(climate)
+    if action:
+        attrs["action"] = action
+    target = getattr(climate, "target_temperature_celsius", None)
+    if target is not None:
+        attrs["target_temperature"] = target
+    return attrs
+
+
+def weather_attributes(weather: Any) -> dict[str, Any]:
+    """When the weather service says the outside temperature was taken (it is a lookup at the car's location)."""
+    millis = getattr(weather, "timestamp_epoch_millis", 0) if weather else 0
+    if not millis:
+        return {}
+    return {
+        "report_time": datetime.fromtimestamp(millis / 1000, tz=dt_util.UTC).isoformat(),
+        "source": "weather service",
+    }

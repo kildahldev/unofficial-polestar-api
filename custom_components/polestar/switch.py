@@ -15,6 +15,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import DOMAIN
 from .coordinator import PolestarCoordinator, PolestarVehicleData
 from .entity import OptimisticStateMixin, PolestarEntity, async_filter_supported_entities
+from .utils import climate_attributes
 
 PARALLEL_UPDATES = 1
 
@@ -28,6 +29,7 @@ class PolestarSwitchDescription(SwitchEntityDescription):
     turn_off_fn: Callable[[PolestarCoordinator], Awaitable[Any]]
     capability: str | None = None
     fetch_attr: str | None = None
+    attrs_fn: Callable[[PolestarVehicleData], dict[str, Any]] | None = None
 
 
 SWITCHES: tuple[PolestarSwitchDescription, ...] = (
@@ -39,6 +41,7 @@ SWITCHES: tuple[PolestarSwitchDescription, ...] = (
         turn_on_fn=lambda c: c.async_start_climate(),
         turn_off_fn=lambda c: c.async_stop_climate(),
         capability="climate",
+        attrs_fn=lambda d: climate_attributes(d.climate),
     ),
     PolestarSwitchDescription(
         key="precleaning",
@@ -123,6 +126,13 @@ class PolestarSwitch(OptimisticStateMixin, PolestarEntity, SwitchEntity):
         if cap and not self.coordinator.is_command_supported(cap):
             return False
         return super().available
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        fn = self.entity_description.attrs_fn
+        if fn is None or self.coordinator.data is None:
+            return None
+        return fn(self.coordinator.data) or None
 
     @property
     def is_on(self) -> bool | None:
