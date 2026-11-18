@@ -405,17 +405,28 @@ def last_seen(data: Any) -> datetime | None:
     return datetime.fromtimestamp(max(seconds), UTC) if seconds else None
 
 
-def connection_text(data: Any, local_time: Any) -> str:
-    """One sentence about whether commands can reach the car (``local_time(dt)`` formats a time as HH:MM)."""
+_SHORT_REASON = {
+    "NO_INTERNET": "no internet",
+    "POWER_SAVING_MODE": "power saving",
+    "CAR_IN_USE": "car in use",
+    "OTA_INSTALLATION_IN_PROGRESS": "updating",
+    "STOLEN_VEHICLE_TRACKING_IN_PROGRESS": "tracking",
+    "SERVICE_MODE_ACTIVE": "service mode",
+}
+
+
+def connection_text(data: Any) -> str:
+    """Short state of the Connection sensor: "Online", "Offline: car in use" or "Unknown".
+
+    Short and free of clock times so the history stays quiet; the explanation and the time are attributes
+    (``connection_attributes``) and the Last seen sensor.
+    """
     availability = getattr(data, "availability", None)
     if availability is None:
-        return "Unknown: Polestar does not say whether the car is online."
+        return "Unknown"
     if availability.is_available:
-        return "Online: the car can receive commands."
-    seen = last_seen(data)
-    when = f" since {local_time(seen)}" if seen is not None else ""
-    why = _REASON_TEXT.get(_reason_key(availability), "no connection to the car")
-    return f"Offline{when}: {why}. Commands may not reach the car until it is online again."
+        return "Online"
+    return f"Offline: {_SHORT_REASON.get(_reason_key(availability), 'no connection')}"
 
 
 def command_blocker(data: Any, local_time: Any) -> str | None:
@@ -430,3 +441,18 @@ def command_blocker(data: Any, local_time: Any) -> str | None:
     when = f" since {local_time(seen)}" if seen is not None else ""
     state = "in use" if key == "CAR_IN_USE" else f"offline{when}"
     return f"The car is {state} ({_REASON_TEXT[key]}). Nothing was sent. Try again when it is available."
+
+
+def connection_attributes(data: Any) -> dict[str, Any]:
+    """The longer explanation, and when the car was last heard from while offline (kept out of the state)."""
+    availability = getattr(data, "availability", None)
+    if availability is None:
+        return {"detail": "Polestar does not say whether the car is online."}
+    if availability.is_available:
+        return {"detail": "The car can receive commands."}
+    why = _REASON_TEXT.get(_reason_key(availability), "no connection to the car")
+    attrs: dict[str, Any] = {"detail": f"{why[0].upper()}{why[1:]}. Commands may not reach the car until it is online again."}
+    seen = last_seen(data)
+    if seen is not None:
+        attrs["offline_since"] = seen.isoformat()
+    return attrs

@@ -63,6 +63,7 @@ from .coordinator import PolestarVehicleData
 from .entity import PolestarEntity, async_filter_supported_entities, async_remove_registered_entities
 from . import geocode
 from .utils import (
+    connection_attributes,
     connection_text,
     last_seen,
     flatten_attributes,
@@ -506,7 +507,8 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         translation_key="connection",
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:car-connected",
-        value_fn=lambda d: connection_text(d, lambda moment: dt_util.as_local(moment).strftime("%H:%M"))[:255],
+        value_fn=lambda d: connection_text(d)[:255],
+        attrs_fn=connection_attributes,
     ),
     PolestarSensorDescription(
         key="last_seen",
