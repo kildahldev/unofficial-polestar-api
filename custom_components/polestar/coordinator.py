@@ -48,13 +48,16 @@ from polestar_api.models.precleaning import PreCleaningInfo
 from polestar_api.models.weather import WeatherReport
 
 from .const import (
+    CONF_ACTIVE_INTERVAL,
     CONF_UPDATE_INTERVAL,
+    DEFAULT_ACTIVE_INTERVAL,
     DEFAULT_UPDATE_INTERVAL,
+    POST_TRIP_SECONDS,
     STREAM_MAX_RETRIES,
     STREAM_MIN_RESUBSCRIBE_INTERVAL,
     STREAM_RETRY_DELAY,
 )
-from .utils import local_utc_offset_minutes
+from .utils import driving, local_utc_offset_minutes, poll_is_active
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -230,6 +233,13 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
             always_update=False,
         )
         self.vehicle = vehicle
+        # Idle poll interval from the options; the active one is never slower. See _adapt_poll_interval.
+        self._idle_interval = float(entry.options.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL))
+        self._active_interval = min(
+            float(entry.options.get(CONF_ACTIVE_INTERVAL, DEFAULT_ACTIVE_INTERVAL)), self._idle_interval
+        )
+        self._post_trip_until = 0.0
+        self._was_driving = False
         self.climate_preferences = ClimateCommandPreferences()
         # Seeded from the car record; real OTA info replaces it when the backend has some.
         self._installed_version_cache: str | None = getattr(vehicle, "installed_software_version", None) or None
@@ -551,8 +561,31 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         data = PolestarVehicleData(**values)
         self._update_installed_version_cache(data.software)
         self._unsupported_commands.clear()
+        self._adapt_poll_interval(data)
         await self._restart_dead_streams()
         return data
+
+    def _adapt_poll_interval(self, data: PolestarVehicleData | None) -> bool:
+        """Poll faster while charging, driving or the climate runs, and for 5 minutes after a trip.
+
+        Returns True when the interval changed. The idle interval is the one from the options.
+        """
+        idle = getattr(self, "_idle_interval", None)
+        if idle is None or data is None:
+            return False
+        now = time.monotonic()
+        availability = data.availability
+        driving_now = bool(availability is not None and driving(availability.usage_mode))
+        if self._was_driving and not driving_now:
+            self._post_trip_until = now + POST_TRIP_SECONDS
+        self._was_driving = driving_now
+        active = poll_is_active(data) or now < self._post_trip_until
+        wanted = timedelta(seconds=self._active_interval if active else idle)
+        if self.update_interval == wanted:
+            return False
+        _LOGGER.debug("Polling every %s s (%s)", wanted.total_seconds(), "active" if active else "idle")
+        self.update_interval = wanted
+        return True
 
     def _async_apply_values(self, values: dict[str, Any], generation: int) -> None:
         """Merge fetched/streamed values into the snapshot and push, generation permitting.
@@ -596,6 +629,8 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
             self._update_installed_version_cache(data.software)
         self.data = data
         self.last_update_success = True
+        if self._adapt_poll_interval(data) and hasattr(self, "_schedule_refresh"):
+            self._schedule_refresh()  # start the new interval now, not after the next poll
         return True
 
     async def async_request_attrs_refresh(self, *attrs: str) -> None:
@@ -677,8 +712,8 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
     async def _restart_dead_streams(self) -> None:
         """Restart streams that gave up or went silent, after a poll proves connectivity."""
         stale_after = (
-            self.update_interval.total_seconds() * _STREAM_STALE_POLL_INTERVALS
-            if self.update_interval is not None
+            self._idle_interval * _STREAM_STALE_POLL_INTERVALS  # the idle interval, not the shortened one
+            if getattr(self, "_idle_interval", None)
             else None
         )
         now = time.monotonic()

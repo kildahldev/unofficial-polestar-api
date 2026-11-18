@@ -17,8 +17,10 @@ from polestar_api.exceptions import AuthError
 from .utils import entry_title
 from .const import (
     CONF_DEMO,
+    CONF_ACTIVE_INTERVAL,
     CONF_REGISTRATION_PLATE,
     CONF_UPDATE_INTERVAL,
+    DEFAULT_ACTIVE_INTERVAL,
     CONF_VIN,
     DEFAULT_UPDATE_INTERVAL,
     DOMAIN,
@@ -108,6 +110,10 @@ class PolestarOptionsFlow(OptionsFlow):
                     vol.Optional(CONF_UPDATE_INTERVAL, default=current): vol.All(
                         int, vol.Range(min=60, max=86400)
                     ),
+                    vol.Optional(
+                        CONF_ACTIVE_INTERVAL,
+                        default=self.config_entry.options.get(CONF_ACTIVE_INTERVAL, DEFAULT_ACTIVE_INTERVAL),
+                    ): vol.All(int, vol.Range(min=30, max=3600)),
                     vol.Optional(
                         CONF_REGISTRATION_PLATE, description={"suggested_value": current_plate}
                     ): str,

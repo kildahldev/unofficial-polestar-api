@@ -4,11 +4,13 @@
       "init": {
         "data": {
           "update_interval": "Polling interval (seconds)",
-          "registration_plate": "Registration plate (optional)"
+          "registration_plate": "Registration plate (optional)",
+          "active_interval": "Active polling interval (seconds)"
         },
         "description": "How often to poll the Polestar cloud for updates. Lower values give faster updates but may increase server load and 12v battery usage.",
         "data_description": {
-          "registration_plate": "Shown in the device name. Only needed when Polestar does not supply the plate for your account, for example a secondary or guest login. Leave blank to use the plate Polestar reports."
+          "registration_plate": "Shown in the device name. Only needed when Polestar does not supply the plate for your account, for example a secondary or guest login. Leave blank to use the plate Polestar reports.",
+          "active_interval": "Used while the car is charging, being driven or running its climate, and for 5 minutes after a trip. Between 30 and 3600; never slower than the polling interval."
         }
       }
     }

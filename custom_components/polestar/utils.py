@@ -298,3 +298,15 @@ def light_attributes(health: Any) -> dict[str, str]:
         state = enum_name(value)
         out[name] = "ok" if state == "no_warning" else "unknown" if state is None else state
     return out
+
+
+def poll_is_active(data: Any) -> bool:
+    """Is something happening that deserves the faster poll: charging, driving, or the climate running?"""
+    battery = getattr(data, "battery", None)
+    if battery is not None and getattr(battery, "is_charging", False):
+        return True
+    climate = getattr(data, "climate", None)
+    if climate is not None and getattr(climate, "is_active", False):
+        return True
+    availability = getattr(data, "availability", None)
+    return availability is not None and driving(getattr(availability, "usage_mode", None)) is True

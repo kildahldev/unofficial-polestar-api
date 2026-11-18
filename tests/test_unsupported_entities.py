@@ -732,3 +732,59 @@ def test_privacy_read_is_not_part_of_the_main_poll():
     source = Path("custom_components/polestar/coordinator.py").read_text()
     assert '_BACKGROUND_ATTRS = ("remote_function_data_sharing",)' in source
     assert "if a not in _BACKGROUND_ATTRS" in source
+
+
+def _adaptive(monkeypatch, idle=600.0, active=120.0):
+    from datetime import timedelta
+    from types import SimpleNamespace
+
+    module, _ = _load(monkeypatch, FakeRegistry())
+    coordinator = _coordinator(module, FakeVehicle({}))
+    coordinator._idle_interval = idle
+    coordinator._active_interval = min(active, idle)
+    coordinator._post_trip_until = 0.0
+    coordinator._was_driving = False
+    coordinator.update_interval = timedelta(seconds=idle)
+    return module, coordinator, SimpleNamespace
+
+
+def _data(ns, *, charging=False, climate=False, mode="UNSPECIFIED"):
+    return ns(
+        battery=ns(is_charging=charging),
+        climate=ns(is_active=climate),
+        availability=ns(usage_mode=ns(name=mode)),
+    )
+
+
+def test_poll_speeds_up_while_charging_and_returns_to_idle(monkeypatch):
+    module, coordinator, ns = _adaptive(monkeypatch)
+    assert coordinator._adapt_poll_interval(_data(ns, charging=True)) is True
+    assert coordinator.update_interval.total_seconds() == 120
+    assert coordinator._adapt_poll_interval(_data(ns, charging=True)) is False  # no change, no reschedule
+    assert coordinator._adapt_poll_interval(_data(ns)) is True
+    assert coordinator.update_interval.total_seconds() == 600
+
+
+def test_poll_stays_fast_for_five_minutes_after_a_trip(monkeypatch):
+    module, coordinator, ns = _adaptive(monkeypatch)
+    coordinator._adapt_poll_interval(_data(ns, mode="DRIVING"))
+    assert coordinator.update_interval.total_seconds() == 120
+    coordinator._adapt_poll_interval(_data(ns, mode="INACTIVE"))  # trip just ended
+    assert coordinator.update_interval.total_seconds() == 120
+    coordinator._post_trip_until = 0.0  # the five minutes are over
+    coordinator._adapt_poll_interval(_data(ns, mode="INACTIVE"))
+    assert coordinator.update_interval.total_seconds() == 600
+
+
+def test_active_interval_is_never_slower_than_idle_and_climate_counts(monkeypatch):
+    module, coordinator, ns = _adaptive(monkeypatch, idle=60.0, active=300.0)
+    assert coordinator._active_interval == 60.0
+    module2, coordinator2, ns2 = _adaptive(monkeypatch)
+    coordinator2._adapt_poll_interval(_data(ns2, climate=True))
+    assert coordinator2.update_interval.total_seconds() == 120
+
+
+def test_a_coordinator_without_polling_state_is_left_alone(monkeypatch):
+    module, _ = _load(monkeypatch, FakeRegistry())
+    bare = _coordinator(module, FakeVehicle({}))
+    assert bare._adapt_poll_interval(object()) is False
