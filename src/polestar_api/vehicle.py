@@ -124,6 +124,7 @@ class Vehicle:
         self.reports_tyre_pressure_warning: bool | None = None
         self.reports_tyre_pressure: bool | None = None  # actual pressures (kPa)
         self.reports_service_warning: bool | None = None
+        self.supports_air_purification: bool | None = None
         self.car_capabilities: dict = {}
         self.supports_charge_locations: bool | None = None
         self.supports_window_control: bool | None = None
@@ -203,6 +204,7 @@ class Vehicle:
             self.reports_tyre_pressure_warning = car.reports_tyre_pressure_warning
             self.reports_tyre_pressure = car.reports_tyre_pressure_in_kpa
             self.reports_service_warning = car.reports_service_warning
+            self.supports_air_purification = car.air_purification is not None and car.air_purification.any_supported
             self.car_capabilities = _non_default_fields(car)
             self.model_name = self.model_name or car.vehicle_type_name or None
             if self.model_year is None and car.model_year.isdigit():

@@ -101,6 +101,24 @@ class LocksCapabilities(ProtoMessage, schema={5: "supports_window_control", 6: "
 
 
 @dataclass(frozen=True)
+class AirPurificationCapabilities(ProtoMessage, schema={
+    1: "supports_remote_start",
+    2: "supports_internal_measurement",
+    3: "supports_external_measurement",
+}):
+    """What the car can do for air purification. Cars without the feature (a Polestar 2 without the
+    Plus pack) do not send this message at all."""
+
+    supports_remote_start: bool = False
+    supports_internal_measurement: bool = False
+    supports_external_measurement: bool = False
+
+    @property
+    def any_supported(self) -> bool:
+        return self.supports_remote_start or self.supports_internal_measurement or self.supports_external_measurement
+
+
+@dataclass(frozen=True)
 class CarDetails(ProtoMessage, schema={
     1: "vin",
     5: "vehicle_type_code",
@@ -111,6 +129,7 @@ class CarDetails(ProtoMessage, schema={
     20: "reports_avg_electric_consumption",
     23: "reports_tyre_pressure_warning",
     27: "supports_engine_start",
+    34: "air_purification",
     35: "charging",
     36: "locks",
     37: "parking_climatization",
@@ -134,6 +153,7 @@ class CarDetails(ProtoMessage, schema={
     reports_avg_electric_consumption: bool = False
     reports_avg_electric_consumption_last_trip: bool = False
     reports_avg_electric_consumption_last_charge: bool = False
+    air_purification: AirPurificationCapabilities | None = None
     charging: ChargingCapabilities | None = None
     locks: LocksCapabilities | None = None
     parking_climatization: ParkingClimatizationCapabilities | None = None

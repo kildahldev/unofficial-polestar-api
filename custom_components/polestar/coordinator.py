@@ -115,6 +115,7 @@ _CAPABILITY_FETCHES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("reports_tyre_pressure_warning", ("tyre_warning",)),
     ("reports_tyre_pressure", ("tyre_pressure",)),
     ("reports_service_warning", ("service_warning",)),
+    ("supports_air_purification", ("precleaning",)),
 )
 _CLIMATE_TIMER_SLOTS = 3
 

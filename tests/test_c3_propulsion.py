@@ -51,3 +51,10 @@ def test_reporting_flags_decode_and_default_to_false():
     bare = CarDetails.from_bytes(_ld(1, b"VIN"))
     # A Polestar 2 sends neither tyre flag, so they decode as False (the car says it does not report them).
     assert not bare.reports_tyre_pressure_warning and not bare.reports_tyre_pressure_in_kpa
+
+
+def test_air_purification_capability_decodes_and_is_absent_without_the_plus_pack():
+    with_pack = CarDetails.from_bytes(_ld(1, b"VIN") + _ld(34, _field(1, 0, _varint(1)) + _field(2, 0, _varint(1))))
+    assert with_pack.air_purification is not None and with_pack.air_purification.any_supported
+    # A car without the feature does not send field 34 at all.
+    assert CarDetails.from_bytes(_ld(1, b"VIN")).air_purification is None

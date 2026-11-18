@@ -675,3 +675,11 @@ def test_unknown_reporting_flags_keep_the_entities(monkeypatch):
     assert coordinator.is_fetch_supported("tyre_pressure")
     assert coordinator.is_fetch_supported("tyre_warning")
     assert coordinator.is_fetch_supported("service_warning")
+
+
+def test_car_without_air_purification_hides_the_pre_cleaning_entities(monkeypatch):
+    module, _ = _load(monkeypatch, FakeRegistry())
+
+    assert not _coordinator_for(module, supports_air_purification=False).is_fetch_supported("precleaning")
+    assert _coordinator_for(module, supports_air_purification=True).is_fetch_supported("precleaning")
+    assert _coordinator_for(module).is_fetch_supported("precleaning")  # unknown keeps it
