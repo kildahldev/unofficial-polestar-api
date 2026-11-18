@@ -360,3 +360,4 @@ def _parse_model_year(value: object) -> int | None:
 def _string_or_none(value: object) -> str | None:
     """Return strings unchanged and coerce everything else to None."""
     return value if isinstance(value, str) and value else None
+

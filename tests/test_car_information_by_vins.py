@@ -29,3 +29,14 @@ def test_by_vins_also_returns_build_data():
     info = _extract_car_information_by_vins(data)["V1"]
     assert (info.slug, info.structure_week, info.pno34) == ("polestar-2", "202611", "534X")
     assert info.is_primary_driver is True and info.is_bst_edition is False
+
+
+def test_model_name_falls_back_to_the_slug():
+    from polestar_api.naming import model_from_slug
+    from polestar_api.vehicle import Vehicle
+
+    assert model_from_slug("polestar-2") == "Polestar 2"
+    assert model_from_slug("polestar-4") == "Polestar 4"
+    assert model_from_slug(None) is None and model_from_slug("") is None
+    assert Vehicle(vin="YSMVSFDR8TL421810", connection=None, slug="polestar-2").model_name == "Polestar 2"
+    assert Vehicle(vin="X", connection=None, model_name="Polestar 3", slug="polestar-2").model_name == "Polestar 3"

@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator, Callable
 from typing import TYPE_CHECKING
 
 from .models.availability import Availability
+from .naming import model_from_slug
 from .models.battery import Battery
 from .models.charge_location import ChargeLocation
 from .models.consent import PrivacySetting, PrivacySettingDetail, RemoteFunctionDataSharing
@@ -103,7 +104,7 @@ class Vehicle:
         self.internal_id = internal_id
         self.registration_no = registration_no
         self.model_year = model_year
-        self.model_name = model_name
+        self.model_name = model_name or model_from_slug(slug)
         self.slug = slug
         self.pno34 = pno34
         self.structure_week = structure_week
@@ -206,7 +207,7 @@ class Vehicle:
             self.reports_service_warning = car.reports_service_warning
             self.supports_air_purification = car.air_purification is not None and car.air_purification.any_supported
             self.car_capabilities = _non_default_fields(car)
-            self.model_name = self.model_name or car.vehicle_type_name or None
+            self.model_name = self.model_name or car.vehicle_type_name or model_from_slug(self.slug) or None
             if self.model_year is None and car.model_year.isdigit():
                 self.model_year = int(car.model_year)
         self.registration_no = self.registration_no or my_car.registration_plate or None
