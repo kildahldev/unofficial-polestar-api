@@ -132,9 +132,6 @@
       "service_required": {
         "name": "Service required"
       },
-      "sunroof": {
-        "name": "Sunroof"
-      },
       "tailgate": {
         "name": "Tailgate"
       },

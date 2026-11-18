@@ -173,3 +173,9 @@ def test_installed_software_version_comes_from_the_car_record():
     ).read_text()
     coordinator = Path("custom_components/polestar/coordinator.py").read_text()
     assert 'getattr(vehicle, "installed_software_version", None)' in coordinator
+
+
+def test_polestar_has_no_sunroof_sensor_and_an_old_one_is_removed():
+    binary_src = (ROOT / "binary_sensor.py").read_text()
+    assert 'key="sunroof"' not in binary_src
+    assert '"sunroof",' in (ROOT / "__init__.py").read_text().split("_REPLACED_ENTITY_SUFFIXES", 1)[1].split(")", 1)[0]
