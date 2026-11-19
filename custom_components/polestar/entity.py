@@ -183,7 +183,12 @@ def async_filter_supported_entities(
         entity_id = registry.async_get_entity_id(domain, DOMAIN, entity.unique_id)
         entry = registry.async_get(entity_id) if entity_id else None
         if is_supported:
-            if entry is not None and entry.disabled_by is er.RegistryEntryDisabler.INTEGRATION:
+            # Re-enable what the integration itself disabled for lack of support, but not what is off by default.
+            if (
+                entry is not None
+                and entry.disabled_by is er.RegistryEntryDisabler.INTEGRATION
+                and getattr(entity, "entity_registry_enabled_default", True)
+            ):
                 registry.async_update_entity(entity_id, disabled_by=None)
             supported.append(entity)
         elif entry is not None and entry.disabled_by is None:

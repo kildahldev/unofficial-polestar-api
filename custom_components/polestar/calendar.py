@@ -10,6 +10,7 @@ from homeassistant.components.calendar import CalendarEntity, CalendarEntityFeat
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util
 
@@ -49,6 +50,10 @@ async def async_setup_entry(
 
 class PolestarParkingClimateTimerCalendar(PolestarEntity, CalendarEntity):
     """Calendar entity representing one parking climate timer slot."""
+
+    # Timers are set up once and rarely looked at, so they live under Configuration and are off until wanted.
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_entity_registry_enabled_default = False
 
     def __init__(self, coordinator: PolestarCoordinator, slot: int) -> None:
         super().__init__(coordinator)

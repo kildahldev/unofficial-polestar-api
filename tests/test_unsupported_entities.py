@@ -314,6 +314,19 @@ def test_integration_disabled_entity_is_reenabled_when_supported(monkeypatch):
     assert registry.updates == [("number.amp", None)]
 
 
+def test_entity_that_is_off_by_default_is_not_reenabled(monkeypatch):
+    registry = FakeRegistry({"calendar.timer": _entry("v_timer", RegistryEntryDisabler.INTEGRATION)})
+    _, entity_module = _load(monkeypatch, registry)
+    coordinator = SimpleNamespace(is_fetch_supported=lambda attr: True)
+    entity = FakeEntity("v_timer", "climate_timer_slot_1")
+    entity.entity_registry_enabled_default = False
+
+    result = entity_module.async_filter_supported_entities(None, coordinator, "calendar", [entity])
+
+    assert len(result) == 1
+    assert registry.updates == []
+
+
 def test_user_disabled_entity_is_left_alone(monkeypatch):
     registry = FakeRegistry({"number.amp": _entry("v_amp_limit", RegistryEntryDisabler.USER)})
     _, entity_module = _load(monkeypatch, registry)
