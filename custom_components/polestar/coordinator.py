@@ -720,13 +720,15 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         self,
         interval: float = _AVAILABILITY_REFRESH_SECONDS,
     ) -> None:
-        """Refresh availability (and so usage mode) once a minute, without touching the poll timer.
+        """Refresh availability (and so usage mode) and the charge limits once a minute, without touching the poll timer.
 
-        Usage mode has no stream, so on the 10 minute poll a whole trip can pass unseen.
+        Usage mode has no stream, so on the 10 minute poll a whole trip can pass unseen. The Target SoC and amp limit
+        are changed in the Polestar app with no push to us, so they are re-read here too (a car that lacks them is
+        skipped).
         """
         while True:
             try:
-                await self.async_request_attrs_refresh("availability")
+                await self.async_request_attrs_refresh("availability", "target_soc", "amp_limit")
             except asyncio.CancelledError:
                 raise
             except Exception as err:  # noqa: BLE001

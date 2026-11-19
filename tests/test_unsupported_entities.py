@@ -734,7 +734,7 @@ def test_car_without_air_purification_hides_the_pre_cleaning_entities(monkeypatc
 
 
 @pytest.mark.asyncio
-async def test_availability_loop_only_refreshes_availability(monkeypatch):
+async def test_availability_loop_also_rereads_the_charge_limits(monkeypatch):
     import asyncio
 
     coordinator_module, _ = _load(monkeypatch, FakeRegistry())
@@ -750,7 +750,7 @@ async def test_availability_loop_only_refreshes_availability(monkeypatch):
     with pytest.raises(asyncio.CancelledError):
         await coordinator._async_availability_loop(interval=0.001)
 
-    assert calls == [("availability",)] * 3
+    assert calls == [("availability", "target_soc", "amp_limit")] * 3
 
 
 def _adaptive(monkeypatch, idle=600.0, active=120.0):
