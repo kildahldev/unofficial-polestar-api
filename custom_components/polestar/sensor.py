@@ -170,6 +170,13 @@ class PolestarSensorDescription(SensorEntityDescription):
     requires_combustion_engine: bool = False
 
 
+def _dashboard_value(data: PolestarVehicleData, field: str) -> float | None:
+    """A reading from the dashboard record, or None when the car sends none (zero means "not sent")."""
+    dash = data.dashboard.dashboard_data if data.dashboard else None
+    value = getattr(dash, field, 0) if dash else 0
+    return value or None
+
+
 SENSORS: tuple[PolestarSensorDescription, ...] = (
     PolestarSensorDescription(
         key="battery_level",
@@ -304,6 +311,27 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:lightning-bolt",
         value_fn=lambda d: d.battery.avg_consumption_since_charge if d.battery else None,
+    ),
+    PolestarSensorDescription(
+        key="avg_speed",
+        translation_key="avg_speed",
+        # Hidden when the car's dashboard record carries no average speed (the Polestar 2 may not send one).
+        required_data=lambda d: _dashboard_value(d, "avg_speed_manual") is not None,
+        device_class=SensorDeviceClass.SPEED,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfSpeed.KILOMETERS_PER_HOUR,
+        suggested_display_precision=0,
+        value_fn=lambda d: _dashboard_value(d, "avg_speed_manual"),
+    ),
+    PolestarSensorDescription(
+        key="avg_speed_auto",
+        translation_key="avg_speed_auto",
+        required_data=lambda d: _dashboard_value(d, "avg_speed_auto") is not None,
+        device_class=SensorDeviceClass.SPEED,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfSpeed.KILOMETERS_PER_HOUR,
+        suggested_display_precision=0,
+        value_fn=lambda d: _dashboard_value(d, "avg_speed_auto"),
     ),
     PolestarSensorDescription(
         key="odometer",

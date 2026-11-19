@@ -460,6 +460,12 @@
       },
       "vin": {
         "name": "VIN"
+      },
+      "avg_speed": {
+        "name": "Average speed"
+      },
+      "avg_speed_auto": {
+        "name": "Average speed (auto)"
       }
     },
     "switch": {
