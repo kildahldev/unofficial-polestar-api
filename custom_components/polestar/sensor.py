@@ -65,7 +65,6 @@ from . import geocode
 from .utils import (
     connection_attributes,
     connection_text,
-    last_seen,
     flatten_attributes,
     weather_attributes,
     climate_end_time,
@@ -503,14 +502,6 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         attrs_fn=connection_attributes,
     ),
     PolestarSensorDescription(
-        key="last_seen",
-        translation_key="last_seen",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        device_class=SensorDeviceClass.TIMESTAMP,
-        icon="mdi:car-wireless",
-        value_fn=last_seen,
-    ),
-    PolestarSensorDescription(
         key="availability_unavailable_reason",
         translation_key="availability_unavailable_reason",
         device_class=SensorDeviceClass.ENUM,
@@ -548,6 +539,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
 
 # Sensors replaced by other entities or attributes (19 Nov 2026); their registry entries are removed at setup.
 REMOVED_SENSOR_KEYS = (
+    "last_seen",  # it changed every few seconds while charging and filled the activity log; Connection has offline_since
     "pm25",  # merged into Cabin air quality index, which now shows PM2.5 in µg/m³
     "target_soc",  # the Target SOC number shows it
     "precleaning_runtime_left",  # attributes of the Air Purification switch

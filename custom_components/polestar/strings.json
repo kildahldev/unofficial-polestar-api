@@ -396,9 +396,6 @@
       "internet_activation": {
         "name": "Internet Activation"
       },
-      "last_seen": {
-        "name": "Last seen"
-      },
       "location_address": {
         "name": "Location address"
       },
