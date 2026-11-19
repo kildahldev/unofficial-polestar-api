@@ -72,12 +72,14 @@ SELECTS: tuple[PolestarSelectDescription, ...] = (
     ),
     PolestarSelectDescription(
         key="climate_front_left_seat",
+        fetch_attr="climate_settings",
         translation_key="climate_front_left_seat",
         entity_category=EntityCategory.CONFIG,
         options=_HEATING_OPTIONS,
     ),
     PolestarSelectDescription(
         key="climate_front_right_seat",
+        fetch_attr="climate_settings",
         translation_key="climate_front_right_seat",
         entity_category=EntityCategory.CONFIG,
         options=_HEATING_OPTIONS,
@@ -98,6 +100,7 @@ SELECTS: tuple[PolestarSelectDescription, ...] = (
     ),
     PolestarSelectDescription(
         key="climate_steering_wheel",
+        fetch_attr="climate_settings",
         translation_key="climate_steering_wheel",
         entity_category=EntityCategory.CONFIG,
         options=_HEATING_OPTIONS,

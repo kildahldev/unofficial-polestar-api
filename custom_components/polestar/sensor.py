@@ -450,14 +450,6 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         key="air_quality_index",
         fetch_attr="precleaning",
         translation_key="air_quality_index",
-        device_class=SensorDeviceClass.AQI,
-        state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda d: d.precleaning.measured_air_quality_index if d.precleaning else None,
-    ),
-    PolestarSensorDescription(
-        key="pm25",
-        fetch_attr="precleaning",
-        translation_key="pm25",
         device_class=SensorDeviceClass.PM25,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement="µg/m³",
@@ -556,6 +548,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
 
 # Sensors replaced by other entities or attributes (19 Nov 2026); their registry entries are removed at setup.
 REMOVED_SENSOR_KEYS = (
+    "pm25",  # merged into Cabin air quality index, which now shows PM2.5 in µg/m³
     "target_soc",  # the Target SOC number shows it
     "precleaning_runtime_left",  # attributes of the Air Purification switch
     "precleaning_start_reason",

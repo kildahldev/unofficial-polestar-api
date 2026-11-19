@@ -59,6 +59,7 @@ NUMBERS: tuple[PolestarNumberDescription, ...] = (
     ),
     PolestarNumberDescription(
         key="climate_target_temperature",
+        fetch_attr="climate_settings",
         translation_key="climate_target_temperature",
         icon="mdi:thermometer-auto",
         device_class=NumberDeviceClass.TEMPERATURE,

@@ -87,7 +87,7 @@
         "name": "At charge location"
       },
       "available": {
-        "name": "Available"
+        "name": "Online"
       },
       "brake_fluid_problem": {
         "name": "Brake fluid"
@@ -120,7 +120,7 @@
         "name": "Light status"
       },
       "low_voltage_battery": {
-        "name": "Low-voltage battery"
+        "name": "12V battery"
       },
       "service_required": {
         "name": "Service required"
@@ -129,7 +129,7 @@
         "name": "Tailgate"
       },
       "tank_lid": {
-        "name": "Charging lid"
+        "name": "Charge port"
       },
       "tyre_warning": {
         "name": "Tyre warning"
@@ -197,7 +197,7 @@
         "name": "Climate target temperature"
       },
       "target_soc": {
-        "name": "Target SOC"
+        "name": "Target SoC"
       },
       "timer_target_temperature": {
         "name": "Timer target temperature"
@@ -205,45 +205,45 @@
     },
     "select": {
       "climate_front_left_seat": {
-        "name": "Climate front left seat heat"
+        "name": "Front left seat heating"
       },
       "climate_front_right_seat": {
-        "name": "Climate front right seat heat"
+        "name": "Front right seat heating"
       },
       "climate_rear_left_seat": {
-        "name": "Climate rear left seat heat"
+        "name": "Rear left seat heating"
       },
       "climate_rear_right_seat": {
-        "name": "Climate rear right seat heat"
+        "name": "Rear right seat heating"
       },
       "climate_steering_wheel": {
-        "name": "Climate steering wheel heat"
+        "name": "Steering wheel heating"
       },
       "target_soc_setting_type": {
-        "name": "Target SOC mode"
+        "name": "Target SoC mode"
       },
       "timer_battery_preconditioning": {
         "name": "Timer battery preconditioning"
       },
       "timer_front_left_seat": {
-        "name": "Timer front left seat heat"
+        "name": "Timer front left seat heating"
       },
       "timer_front_right_seat": {
-        "name": "Timer front right seat heat"
+        "name": "Timer front right seat heating"
       },
       "timer_rear_left_seat": {
-        "name": "Timer rear left seat heat"
+        "name": "Timer rear left seat heating"
       },
       "timer_rear_right_seat": {
-        "name": "Timer rear right seat heat"
+        "name": "Timer rear right seat heating"
       },
       "timer_steering_wheel": {
-        "name": "Timer steering wheel heat"
+        "name": "Timer steering wheel heating"
       }
     },
     "sensor": {
       "air_quality_index": {
-        "name": "Air quality index"
+        "name": "Cabin air quality index"
       },
       "altitude": {
         "name": "Altitude"
@@ -284,7 +284,7 @@
         "name": "Battery Capacity"
       },
       "battery_level": {
-        "name": "Battery level"
+        "name": "State of charge"
       },
       "charge_locations": {
         "name": "Charge locations"
@@ -408,9 +408,6 @@
       "outside_temperature": {
         "name": "Outside temperature"
       },
-      "pm25": {
-        "name": "PM2.5"
-      },
       "range": {
         "name": "Range"
       },
@@ -470,7 +467,7 @@
     },
     "switch": {
       "air_purification": {
-        "name": "Air Purification"
+        "name": "Air purification"
       },
       "charge_timer": {
         "name": "Charging schedule"
