@@ -456,3 +456,48 @@ def connection_attributes(data: Any) -> dict[str, Any]:
     if seen is not None:
         attrs["offline_since"] = seen.isoformat()
     return attrs
+
+
+def service_attributes(warning: Any) -> dict[str, str]:
+    """How urgent a service warning is and what triggers it (empty while there is no warning).
+
+    ``service_urgency``: ``almost_due``, ``due`` or ``overdue``; ``service_reason``: ``regular``, ``engine_hours`` or
+    ``distance``. Built from the warning's name (for example ``DISTANCE_DRIVEN_ALMOST_TIME``).
+    """
+    name = getattr(warning, "name", None) or str(warning or "")
+    name = name.upper()
+    if not name or name in ("UNSPECIFIED", "NO_WARNING", "UNKNOWN_WARNING") or name.endswith("_NO_WARNING"):
+        return {}
+    if "ALMOST" in name:
+        urgency = "almost_due"
+    elif "OVERDUE" in name:
+        urgency = "overdue"
+    elif name.endswith("_TIME"):
+        urgency = "due"
+    else:
+        return {}
+    if "ENGINE_HOURS" in name:
+        reason = "engine_hours"
+    elif "DISTANCE" in name:
+        reason = "distance"
+    elif "REGULAR" in name:
+        reason = "regular"
+    else:
+        return {"service_urgency": urgency}
+    return {"service_urgency": urgency, "service_reason": reason}
+
+
+_TYRE_WHEELS = ("front_left", "front_right", "rear_left", "rear_right")
+
+
+def tyre_attributes(health: Any) -> dict[str, Any]:
+    """Per-wheel warning grade (``ok``, ``very_low``, ``low``, ``high``) for cars that report tyre pressures."""
+    if health is None or not any(getattr(health, f"{w}_tyre_pressure_kpa", 0) for w in _TYRE_WHEELS):
+        return {}
+    out: dict[str, Any] = {}
+    for wheel in _TYRE_WHEELS:
+        name = getattr(getattr(health, f"{wheel}_tyre_pressure_warning", None), "name", "UNSPECIFIED")
+        grade = {"NO_WARNING": "ok", "VERY_LOW_PRESSURE": "very_low", "LOW_PRESSURE": "low", "HIGH_PRESSURE": "high"}.get(name)
+        if grade is not None:
+            out[f"{wheel}_warning"] = grade
+    return out

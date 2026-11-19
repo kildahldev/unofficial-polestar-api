@@ -145,7 +145,7 @@ def test_failed_command_notifies_reverts_entities_and_refreshes(monkeypatch):
     assert reverted == [True]
     assert coordinator.refreshes == [("exterior",)]
     assert len(notifications) == 1
-    assert "response timeout" in notifications[0][0][1]
+    assert "did not answer in time" in notifications[0][0][1]
 
 
 def test_successful_command_only_refreshes(monkeypatch):

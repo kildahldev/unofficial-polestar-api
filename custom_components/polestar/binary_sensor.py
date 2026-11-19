@@ -21,7 +21,7 @@ from polestar_api.models.health import LowVoltageBatteryWarning, ServiceWarning
 from .const import DOMAIN
 from .coordinator import PolestarVehicleData
 from .entity import PolestarEntity, async_filter_supported_entities, async_remove_registered_entities
-from .utils import alarm_triggered, in_use, level_problem as _level_problem, light_attributes, state_icon
+from .utils import alarm_triggered, in_use, level_problem as _level_problem, light_attributes, service_attributes, state_icon, tyre_attributes
 
 PARALLEL_UPDATES = 0
 
@@ -169,6 +169,7 @@ BINARY_SENSORS: tuple[PolestarBinarySensorDescription, ...] = (
         translation_key="tyre_warning",
         device_class=BinarySensorDeviceClass.PROBLEM,
         value_fn=lambda d: d.health.any_tyre_warning if d.health else None,
+        attrs_fn=lambda d: tyre_attributes(d.health),
     ),
     PolestarBinarySensorDescription(
         key="light_failure",
@@ -213,6 +214,7 @@ BINARY_SENSORS: tuple[PolestarBinarySensorDescription, ...] = (
         translation_key="service_required",
         device_class=BinarySensorDeviceClass.PROBLEM,
         value_fn=lambda d: d.health.service_warning not in {ServiceWarning.UNSPECIFIED, ServiceWarning.NO_WARNING} if d.health else None,
+        attrs_fn=lambda d: service_attributes(d.health.service_warning) if d.health else {},
     ),
     PolestarBinarySensorDescription(
         key="low_voltage_battery",

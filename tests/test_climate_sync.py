@@ -291,3 +291,42 @@ def test_switch_attributes_carry_what_the_removed_sensors_showed(utils):
     assert utils.precleaning_attributes(pre)["runtime_left_minutes"] == 7
     assert "error" not in utils.precleaning_attributes(pre)
     assert utils.precleaning_attributes(None) == {}
+
+
+def test_service_attributes_grade_the_warning(utils):
+    from polestar_api.models.health import ServiceWarning
+
+    assert utils.service_attributes(ServiceWarning.NO_WARNING) == {}
+    assert utils.service_attributes(ServiceWarning.UNSPECIFIED) == {}
+    assert utils.service_attributes(ServiceWarning.UNKNOWN_WARNING) == {}
+    assert utils.service_attributes(ServiceWarning.REGULAR_MAINTENANCE_ALMOST_TIME) == {
+        "service_urgency": "almost_due",
+        "service_reason": "regular",
+    }
+    assert utils.service_attributes(ServiceWarning.ENGINE_HOURS_TIME) == {
+        "service_urgency": "due",
+        "service_reason": "engine_hours",
+    }
+    assert utils.service_attributes(ServiceWarning.DISTANCE_DRIVEN_OVERDUE) == {
+        "service_urgency": "overdue",
+        "service_reason": "distance",
+    }
+
+
+def test_tyre_attributes_only_when_pressures_are_reported(utils):
+    from polestar_api.models.health import Health, TyrePressureWarning
+
+    no_pressure = Health(front_left_tyre_pressure_warning=TyrePressureWarning.LOW_PRESSURE)
+    assert utils.tyre_attributes(no_pressure) == {}
+    assert utils.tyre_attributes(None) == {}
+    health = Health(
+        front_left_tyre_pressure_kpa=250.0,
+        front_left_tyre_pressure_warning=TyrePressureWarning.NO_WARNING,
+        front_right_tyre_pressure_warning=TyrePressureWarning.VERY_LOW_PRESSURE,
+        rear_left_tyre_pressure_warning=TyrePressureWarning.HIGH_PRESSURE,
+    )
+    assert utils.tyre_attributes(health) == {
+        "front_left_warning": "ok",
+        "front_right_warning": "very_low",
+        "rear_left_warning": "high",
+    }

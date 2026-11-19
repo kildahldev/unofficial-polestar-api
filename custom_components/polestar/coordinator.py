@@ -212,8 +212,24 @@ _FETCH_ATTR_LOOKUP = dict(_FETCH_ATTRS)
 _ATTR_FIELDS = {spec.name: spec for spec in fields(PolestarVehicleData)}
 
 
+_COMMAND_REFUSAL_REASONS = {
+    "UNKNOWN_ERROR": "an unknown error",
+    "CAR_OFFLINE": "the car is offline",
+    "DELIVERY_TIMEOUT": "the car did not receive the command in time",
+    "RESPONSE_TIMEOUT": "the car did not answer in time",
+    "UNKNOWN_CAR_ERROR": "the car reported an unknown error",
+    "NOT_ALLOWED_PRIVACY_ENABLED": "privacy mode is on in the car, which blocks remote commands",
+    "NOT_ALLOWED_WRONG_USAGE_MODE": "the car is not in a state that allows this command (for example it is being driven)",
+    "INVOCATION_SPECIFIC_ERROR": "the car rejected this particular command",
+    "NOT_ALLOWED_CONFLICTING_INVOCATION": "another command is still in progress",
+}
+
+
 def _status_words(name: str) -> str:
     """A command status for a message; "undefined" means the car gave no reason."""
+    reason = _COMMAND_REFUSAL_REASONS.get(name.upper())
+    if reason is not None:
+        return reason
     word = name.lower()
     return "the car gave no reason" if word in ("undefined", "unspecified") else word
 
@@ -309,7 +325,7 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
                 self._schedule_background_refresh(*attrs)
             return
 
-        reason = response.message or response.status.name.replace("_", " ").lower()
+        reason = response.message or _status_words(response.status.name)
         _LOGGER.warning("Polestar %s command for %s failed: %s", method, self.vehicle.vin, reason)
         persistent_notification.async_create(
             self.hass,
