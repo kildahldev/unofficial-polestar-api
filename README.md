@@ -23,34 +23,76 @@ Reports of what works and what doesn't on your model are welcome. Please [open a
 
 ## Features
 
-**Read**
+[Volvo C3](https://github.com/BeauGiles/ha-volvo-c3) and Polestar C3 talk to the same Volvo Cars C3 platform, so most features are the same. This table is shared by both READMEs.
 
-- Battery: state of charge, range, charging status, power, current and voltage, time to full charge, time to target
-- Location: current and last parked position, with a reverse-geocoded address, plus saved charge locations
-- Doors, windows, hood, tailgate and central lock, with an "any door open" summary
-- Service and health: service required (with how urgent), days, distance and engine hours to service, brake and washer fluid, 12V battery, light status
-- Tyre warning, and per-wheel tyre pressures on cars that report them
-- Odometer, trip meters, average consumption and average speed, outside temperature
-- Climate status and time remaining; cabin air quality
-- Software version and update status
-- **Online**, **In use**, **Alarm triggered**, and a **Connection** sensor with a short state and the full explanation in attributes
+✅ supported · 🧪 experimental (limited testing) · ◐ only on cars that report it · ➖ not available
 
-**Control**
+### Read
 
-- Lock and unlock, boot lock, lock with reduced alarm
-- Flash lights, honk, honk and flash, open and close windows
-- Start and stop climate, with target temperature and seat and steering wheel heating
-- Air purification
-- Charging: target SoC, charging amp limit, charging schedule (switch, start and end times), start and stop charging
-- Parking climate timers, as three calendars
-- Software update scheduling
+| Feature | Volvo C3 | Polestar C3 |
+| --- | :---: | :---: |
+| State of charge, range | ✅ | ✅ |
+| Charging status, power, current, voltage, charger connection | ✅ | ✅ |
+| Time to full charge | ✅ | ✅ |
+| Time to target charge and to minimum SoC | ➖ | ✅ |
+| Charge port, plugged in | ✅ | ✅ |
+| Saved charge locations, "at charge location" | ➖ | ✅ |
+| Location, with address | ✅ | ✅ |
+| Parked location, altitude, heading, speed | ➖ | ✅ |
+| Doors, windows, hood, tailgate | ✅ | ✅ |
+| Sunroof | ◐ | ➖ |
+| Central lock, boot lock | ✅ | ✅ |
+| Alarm triggered, In use, Online, Connection | ✅ | ✅ |
+| Odometer, trip meters, average consumption, average speed | ✅ | ✅ (average speed hidden on the Polestar 2) |
+| Outside temperature | ✅ | ✅ |
+| Service required (with urgency), days, distance and engine hours to service | ✅ | ✅ |
+| Tyre warning, per-wheel grades | ◐ | ◐ |
+| Per-wheel tyre pressures | ◐ | ◐ |
+| 12V battery, brake fluid, washer fluid, light status | ✅ | ✅ |
+| Engine coolant, oil level (combustion cars) | ◐ | ➖ |
+| Climate status and time remaining | ➖ | ✅ |
+| Cabin air quality | ✅ | ✅ |
+| Software version | ✅ | ✅ |
+| Driving journal: last trip, trips and distance this month (opt in) | ✅ | ➖ |
+| VIN, vehicle info, registration plate | ✅ | ✅ |
 
-Commands show a clear error in Home Assistant when they are refused (car offline, privacy mode on, car being driven, another command in progress, a timeout) instead of silently doing nothing.
+### Control
+
+| Feature | Volvo C3 | Polestar C3 |
+| --- | :---: | :---: |
+| Lock, unlock, lock with reduced alarm | ✅ | ✅ |
+| Boot lock (unlock the tailgate only) | ✅ | ✅ |
+| Open and close tailgate | ✅ | ➖ |
+| Flash lights, honk, honk and flash | ✅ | ✅ |
+| Open and close all windows | ✅ | ✅ |
+| Start and stop climate | ✅ | ✅ |
+| Climate target temperature | ◐ | ◐ |
+| Seat and steering wheel heating | 🧪 ◐ | ◐ |
+| Engine remote start (starts cabin climate on an EV) | ✅ | ➖ |
+| Air purification | ✅ | ✅ |
+| Target SoC, charging amp limit | ✅ | ✅ |
+| Charging schedule: switch, start and end times | ✅ | ✅ |
+| Start and stop charging | ✅ | ✅ |
+| Parking climate timers (calendars) | ➖ | ✅ |
+| Software update: schedule, install, cancel | ➖ | ✅ |
+| Manage saved charge locations (services) | ➖ | ✅ |
+
+### Behaviour
+
+| Feature | Volvo C3 | Polestar C3 |
+| --- | :---: | :---: |
+| Clear error when a command is refused (offline, privacy mode, in use, busy, timeout) | 🧪 | ✅ |
+| Live updates streamed from the car's cloud | 🧪 | ✅ |
+| Adaptive polling (faster while charging, driving or running climate) | ✅ | ✅ |
+| Entities hidden for features the car doesn't have | ✅ | ✅ |
+| Reconfigure flow, diagnostics download | ✅ | ✅ |
+| Demo mode | ➖ | ✅ |
+| More than one car (one entry per car) | ✅ | ✅ |
 
 > [!CAUTION]
 > These commands act on a real car. You are responsible for how you use them and for any automations you build on them.
 
-### Entities
+## Entities
 
 | Platform | Examples |
 | --- | --- |
