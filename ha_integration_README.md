@@ -70,3 +70,7 @@ The integration also registers custom services for the parts of the Polestar API
 - `polestar.schedule_ota`
 - `polestar.cancel_ota`
 - `polestar.delete_climate_timer`
+
+## Examples
+
+- [Live Activities & rich notifications](example-live-activities) — ready-to-paste automations that turn charging and climate/pre-conditioning into an iOS Live Activity (Dynamic Island + Lock Screen) or an Android Live Update, via the Home Assistant Companion App.
