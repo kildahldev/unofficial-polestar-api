@@ -26,7 +26,7 @@ APP_BACKEND_OPERATION_NAME = "GetVDMSCars"
 APP_BACKEND_CLIENT_LIBRARY = {"name": "apollo-kotlin", "version": "4.4.1"}
 APP_FORCE_UPDATE_VERSION = "5.15.0"
 APP_LOCALE = "SE"
-APP_USER_AGENT = "PolestarApp/5.15.0b1118 Android/14"
+APP_USER_AGENT = "PolestarApp/5.15.1b9417 Android/14"
 
 APP_BACKEND_GET_VEHICLES_QUERY = """
 query GetVDMSCars {

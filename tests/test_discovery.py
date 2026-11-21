@@ -15,7 +15,7 @@ class TestAppBackendHeaders:
         headers = _app_backend_headers("test-token")
 
         assert APP_FORCE_UPDATE_VERSION == "5.15.0"
-        assert APP_USER_AGENT == "PolestarApp/5.15.0b1118 Android/14"
+        assert APP_USER_AGENT == "PolestarApp/5.15.1b9417 Android/14"
         assert headers["User-Agent"] == APP_USER_AGENT
         assert headers["X-Polestar-Force-Update-Version"] == APP_FORCE_UPDATE_VERSION
         assert headers["X-PolestarId-Authorization"] == "Bearer test-token"
@@ -57,7 +57,7 @@ class TestGetVehicles:
         assert captured["url"] == APP_BACKEND_GRAPHQL_URL
         headers = captured["headers"]
         assert isinstance(headers, dict)
-        assert headers["User-Agent"] == "PolestarApp/5.15.0b1118 Android/14"
+        assert headers["User-Agent"] == "PolestarApp/5.15.1b9417 Android/14"
         assert headers["X-Polestar-Force-Update-Version"] == "5.15.0"
         assert headers["X-PolestarId-Authorization"] == "Bearer test-token"
         assert len(vehicles) == 1
