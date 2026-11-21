@@ -4,6 +4,13 @@ All notable changes to Polestar C3 (domain `polestar`), the Home Assistant integ
 
 Dates are 2026.
 
+## Unreleased
+
+### Changed
+
+- **README rewritten** for this project (it was still the upstream library's README), with an unofficial and unsupported warning that points to Polestar's official Data Portal where it is available. The separate integration README is folded into it.
+- Documentation uses GitHub alert boxes (note, tip, important, warning) for the points that matter.
+
 ## 0.4.1 (21 November)
 
 ### Fixed
@@ -25,8 +32,8 @@ Dates are 2026.
 - **Display names changed**, entity IDs did not.
 - **Climate target temperature and the front seat and steering wheel heating selects are hidden on cars without rear seat settings** (the Polestar 2). The car record has no separate flags for these, so this is a heuristic: a car with front heating but no rear heating would lose them too.
 - The three parking climate timer calendars are in the Configuration category and off by default. Existing installs keep their registry state; disable or enable them in the entity settings.
-- **Why it is called "Polestar C3":** the integration was renamed (11 November) to tell it apart from the web-based GraphQL "Polestar API" integration (`polestar_api`). This one uses the C3 gRPC services that the Polestar app itself uses, which is why it has live streams, command results and the car's capability flags that the GraphQL one cannot offer. Keeping the two names distinct also avoids confusing their entities in Home Assistant.
-- `polestar_api` (the older GraphQL integration) is not needed. Move automations and dashboards to this integration's entities before removing it.
+- **Why it is called "Polestar C3":** the integration was renamed (11 November) to tell it apart from the web-based GraphQL [Polestar API](https://github.com/pypolestar/polestar_api) integration (`polestar_api`). This one uses the C3 gRPC services that the Polestar app itself uses, which is why it has live streams, command results and the car's capability flags that the GraphQL one cannot offer. Keeping the two names distinct also avoids confusing their entities in Home Assistant.
+- [`polestar_api`](https://github.com/pypolestar/polestar_api) (the older GraphQL integration) is not needed. Move automations and dashboards to this integration's entities before removing it.
 
 ### Harmonised with Volvo C3
 

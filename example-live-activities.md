@@ -1,8 +1,3 @@
----
-layout: none
-permalink: /example-live-activities
----
-{% raw %}
 ## Live Activities & rich charging/climate notifications
 
 Two automations that turn charging and climate (pre-conditioning) into an always-current notification on your phone: a **Live Activity** on iOS (Dynamic Island + Lock Screen) and a **Live Update** on Android — Home Assistant's own names for the same pair of features. Both come from the [Home Assistant Companion App](https://companion.home-assistant.io/)'s `notify.mobile_app_*` action and its [Live Activities / Live Updates](https://companion.home-assistant.io/docs/notifications/live-activities/) support — no extra integration or server needed.
@@ -11,10 +6,14 @@ Two automations that turn charging and climate (pre-conditioning) into an always
 
 Both automations call the same `notify.mobile_app_*` action with the same data; `live_update: true` (the field that starts/updates the activity) and most other fields below work on both platforms, so there is no per-OS branching to write.
 
+> [!IMPORTANT]
+> **Android needs a `title` on every call.** Without it, the notification posts as an ordinary banner instead of a Live Update. **iOS needs 17.2 or later and Home Assistant Core 2026.7.0 or newer**, and is not available on iPad.
+
 - **iOS:** needs **17.2 or later** and **Home Assistant Core 2026.7.0+**. While the feature is in beta, check its status under the Companion App's own **Settings → Live Activities**, and that Home Assistant is allowed to send notifications at all under **iOS Settings → Home Assistant**. Not available on iPad (an Apple limitation). The first time an activity starts, iOS shows a one-time privacy disclosure.
 - **Android:** needs `title` to be set on every call — without it, the notification posts as an ordinary banner instead of a Live Update. Some options need Android 16+, and Samsung phones may need **developer options → Live notifications for all apps** turned on.
 
-Re-sending a notification with the same `tag` updates the existing activity in place instead of stacking a new one, on both platforms — that's what makes it "live". `tag` may only contain letters, numbers, hyphens and underscores, up to 64 characters (both examples below already comply).
+> [!NOTE]
+> Re-sending a notification with the same `tag` updates the existing activity in place instead of stacking a new one, on both platforms — that's what makes it "live". `tag` may only contain letters, numbers, hyphens and underscores, up to 64 characters (both examples below already comply).
 
 ### Setup
 
@@ -301,7 +300,8 @@ actions:
 
 ### Plain notifications instead
 
-If you'd rather get a normal (non-persistent) notification at the start/stop/finish of charging than an always-on Live Activity, trigger on the same `sensor.polestar_VIN_charging_status` and `sensor.polestar_VIN_charger_connection` state changes, but call `notify.mobile_app_YOUR_DEVICE` without `tag`/`live_update`/`progress` — each call then shows as its own notification instead of updating one in place. `data: {push: {interruption-level: passive}}` (iOS only; Android ignores it) is useful for a "plugged in but not yet charging" note you don't want to make a sound.
+> [!TIP]
+> If you'd rather get a normal (non-persistent) notification at the start/stop/finish of charging than an always-on Live Activity, trigger on the same `sensor.polestar_VIN_charging_status` and `sensor.polestar_VIN_charger_connection` state changes, but call `notify.mobile_app_YOUR_DEVICE` without `tag`/`live_update`/`progress` — each call then shows as its own notification instead of updating one in place. `data: {push: {interruption-level: passive}}` (iOS only; Android ignores it) is useful for a "plugged in but not yet charging" note you don't want to make a sound.
 
 ### Troubleshooting
 
@@ -311,4 +311,3 @@ If you'd rather get a normal (non-persistent) notification at the start/stop/fin
 - **Activity stopped updating after repeated start/stop while testing:** iOS enforces a "push-to-start" budget; rapidly starting and ending activities while iterating on the automation can make new ones silently fail to start for a while. Space out test runs, or wait and retry.
 - **Long-running climate/charging session stops updating:** both platforms cap how long a single activity can run (iOS: up to 8 hours) before the OS ends it on its own: not usually a factor for charging/climate, but worth knowing if you adapt these for something longer-running.
 - **Stale Charged/Done card that won't clear:** the `clear_notification` actions rely on `tag` matching too; if you changed the tag partway through testing, send one `clear_notification` call with the old tag to remove the orphaned card.
-{% endraw %}
