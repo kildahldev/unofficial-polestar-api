@@ -303,7 +303,9 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
                 return self.data
             raise UpdateFailed("All API calls failed")
 
-        data = PolestarVehicleData(**values)
+        # Start from the previous snapshot so stream-only attrs (odometer)
+        # aren't wiped by a full poll that doesn't fetch them.
+        data = replace(previous, **values)
         self._update_installed_version_cache(data.software, data.mycars)
         self._unsupported_commands.clear()
         self._restart_dead_streams()
