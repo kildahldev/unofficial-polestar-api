@@ -182,24 +182,48 @@ async def test_non_api_errors_close_client_and_propagate(monkeypatch, error):
     assert api_class.instances[0].closed is True
 
 
+def _status_error(code: int) -> httpx.HTTPStatusError:
+    request = httpx.Request("GET", "https://example.invalid/")
+    return httpx.HTTPStatusError("err", request=request, response=httpx.Response(code, request=request))
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "init_error",
     [
-        httpx.ConnectTimeout("dns not ready"),
-        httpx.ConnectError("network unreachable"),
-        ApiError("C3 discovery failed: 503", 503),
+        httpx.ConnectError("dns / network unreachable"),  # what httpx actually raises offline
+        httpx.ConnectTimeout("connect timeout"),
+        httpx.ReadTimeout("read timeout"),
+        _status_error(503),  # OIDC discovery raise_for_status
+        _status_error(429),
+        ApiError("C3 discovery failed: 502", 502),
         TimeoutError(),
         OSError("Network is unreachable"),
     ],
 )
-async def test_network_errors_during_init_are_retried(monkeypatch, init_error):
+async def test_transient_errors_during_init_are_retried(monkeypatch, init_error):
     """#39: network trouble at startup raises ConfigEntryNotReady so HA retries."""
     component = _load_component(monkeypatch)
     api_class = _fake_api_class(RuntimeError("unused"), init_error=init_error)
     monkeypatch.setattr(component, "PolestarApi", api_class)
 
     with pytest.raises(FakeConfigEntryNotReady):
+        await component.async_setup_entry(FakeHass(), FakeEntry())
+
+    assert api_class.instances[0].closed is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "init_error",
+    [_status_error(400), ApiError("C3 discovery failed: 404", 404), ApiError("missing grpcHost")],
+)
+async def test_permanent_errors_during_init_are_not_retried(monkeypatch, init_error):
+    component = _load_component(monkeypatch)
+    api_class = _fake_api_class(RuntimeError("unused"), init_error=init_error)
+    monkeypatch.setattr(component, "PolestarApi", api_class)
+
+    with pytest.raises(type(init_error)):
         await component.async_setup_entry(FakeHass(), FakeEntry())
 
     assert api_class.instances[0].closed is True

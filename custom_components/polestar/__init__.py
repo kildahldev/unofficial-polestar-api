@@ -25,6 +25,16 @@ _LOGGER = logging.getLogger(__name__)
 STATIC_DIR = Path(__file__).parent / "static"
 
 
+def _is_transient(err: Exception) -> bool:
+    """True for errors worth retrying: no network, timeouts, Polestar 5xx/429."""
+    if isinstance(err, httpx.HTTPStatusError):
+        code = err.response.status_code
+        return code >= 500 or code == 429
+    if isinstance(err, ApiError):
+        return err.status_code is not None and (err.status_code >= 500 or err.status_code == 429)
+    return isinstance(err, (httpx.TransportError, NetworkError, TimeoutError, OSError))
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Polestar from a config entry."""
     if entry.data.get(CONF_DEMO):
@@ -52,13 +62,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except AuthError as err:
         await api.close()
         raise ConfigEntryAuthFailed(str(err)) from err
-    except (httpx.HTTPError, NetworkError, ApiError, TimeoutError, OSError) as err:
-        # Network down / DNS not ready / Polestar unreachable at startup:
-        # let HA retry the setup instead of failing for good.
+    except Exception as err:
         await api.close()
-        raise ConfigEntryNotReady(f"Polestar not reachable: {type(err).__name__}") from err
-    except Exception:
-        await api.close()
+        if _is_transient(err):
+            # Network down / DNS not ready / Polestar unreachable at startup:
+            # let HA retry the setup instead of failing for good.
+            raise ConfigEntryNotReady(f"Polestar not reachable: {type(err).__name__}") from err
         raise
 
     vehicle = next((v for v in vehicles if v.vin == configured_vin), None)
