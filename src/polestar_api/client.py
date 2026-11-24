@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from .auth import AuthManager, FileTokenStore, TokenStore
 from .connection import GrpcConnection
-from .discovery import VehicleInfo, discover_c3_endpoint, get_vehicles
+from .discovery import ChargeAmpLimits, VehicleInfo, discover_c3_endpoint, get_charge_amp_limits, get_vehicles
 from .vehicle import Vehicle
 
 
@@ -32,12 +32,14 @@ class PolestarApi:
         self._auth = AuthManager(token_store=token_store)
         self._connection: GrpcConnection | None = None
         self._vehicle_cache: list[VehicleInfo] | None = None
+        self._c3_host: str | None = None
 
     async def async_init(self) -> None:
         """Authenticate and discover endpoints. Must be called before use."""
         await self._auth.authenticate(self._email, self._password)
         token = await self._auth.ensure_valid_token()
         endpoint = await discover_c3_endpoint(token)
+        self._c3_host = endpoint.host
         self._connection = GrpcConnection(
             host=endpoint.host,
             port=endpoint.port,
@@ -60,6 +62,11 @@ class PolestarApi:
             )
             for info in infos
         ]
+
+    async def get_charge_amp_limits(self, vin: str) -> ChargeAmpLimits | None:
+        """Charge current range reported for ``vin``; None if unavailable."""
+        token = await self._auth.ensure_valid_token()
+        return await get_charge_amp_limits(token, self._c3_host, vin)
 
     async def get_vehicle(self, vin: str) -> Vehicle:
         """Get a specific vehicle by VIN."""

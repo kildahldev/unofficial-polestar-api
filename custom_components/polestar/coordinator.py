@@ -15,6 +15,7 @@ from homeassistant.core import callback
 from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
+from polestar_api.discovery import ChargeAmpLimits
 from polestar_api.exceptions import AuthError, TokenExpiredError
 from polestar_api.models.availability import Availability
 from polestar_api.models.battery import Battery
@@ -161,6 +162,7 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         self._stream_tasks: dict[str, asyncio.Task[None]] = {}
         self._unsupported_streams: set[str] = set()
         self._unsupported_commands: set[str] = set()
+        self.charge_amp_limits: ChargeAmpLimits | None = None
 
     @staticmethod
     def _command_succeeded(response: Any) -> bool:

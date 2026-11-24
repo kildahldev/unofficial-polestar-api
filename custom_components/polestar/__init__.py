@@ -84,6 +84,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     coordinator = PolestarCoordinator(hass, vehicle, entry)
     try:
+        # Per-car charge current range, as the app uses for its +/- control.
+        coordinator.charge_amp_limits = await api.get_charge_amp_limits(vehicle.vin)
+    except Exception as err:  # noqa: BLE001 - optional; fall back to defaults
+        _LOGGER.debug("Charge amp limits unavailable: %s", err)
+    try:
         await coordinator.async_config_entry_first_refresh()
     except Exception:
         await api.close()

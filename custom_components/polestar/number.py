@@ -14,6 +14,7 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
+from .amp_range import amp_limit_range
 from .const import DOMAIN
 from .coordinator import PolestarCoordinator, PolestarVehicleData
 from .entity import OptimisticStateMixin, PolestarEntity
@@ -48,7 +49,7 @@ NUMBERS: tuple[PolestarNumberDescription, ...] = (
         icon="mdi:current-ac",
         native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
         native_min_value=6,
-        native_max_value=48,  # NA-market P2 has a 48 A onboard charger (#27); the car rejects what it can't do
+        native_max_value=32,  # fallback; the car-reported range overrides this (#27)
         native_step=1,
         value_fn=lambda c: c.data.amp_limit.amperage_limit if c.data and c.data.amp_limit else None,
         set_fn=lambda c, val: c.async_set_amp_limit(int(val)),
@@ -126,6 +127,18 @@ class PolestarNumber(OptimisticStateMixin, PolestarEntity, RestoreEntity, Number
             if mode is not None and mode != ChargeTargetLevelSettingType.CUSTOM:
                 return False
         return super().available
+
+    @property
+    def native_min_value(self) -> float:
+        if self.entity_description.key == "amp_limit":
+            return float(amp_limit_range(self.coordinator.charge_amp_limits)[0])
+        return super().native_min_value
+
+    @property
+    def native_max_value(self) -> float:
+        if self.entity_description.key == "amp_limit":
+            return float(amp_limit_range(self.coordinator.charge_amp_limits)[1])
+        return super().native_max_value
 
     @property
     def native_value(self) -> float | None:

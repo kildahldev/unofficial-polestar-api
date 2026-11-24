@@ -17,6 +17,11 @@ C3_DISCOVERY_URL = "https://cnepmob.volvocars.com/"
 C3_ACCEPT_HEADER = "application/volvo.cloud.cnepmob.v1+json"
 
 APP_BACKEND_GRAPHQL_URL = "https://pc-api.polestar.com/eu-north-1/app-backend/api/graphql"
+# Same "car-information" REST resource the app reads per-car limits from. The
+# app queries both the C3 host (from discovery) and the PCCS host and merges.
+PCCS_API_URL = "https://api.pccs-prod.plstr.io"
+CAR_INFORMATION_PATH = "/car-information/car"
+
 APP_BACKEND_ACCEPT_HEADER = "multipart/mixed;deferSpec=20220824, application/graphql-response+json, application/json"
 APP_BACKEND_OPERATION_NAME = "GetVDMSCars"
 APP_BACKEND_CLIENT_LIBRARY = {"name": "apollo-kotlin", "version": "4.4.1"}
@@ -43,6 +48,15 @@ class GrpcEndpoint:
     host: str
     port: int
     keep_alive_time: int | None = None
+
+
+@dataclass
+class ChargeAmpLimits:
+    """Charge current range the car reports via car-information."""
+
+    supported: bool
+    min_amps: int | None = None
+    max_amps: int | None = None
 
 
 @dataclass
@@ -79,6 +93,49 @@ async def discover_c3_endpoint(access_token: str) -> GrpcEndpoint:
         raise ApiError("C3 discovery response missing grpcHost")
 
     return GrpcEndpoint(host=host, port=int(port), keep_alive_time=keep_alive)
+
+
+async def get_charge_amp_limits(
+    access_token: str, c3_host: str | None, vin: str
+) -> ChargeAmpLimits | None:
+    """Return the car's charge amperage range, or None if no host lists the car.
+
+    Mirrors the app: GET car-information on the C3 host and on the PCCS host
+    and use whichever entry matches the VIN. Hosts that fail are skipped.
+    """
+    urls = [f"https://{c3_host}{CAR_INFORMATION_PATH}"] if c3_host else []
+    urls.append(PCCS_API_URL + CAR_INFORMATION_PATH)
+    headers = {"Authorization": f"Bearer {access_token}", "Accept": "application/json"}
+    async with httpx.AsyncClient(verify=_SSL_CONTEXT, timeout=20) as client:
+        for url in urls:
+            extra = {"x-api-key": ""} if url.startswith(PCCS_API_URL) else {}
+            try:
+                r = await client.get(url, headers={**headers, **extra})
+                if r.status_code != 200:
+                    continue
+                payload = r.json()
+            except (httpx.HTTPError, ValueError):
+                continue
+            entries = payload if isinstance(payload, list) else [payload]
+            for entry in entries:
+                if isinstance(entry, dict) and entry.get("vin") == vin:
+                    return _parse_amp_limits(entry)
+    return None
+
+
+def _parse_amp_limits(entry: dict[str, Any]) -> ChargeAmpLimits:
+    supported = bool(
+        entry.get("supportsGlobalChargeAmperageLimitSetting")
+        or entry.get("supportsChargeAmperageLimitSetting")
+        or entry.get("supportsChargeLocationsChargeAmperageLimitSetting")
+    )
+    lo = entry.get("chargeAmperageMinLimit")
+    hi = entry.get("chargeAmperageMaxLimit")
+    lo = lo if isinstance(lo, int) and not isinstance(lo, bool) and lo > 0 else None
+    hi = hi if isinstance(hi, int) and not isinstance(hi, bool) and hi > 0 else None
+    if lo is not None and hi is not None and lo > hi:
+        lo = hi = None
+    return ChargeAmpLimits(supported=supported, min_amps=lo, max_amps=hi)
 
 
 async def get_vehicles(access_token: str) -> list[VehicleInfo]:
