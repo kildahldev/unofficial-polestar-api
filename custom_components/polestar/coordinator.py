@@ -348,6 +348,7 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         "exterior": "stream_exterior",
         "precleaning": "stream_precleaning",
         "odometer": "stream_odometer",
+        "availability": "stream_availability",
     }
 
     async def async_start_streams(self) -> None:
