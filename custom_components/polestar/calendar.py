@@ -6,7 +6,13 @@ from datetime import datetime, time as dt_time, timedelta
 
 from dateutil.rrule import DAILY, WEEKLY, rrulestr
 
-from homeassistant.components.calendar import CalendarEntity, CalendarEntityFeature, CalendarEvent
+from homeassistant.components.calendar import (
+    EVENT_RRULE,
+    EVENT_START,
+    CalendarEntity,
+    CalendarEntityFeature,
+    CalendarEvent,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
@@ -181,8 +187,8 @@ class PolestarParkingClimateTimerCalendar(PolestarEntity, CalendarEntity):
         current_timer: ParkingClimateTimer | None = None,
     ) -> ParkingClimateTimer:
         """Convert a HA calendar event payload into a parking climate timer."""
-        start_value = _coerce_event_datetime(event.get("start"), "start")
-        weekdays, repeat = _parse_weekdays(start_value, event.get("rrule"))
+        start_value = _coerce_event_datetime(event.get(EVENT_START), "start")
+        weekdays, repeat = _parse_weekdays(start_value, event.get(EVENT_RRULE))
         current_timer = current_timer or self.timer
         return ParkingClimateTimer(
             timer_id="" if current_timer is None else current_timer.timer_id,
