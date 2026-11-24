@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
 from .. import grpc as grpc_call
@@ -34,3 +35,18 @@ class AvailabilityServiceClient:
         if raw.get("availability"):
             return Availability.from_bytes(raw["availability"])
         return None
+
+    async def stream(self) -> AsyncIterator[Availability]:
+        """Stream availability updates."""
+        request = VehicleRequest(vin=self._vin)
+        metadata = await self._connection.get_metadata(self._vin)
+
+        async for data in grpc_call.unary_stream(
+            self._connection.channel,
+            f"{self._svc}/GetAvailability",
+            request.to_bytes(),
+            metadata=metadata,
+        ):
+            raw = decode(data, {3: ("availability", "message")})
+            if raw.get("availability"):
+                yield Availability.from_bytes(raw["availability"])

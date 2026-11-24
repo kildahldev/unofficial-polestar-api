@@ -275,6 +275,11 @@ class Vehicle:
         """Vehicle online status and unavailable reason (power saving, OTA, in use, etc.), or ``None`` if unavailable."""
         return await self._availability.get_latest()
 
+    async def stream_availability(self) -> AsyncIterator[Availability]:
+        """Real-time availability updates, including usage mode changes such as driving."""
+        async for status in self._availability.stream():
+            yield status
+
     # -- Windows --
 
     async def open_windows(self) -> ClimatizationResponse:
