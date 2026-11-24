@@ -1,4 +1,4 @@
-"""Charge override response shapes observed by Hisingen and the existing client."""
+"""Charge override (charge now) response parsing."""
 
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from polestar_api.backend import C3, PCCS
-from polestar_api.codec import decode, encode_int32, encode_message, encode_string
+from polestar_api.codec import decode, encode_int32
 from polestar_api.models.common import ResponseStatusCode
 from polestar_api.services.charge_now import ChargeNowServiceClient
 
@@ -16,24 +16,16 @@ from polestar_api.services.charge_now import ChargeNowServiceClient
     ("start", "StartOverrideChargeTimer"),
     ("stop", "StopOverrideChargeTimer"),
 ])
+# Start/StopOverrideChargeTimerResponse: field 1 = chronos ResponseStatus
+# (UNKNOWN_ERROR 0, SUCCESS 1, VALIDATION_ERROR 2, INTERNAL_ERROR 3, NOT_FOUND 4),
+# per the official app's proto for both C3 and PCCS. Only SUCCESS succeeds.
 @pytest.mark.parametrize("wire,status", [
-    (bytes.fromhex("08 02"), ResponseStatusCode.WARNING),
     (encode_int32(1, 1), ResponseStatusCode.SUCCESS),
-    (encode_int32(1, 3), ResponseStatusCode.ERROR),
-    (encode_int32(1, 99), 99),
-    (encode_message(3, encode_int32(1, 1)), ResponseStatusCode.SUCCESS),
-    (encode_message(3, encode_int32(1, 3)), ResponseStatusCode.ERROR),
-    (encode_string(1, "request") + encode_int32(3, 1), ResponseStatusCode.SUCCESS),
-    (encode_string(1, "request") + encode_int32(3, 2), ResponseStatusCode.SUCCESS),
-    (encode_string(1, "request") + encode_int32(3, 3), ResponseStatusCode.SUCCESS),
-    (encode_string(1, "request") + encode_int32(3, 4), ResponseStatusCode.SUCCESS),
-    (encode_string(1, "request") + encode_int32(3, 8), ResponseStatusCode.SUCCESS),
-    (encode_string(1, "request") + encode_int32(3, 5), ResponseStatusCode.ERROR),
-    (encode_string(1, "request") + encode_int32(3, 6), ResponseStatusCode.ERROR),
-    (encode_string(1, "request") + encode_int32(3, 7), ResponseStatusCode.ERROR),
-    (encode_string(1, "request") + encode_int32(3, 99), ResponseStatusCode.ERROR),
-    (encode_string(1, "request"), ResponseStatusCode.UNDEFINED),
-    (b"", ResponseStatusCode.UNDEFINED),
+    (bytes.fromhex("08 02"), ResponseStatusCode.ERROR),  # VALIDATION_ERROR
+    (encode_int32(1, 3), ResponseStatusCode.ERROR),  # INTERNAL_ERROR
+    (encode_int32(1, 4), ResponseStatusCode.ERROR),  # NOT_FOUND
+    (encode_int32(1, 99), ResponseStatusCode.ERROR),  # unknown future value
+    (b"", ResponseStatusCode.UNDEFINED),  # proto3 default: UNKNOWN_ERROR
 ])
 async def test_override_response(monkeypatch, backend, method, rpc_method, wire, status):
     connection = SimpleNamespace(

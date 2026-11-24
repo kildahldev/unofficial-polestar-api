@@ -6,11 +6,14 @@ from typing import TYPE_CHECKING
 
 from .. import grpc as grpc_call
 from ..codec import decode
-from ..models.common import CHRONOS_SUCCESS_STATES, ChronosStatus, ResponseStatusCode
+from ..models.common import ResponseStatusCode
 from .chronos import wrap_chronos
+
+_CHARGE_NOW_SUCCESS = 1  # chronos ResponseStatus.SUCCESS
 
 if TYPE_CHECKING:
     from ..connection import GrpcConnection
+
 
 class ChargeNowServiceClient:
     def __init__(self, connection: GrpcConnection, vin: str) -> None:
@@ -29,32 +32,17 @@ class ChargeNowServiceClient:
             self._connection.channel, f"{self._svc}/{method}",
             wrap_chronos(self._vin), metadata=metadata,
         )
-        raw = decode(data)
-        # Some backends return the response status directly at field 1 (e.g.
-        # 08 02). Keep the existing status-code contract for HA's command handler.
-        status = raw.get(1)
-        if isinstance(status, int):
-            return status
-
-        payload = raw.get(3)
-        if isinstance(payload, bytes):
-            inner = decode(payload, {1: ("status", "int32")})
-            status = inner.get("status", 0)
-            return status if isinstance(status, int) else 0
-
-        # The flat Chronos variant uses field 3 for a delivery lifecycle, which
-        # must be normalized rather than confused with ResponseStatusCode.
-        if isinstance(payload, int):
-            try:
-                lifecycle = ChronosStatus(payload)
-            except ValueError:
-                lifecycle = ChronosStatus.UNKNOWN_ERROR
-            return (
-                ResponseStatusCode.SUCCESS
-                if lifecycle in CHRONOS_SUCCESS_STATES
-                else ResponseStatusCode.ERROR
-            )
-        return ResponseStatusCode.UNDEFINED
+        # Start/StopOverrideChargeTimerResponse is a single field: 1 = status,
+        # using the chronos ResponseStatus enum (UNKNOWN_ERROR 0, SUCCESS 1,
+        # VALIDATION_ERROR 2, INTERNAL_ERROR 3, NOT_FOUND 4) on both C3 and PCCS.
+        # That enum is not ResponseStatusCode (where 2 means WARNING and counts
+        # as success), so map it: only SUCCESS succeeds, everything else is an error.
+        status = decode(data, {1: ("status", "int32")}).get("status")
+        if not isinstance(status, int):
+            return ResponseStatusCode.UNDEFINED
+        if status == _CHARGE_NOW_SUCCESS:
+            return ResponseStatusCode.SUCCESS
+        return ResponseStatusCode.ERROR
 
     async def start(self) -> int:
         """Start charging now (override timer). Returns status code."""
