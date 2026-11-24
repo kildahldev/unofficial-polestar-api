@@ -42,6 +42,7 @@ from polestar_api.models.climate import (
     ClimatizationRunningStatus,
     HeatOrCoolAction,
 )
+from polestar_api.models.climatization import HeatingIntensity
 from polestar_api.models.health import (
     BrakeFluidLevelWarning,
     LowVoltageBatteryWarning,
@@ -62,6 +63,14 @@ def _safe(fn: Callable[[PolestarVehicleData], Any], data: PolestarVehicleData) -
         return fn(data)
     except (AttributeError, TypeError, ValueError):
         return None
+
+
+def _heating_intensity_name(value: HeatingIntensity | None) -> str | None:
+    if value is None:
+        return None
+    if value in (HeatingIntensity.UNSPECIFIED, HeatingIntensity.OFF):
+        return "off"
+    return value.name.lower()
 
 
 def _current_charge_location_state(data: PolestarVehicleData) -> str | None:
@@ -251,7 +260,7 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
-        value_fn=lambda d: (d.dashboard.dashboard_data.trip_meter_auto_km if d.dashboard and d.dashboard.dashboard_data else None) or (d.odometer.trip_meter_automatic_km if d.odometer and d.odometer.trip_meter_automatic_km else None),
+        value_fn=lambda d: (d.dashboard.dashboard_data.trip_meter_auto_km if d.dashboard and d.dashboard.dashboard_data else None) or (d.odometer.trip_meter_automatic_km if d.odometer and d.odometer.trip_meter_automatic_km is not None else None),
     ),
     PolestarSensorDescription(
         key="heading",
@@ -319,8 +328,8 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         name="Washer fluid warning",
         device_class=SensorDeviceClass.ENUM,
         entity_category=EntityCategory.DIAGNOSTIC,
-        options=enum_options(WasherFluidLevelWarning),
-        value_fn=lambda d: enum_name(d.health.washer_fluid_level_warning) if d.health else None,
+        options=enum_options(WasherFluidLevelWarning, exclude_unspecified=False),
+        value_fn=lambda d: enum_name(d.health.washer_fluid_level_warning, allow_unspecified=True) if d.health else None,
     ),
     PolestarSensorDescription(
         key="low_voltage_battery_warning",
@@ -453,6 +462,62 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfTime.MINUTES,
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d: d.climate.time_remaining if d.climate else None,
+    ),
+    PolestarSensorDescription(
+        key="climate_current_temperature",
+        name="Climate current temperature",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda d: d.climate.current_temperature_celsius if d.climate else None,
+    ),
+    PolestarSensorDescription(
+        key="climate_target_temperature",
+        name="Climate target temperature",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda d: d.climate.target_temperature_celsius if d.climate else None,
+    ),
+    PolestarSensorDescription(
+        key="climate_front_left_seat",
+        name="Climate front left seat",
+        device_class=SensorDeviceClass.ENUM,
+        options=["off", "level1", "level2", "level3"],
+        icon="mdi:car-seat-heater",
+        value_fn=lambda d: _heating_intensity_name(d.climate.front_left_seat) if d.climate else None,
+    ),
+    PolestarSensorDescription(
+        key="climate_front_right_seat",
+        name="Climate front right seat",
+        device_class=SensorDeviceClass.ENUM,
+        options=["off", "level1", "level2", "level3"],
+        icon="mdi:car-seat-heater",
+        value_fn=lambda d: _heating_intensity_name(d.climate.front_right_seat) if d.climate else None,
+    ),
+    PolestarSensorDescription(
+        key="climate_rear_left_seat",
+        name="Climate rear left seat",
+        device_class=SensorDeviceClass.ENUM,
+        options=["off", "level1", "level2", "level3"],
+        icon="mdi:car-seat-heater",
+        value_fn=lambda d: _heating_intensity_name(d.climate.rear_left_seat) if d.climate else None,
+    ),
+    PolestarSensorDescription(
+        key="climate_rear_right_seat",
+        name="Climate rear right seat",
+        device_class=SensorDeviceClass.ENUM,
+        options=["off", "level1", "level2", "level3"],
+        icon="mdi:car-seat-heater",
+        value_fn=lambda d: _heating_intensity_name(d.climate.rear_right_seat) if d.climate else None,
+    ),
+    PolestarSensorDescription(
+        key="climate_steering_wheel",
+        name="Climate steering wheel",
+        device_class=SensorDeviceClass.ENUM,
+        options=["off", "level1", "level2", "level3"],
+        icon="mdi:steering",
+        value_fn=lambda d: _heating_intensity_name(d.climate.steering_wheel) if d.climate else None,
     ),
     PolestarSensorDescription(
         key="availability_unavailable_reason",

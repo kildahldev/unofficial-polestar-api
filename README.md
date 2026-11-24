@@ -54,15 +54,51 @@ See the [HA integration README](ha_integration_README.md) for setup, entities, s
 - **Honk & flash** — flash lights or honk+flash
 - **Windows** — open/close all windows
 - **Exterior** — door, window, sunroof, hood, tailgate, and alarm status.
-- **Charging** — target SOC, amp limit, charge timers, start/stop immediate charging *(amp limit appears to be unavailable on Polestar 4)*
+- **Charging** — target SOC, amp limit, charge timers, start/stop immediate charging
 - **Charge locations** — full CRUD for saved locations with per-location amp limits, min SOC, timers, departure times, and smart charging
-- **Health** — service warnings, fluid levels, tyre pressures (kPa), all exterior light warnings, 12V battery *(Tyre pressure is unavailable on Polestar 2 as it does not have TPMS)*
+- **Health** — service warnings, fluid levels, tyre pressures (kPa), all exterior light warnings, 12V battery
 - **Availability** — vehicle online status with unavailable reason
 - **Weather** — temperature at car location
-- **OTA** — software update info, scheduling, install now, cancel *(Appears to be unavailable on Polestar 4)*
-- **Pre-cleaning** — air quality status (PM2.5, AQI) and start/stop cabin pre-cleaning *(Appears to be unavailable on Polestar 4)*
+- **OTA** — software update info, scheduling, install now, cancel
+- **Pre-cleaning** — air quality status (PM2.5, AQI) and start/stop cabin pre-cleaning
 
 For the full API reference with all methods, models, and enums, see the [docs](https://kildahldev.github.io/unofficial-polestar-api/).
+
+### Feature availability by model
+
+Not all features are available on all models. Unsupported commands are
+detected at runtime — the corresponding HA entities become unavailable
+automatically and re-enable if a future software update adds support.
+
+| Feature | Polestar 2 | Polestar 3 | Polestar 4 |
+|---------|:----------:|:----------:|:----------:|
+| Battery | ✅ | ✅ | ✅ |
+| Location / parked location | ✅ | ✅ | ✅ |
+| Climate (start/stop/temp/seats) | ✅ | ✅ | ✅ |
+| Climate timers (list) | ✅ | ✅ | ✅ |
+| Climate timer settings | ✅ | ✅ | ❌ |
+| Lock / unlock | ✅ | ✅ | ✅ |
+| Trunk unlock | ✅ | ✅ | ✅ |
+| Honk & flash | ✅ | ✅ | ✅ |
+| Windows open/close | ✅ | ✅ | ❌ |
+| Exterior status | ✅ | ✅ | ✅ |
+| Charging start/stop | ✅ | ✅ | ✅ |
+| Target SOC | ✅ | ✅ | ✅ |
+| Amp limit | ✅ | ✅ | ❌ |
+| Charge timer | ✅ | ✅ | ✅ |
+| Charge locations | ✅ | ✅ | ✅ |
+| Health (tyre pressures) | ❌ (no TPMS) | ✅ | ✅ |
+| Availability | ✅ | ✅ | ✅ |
+| Weather | ✅ | ✅ | ✅ |
+| OTA software info | ✅ | ✅ | ✅ |
+| OTA schedule / install / cancel | ✅ | ✅ | ❓ |
+| Pre-cleaning | ✅ | ✅ | ✅ |
+| Dashboard (legacy PCCS) | ✅ | ❌ | ❌ |
+| Connectivity (legacy PCCS) | ✅ | ❌ | ❌ |
+
+> **Note:** Availability was tested on a Polestar 4 (software version as of Jul 2026).
+> Polestar 2 and 3 columns are based on community reports and may vary by
+> software version. Please report back what works and what doesn't for your model.
 
 ## FAQ
 

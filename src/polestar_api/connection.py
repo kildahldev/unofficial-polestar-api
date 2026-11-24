@@ -5,6 +5,7 @@ from __future__ import annotations
 import ssl
 from typing import TYPE_CHECKING
 
+import grpclib.client
 import grpclib.metadata
 from grpclib.client import Channel
 from grpclib.config import Configuration
@@ -16,7 +17,10 @@ if TYPE_CHECKING:
     from .auth import AuthManager
 
 # The C3 server rejects non-Java gRPC user agents with UNIMPLEMENTED.
+# grpclib.client imports USER_AGENT by value at module load, so we must
+# patch both the metadata module and the client module's binding.
 grpclib.metadata.USER_AGENT = "grpc-java-okhttp/1.68.2"
+grpclib.client.USER_AGENT = "grpc-java-okhttp/1.68.2"
 
 # Create SSL context at import time to avoid blocking the event loop.
 _SSL_CONTEXT = ssl.create_default_context()
