@@ -54,7 +54,7 @@ class FakeCoordinator:
 
 
 class FakeTokenStore:
-    def __init__(self, hass, entry_id) -> None:
+    def __init__(self, hass, entry_id, email=None) -> None:
         pass
 
     async def remove(self) -> None:

@@ -70,29 +70,39 @@ class PolestarOtaUpdate(PolestarEntity, UpdateEntity, RestoreEntity):
 
     @property
     def available(self) -> bool:
-        return super().available and self.coordinator.data is not None and self.coordinator.data.software is not None
+        if not super().available or self.coordinator.data is None:
+            return False
+        return self.coordinator.data.software is not None or self.coordinator.data.mycars is not None
 
     @property
     def installed_version(self) -> str | None:
         if self.coordinator.installed_version_cache:
             return self.coordinator.installed_version_cache
+        data = self.coordinator.data
         if (
-            self.coordinator.data
-            and self.coordinator.data.software
-            and self.coordinator.data.software.state in {
+            data
+            and data.software
+            and data.software.new_sw_version
+            and data.software.state in {
                 SoftwareState.UNKNOWN,
                 SoftwareState.INSTALLATION_COMPLETED,
                 SoftwareState.INSTALLATION_UNKNOWN,
             }
         ):
-            return self.coordinator.data.software.new_sw_version or None
+            return data.software.new_sw_version
+        if data and data.mycars and data.mycars.details:
+            return data.mycars.details.installed_software_version or None
         return None
 
     @property
     def latest_version(self) -> str | None:
-        if self.coordinator.data and self.coordinator.data.software:
-            return self.coordinator.data.software.new_sw_version or None
-        return None
+        if self.coordinator.data and self.coordinator.data.software and self.coordinator.data.software.new_sw_version:
+            return self.coordinator.data.software.new_sw_version
+        # No pending OTA update advertised (OtaDiscoveryService returns
+        # empty when nothing is queued) — fall back to installed_version
+        # so the entity reads "up to date" rather than showing a blank
+        # latest_version with a real installed_version.
+        return self.installed_version
 
     @property
     def in_progress(self) -> bool | int:

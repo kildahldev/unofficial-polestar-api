@@ -27,6 +27,7 @@ from .models.exterior import ExteriorStatus
 from .models.health import Health
 from .models.honkflash import HonkFlashAction, HonkAndFlashResponse
 from .models.locks import CarLockResponse, CarUnlockResponse, LockAlarmLevel, LockFeedback, UnlockFeedback, TrunkUnlockResponse
+from .models.mycars import MyCarEntry
 from .models.odometer import OdometerStatus
 from .models.wakeup import WakeUpReason, WakeUpResponse
 from .models.weather import WeatherReport
@@ -43,6 +44,7 @@ from .services.exterior import ExteriorServiceClient
 from .services.health import HealthServiceClient
 from .services.invocation import InvocationServiceClient
 from .services.location import LocationServiceClient
+from .services.mycars import MyCarsServiceClient
 from .services.odometer import OdometerServiceClient
 from .services.ota import OtaServiceClient
 from .services.parking_climate_timer import ParkingClimateTimerServiceClient
@@ -85,6 +87,7 @@ class Vehicle:
         self._health = HealthServiceClient(connection, vin)
         self._invocation = InvocationServiceClient(connection, vin)
         self._location = LocationServiceClient(connection, vin)
+        self._mycars = MyCarsServiceClient(connection, vin)
         self._odometer = OdometerServiceClient(connection, vin)
         self._ota = OtaServiceClient(connection, vin)
         self._parking_climate_timer = ParkingClimateTimerServiceClient(connection, vin)
@@ -342,6 +345,17 @@ class Vehicle:
     async def get_weather(self) -> WeatherReport | None:
         """Temperature at the car's current location, or ``None`` if unavailable."""
         return await self._weather.get_report()
+
+    # -- MyCars --
+
+    async def get_mycars(self) -> MyCarEntry | None:
+        """Vehicle identity + installed software version.
+
+        Unlike get_software_info() below, this reports the currently
+        installed version regardless of whether an OTA update is pending —
+        see MyCarsServiceClient's docstring for why the two differ.
+        """
+        return await self._mycars.get_mycars()
 
     # -- OTA --
 

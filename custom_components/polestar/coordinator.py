@@ -36,6 +36,7 @@ from polestar_api.models.dashboard import DashboardStatus
 from polestar_api.models.exterior import ExteriorStatus
 from polestar_api.models.health import Health
 from polestar_api.models.invocation import InvocationStatus
+from polestar_api.models.mycars import MyCarEntry
 from polestar_api.models.odometer import OdometerStatus
 from polestar_api.models.ota import CarSoftwareInfo, Scheduler, SoftwareState
 from polestar_api.models.parking_climate_timer import (
@@ -99,6 +100,7 @@ class PolestarVehicleData:
     weather: WeatherReport | None = None
     software: CarSoftwareInfo | None = None
     ota_schedule: Scheduler | None = None
+    mycars: MyCarEntry | None = None
     target_soc: TargetSocResponse | None = None
     amp_limit: AmpLimitResponse | None = None
     charge_timer: ChargeTimerResponse | None = None
@@ -122,6 +124,7 @@ _FETCH_ATTRS: tuple[tuple[str, str], ...] = (
     ("weather", "get_weather"),
     ("software", "get_software_info"),
     ("ota_schedule", "get_ota_schedule"),
+    ("mycars", "get_mycars"),
     ("target_soc", "get_target_soc"),
     ("amp_limit", "get_amp_limit"),
     ("charge_timer", "get_charge_timer"),
@@ -301,7 +304,7 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
             raise UpdateFailed("All API calls failed")
 
         data = PolestarVehicleData(**values)
-        self._update_installed_version_cache(data.software)
+        self._update_installed_version_cache(data.software, data.mycars)
         self._unsupported_commands.clear()
         self._restart_dead_streams()
         return data
@@ -318,8 +321,8 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
             return
 
         data = replace(previous, **values)
-        if "software" in values:
-            self._update_installed_version_cache(data.software)
+        if "software" in values or "mycars" in values:
+            self._update_installed_version_cache(data.software, data.mycars)
         self._async_push_data(data)
 
     @callback
@@ -747,13 +750,20 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
             return software.software_id
         raise HomeAssistantError("No OTA software id is available for this vehicle")
 
-    def _update_installed_version_cache(self, software: CarSoftwareInfo | None) -> None:
+    def _update_installed_version_cache(
+        self, software: CarSoftwareInfo | None, mycars: MyCarEntry | None = None,
+    ) -> None:
         """Track the best known installed version for OTA entity state."""
-        if software is None or not software.new_sw_version:
-            return
-        if software.state in {
-            SoftwareState.UNKNOWN,
-            SoftwareState.INSTALLATION_COMPLETED,
-            SoftwareState.INSTALLATION_UNKNOWN,
-        }:
+        if (
+            software is not None
+            and software.new_sw_version
+            and software.state in {
+                SoftwareState.UNKNOWN,
+                SoftwareState.INSTALLATION_COMPLETED,
+                SoftwareState.INSTALLATION_UNKNOWN,
+            }
+        ):
             self._installed_version_cache = software.new_sw_version
+            return
+        if mycars is not None and mycars.details and mycars.details.installed_software_version:
+            self._installed_version_cache = mycars.details.installed_software_version

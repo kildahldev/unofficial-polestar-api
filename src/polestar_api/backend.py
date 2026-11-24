@@ -38,6 +38,10 @@ class BackendProfile:
     weather_svc: str = "/weather.WeatherService"
     ota_discovery_svc: str = "/ota_mobcache.OtaDiscoveryService"
     ota_scheduler_svc: str = "/ota_mobcache.SchedulerService"
+    # Vehicle identity + installed software version. Confirmed C3-only,
+    # live-tested end to end (not inferred by analogy like most of the
+    # others above) — see pypolestar/pypolestar#79.
+    mycars_svc: str = "/car_information.CarInformation"
 
 
 C3 = BackendProfile()

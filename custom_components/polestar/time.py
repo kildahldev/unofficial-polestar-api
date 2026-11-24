@@ -8,7 +8,6 @@ from datetime import time as dt_time
 from homeassistant.components.time import TimeEntity, TimeEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
@@ -28,14 +27,12 @@ TIMES: tuple[PolestarTimeDescription, ...] = (
         key="charge_timer_start",
         name="Charge timer start",
         icon="mdi:clock-start",
-        entity_category=EntityCategory.CONFIG,
         value_attr="start",
     ),
     PolestarTimeDescription(
         key="charge_timer_stop",
         name="Charge timer stop",
         icon="mdi:clock-end",
-        entity_category=EntityCategory.CONFIG,
         value_attr="stop",
     ),
 )

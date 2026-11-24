@@ -7,12 +7,18 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigEntryState,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 
 from polestar_api import PolestarApi
 from polestar_api.auth import MemoryTokenStore
-from polestar_api.exceptions import AuthError
+from polestar_api.exceptions import ApiError, AuthError
 
 from .const import CONF_DEMO, CONF_UPDATE_INTERVAL, CONF_VIN, DEFAULT_UPDATE_INTERVAL, DOMAIN
 
@@ -28,8 +34,11 @@ CREDENTIALS_SCHEMA = vol.Schema(
     }
 )
 
-REAUTH_SCHEMA = vol.Schema(
+# Used by both reauth and reconfigure: the email may need to change as well as
+# the password, e.g. when the Polestar ID email address itself was changed.
+UPDATE_CREDENTIALS_SCHEMA = vol.Schema(
     {
+        vol.Required(CONF_EMAIL): str,
         vol.Required(CONF_PASSWORD): str,
     }
 )
@@ -236,46 +245,119 @@ class PolestarConfigFlow(ConfigFlow, domain=DOMAIN):
             ),
         )
 
+    async def _async_validate_credentials(
+        self, email: str, password: str, vin: str
+    ) -> str | None:
+        """Check the credentials work and can access ``vin``.
+
+        Returns an error key for the form, or ``None`` if the credentials are
+        valid for this vehicle.
+        """
+        api = PolestarApi(email, password, token_store=MemoryTokenStore())
+        try:
+            await api.async_init()
+            try:
+                vehicles = await api.get_vehicles()
+            except ApiError:
+                # Same tolerance as setup: the vehicle list is best-effort, so
+                # a lookup failure must not lock the user out of fixing their
+                # credentials. Access is validated at runtime instead.
+                _LOGGER.debug("Vehicle list lookup failed; skipping VIN check")
+                return None
+        except AuthError:
+            return "invalid_auth"
+        except Exception:
+            _LOGGER.exception("Unexpected error validating credentials")
+            return "cannot_connect"
+        finally:
+            try:
+                await api.close()
+            except Exception:
+                pass
+
+        # An empty list is normal for secondary users / guests (see setup), so
+        # only reject when the account lists vehicles and none is ours.
+        if vehicles and not any(v.vin == vin for v in vehicles):
+            return "vin_mismatch"
+        return None
+
+    async def _async_update_credentials(
+        self, entry: ConfigEntry, email: str, password: str
+    ) -> None:
+        """Store new credentials on the existing entry and apply them.
+
+        The entry (and its unique ID, the VIN) is kept, so entities, history
+        and dashboards carry over unchanged.
+        """
+        self.hass.config_entries.async_update_entry(
+            entry,
+            data={**entry.data, CONF_EMAIL: email, CONF_PASSWORD: password},
+        )
+        # A loaded entry has an update listener that reloads it already; only
+        # entries in a failed/retry state need an explicit reload.
+        if entry.state is not ConfigEntryState.LOADED:
+            await self.hass.config_entries.async_reload(entry.entry_id)
+
+    def _credentials_form(
+        self,
+        step_id: str,
+        entry: ConfigEntry,
+        user_input: dict[str, Any] | None,
+        errors: dict[str, str],
+    ) -> ConfigFlowResult:
+        # Pre-fill the email (or what the user last typed) but never the password.
+        suggested = {CONF_EMAIL: (user_input or entry.data)[CONF_EMAIL]}
+        return self.async_show_form(
+            step_id=step_id,
+            data_schema=self.add_suggested_values_to_schema(
+                UPDATE_CREDENTIALS_SCHEMA, suggested
+            ),
+            errors=errors,
+        )
+
     async def async_step_reauth(
         self, entry_data: dict[str, Any]
     ) -> ConfigFlowResult:
-        self._email = entry_data[CONF_EMAIL]
         return await self.async_step_reauth_confirm()
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
+        """Re-enter credentials; both email and password can be changed."""
+        entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
         errors: dict[str, str] = {}
 
         if user_input is not None:
+            email = user_input[CONF_EMAIL].strip()
             password = user_input[CONF_PASSWORD]
-            api = PolestarApi(self._email, password, token_store=MemoryTokenStore())
-            try:
-                await api.async_init()
-            except AuthError:
-                errors["base"] = "invalid_auth"
-            except Exception:
-                _LOGGER.exception("Unexpected error during reauth")
-                errors["base"] = "cannot_connect"
-            else:
-                await api.close()
-                entry = self.hass.config_entries.async_get_entry(
-                    self.context["entry_id"]
-                )
-                self.hass.config_entries.async_update_entry(
-                    entry,
-                    data={**entry.data, CONF_PASSWORD: password},
-                )
-                await self.hass.config_entries.async_reload(entry.entry_id)
+            error = await self._async_validate_credentials(
+                email, password, entry.data[CONF_VIN]
+            )
+            if error is None:
+                await self._async_update_credentials(entry, email, password)
                 return self.async_abort(reason="reauth_successful")
-            finally:
-                try:
-                    await api.close()
-                except Exception:
-                    pass
+            errors["base"] = error
 
-        return self.async_show_form(
-            step_id="reauth_confirm",
-            data_schema=REAUTH_SCHEMA,
-            errors=errors,
-        )
+        return self._credentials_form("reauth_confirm", entry, user_input, errors)
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Change the account email and/or password for the same vehicle."""
+        entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
+        if entry.data.get(CONF_DEMO):
+            return self.async_abort(reason="demo_mode")
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            email = user_input[CONF_EMAIL].strip()
+            password = user_input[CONF_PASSWORD]
+            error = await self._async_validate_credentials(
+                email, password, entry.data[CONF_VIN]
+            )
+            if error is None:
+                await self._async_update_credentials(entry, email, password)
+                return self.async_abort(reason="reconfigure_successful")
+            errors["base"] = error
+
+        return self._credentials_form("reconfigure", entry, user_input, errors)
