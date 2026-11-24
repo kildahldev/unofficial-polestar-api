@@ -422,14 +422,16 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         key="software_version",
         name="Software version",
         icon="mdi:update",
-        # OTA discovery (d.software) only reports a *pending* update and
-        # comes back empty when nothing is queued — it can't say what's
-        # currently installed on a car that's already up to date. MyCars
-        # (d.mycars) always reports the installed version regardless.
-        # Prefer OTA's value when present (it may reflect an in-progress
-        # install's target version), fall back to MyCars otherwise.
-        value_fn=lambda d: (d.software.new_sw_version if d.software else None)
-        or (d.mycars.details.installed_software_version if d.mycars and d.mycars.details else None),
+        # Installed version. MyCars reports what's on the car (same source
+        # as the app's Garage screen). OTA discovery's new_sw_version is the
+        # *offered* update, so only trust it once the install has completed.
+        value_fn=lambda d: (
+            d.mycars.details.installed_software_version
+            if d.mycars and d.mycars.details and d.mycars.details.installed_software_version
+            else d.software.new_sw_version
+            if d.software and d.software.state == SoftwareState.INSTALLATION_COMPLETED
+            else None
+        ),
     ),
     PolestarSensorDescription(
         key="model_year",

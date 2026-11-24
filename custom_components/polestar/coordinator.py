@@ -755,7 +755,14 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
     def _update_installed_version_cache(
         self, software: CarSoftwareInfo | None, mycars: MyCarEntry | None = None,
     ) -> None:
-        """Track the best known installed version for OTA entity state."""
+        """Track the best known installed version for OTA entity state.
+
+        MyCars is the installed version; OTA discovery only reports the
+        offered one, which equals installed once the install completes.
+        """
+        if mycars is not None and mycars.details and mycars.details.installed_software_version:
+            self._installed_version_cache = mycars.details.installed_software_version
+            return
         if (
             software is not None
             and software.new_sw_version
@@ -766,6 +773,3 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
             }
         ):
             self._installed_version_cache = software.new_sw_version
-            return
-        if mycars is not None and mycars.details and mycars.details.installed_software_version:
-            self._installed_version_cache = mycars.details.installed_software_version

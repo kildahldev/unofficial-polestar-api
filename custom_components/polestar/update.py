@@ -79,6 +79,8 @@ class PolestarOtaUpdate(PolestarEntity, UpdateEntity, RestoreEntity):
         if self.coordinator.installed_version_cache:
             return self.coordinator.installed_version_cache
         data = self.coordinator.data
+        if data and data.mycars and data.mycars.details and data.mycars.details.installed_software_version:
+            return data.mycars.details.installed_software_version
         if (
             data
             and data.software
@@ -90,8 +92,6 @@ class PolestarOtaUpdate(PolestarEntity, UpdateEntity, RestoreEntity):
             }
         ):
             return data.software.new_sw_version
-        if data and data.mycars and data.mycars.details:
-            return data.mycars.details.installed_software_version or None
         return None
 
     @property
