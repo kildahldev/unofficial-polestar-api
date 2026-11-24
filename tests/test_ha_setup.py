@@ -8,9 +8,14 @@ import types
 from pathlib import Path
 from types import SimpleNamespace
 
+import httpx
 import pytest
 
 from polestar_api.exceptions import ApiError, AuthError
+
+
+class FakeConfigEntryNotReady(Exception):
+    pass
 
 
 class FakeConfigEntryAuthFailed(Exception):
@@ -89,6 +94,7 @@ def _load_component(monkeypatch):
         monkeypatch,
         "homeassistant.exceptions",
         ConfigEntryAuthFailed=FakeConfigEntryAuthFailed,
+        ConfigEntryNotReady=FakeConfigEntryNotReady,
     )
 
     package_name = "_polestar_component_under_test"
@@ -126,7 +132,7 @@ def _load_component(monkeypatch):
     return module
 
 
-def _fake_api_class(error: Exception):
+def _fake_api_class(error: Exception, init_error: Exception | None = None):
     class FakeApi:
         instances = []
 
@@ -136,7 +142,8 @@ def _fake_api_class(error: Exception):
             self.instances.append(self)
 
         async def async_init(self) -> None:
-            return None
+            if init_error is not None:
+                raise init_error
 
         async def get_vehicles(self):
             raise error
@@ -170,6 +177,29 @@ async def test_non_api_errors_close_client_and_propagate(monkeypatch, error):
 
     expected = FakeConfigEntryAuthFailed if isinstance(error, AuthError) else RuntimeError
     with pytest.raises(expected):
+        await component.async_setup_entry(FakeHass(), FakeEntry())
+
+    assert api_class.instances[0].closed is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "init_error",
+    [
+        httpx.ConnectTimeout("dns not ready"),
+        httpx.ConnectError("network unreachable"),
+        ApiError("C3 discovery failed: 503", 503),
+        TimeoutError(),
+        OSError("Network is unreachable"),
+    ],
+)
+async def test_network_errors_during_init_are_retried(monkeypatch, init_error):
+    """#39: network trouble at startup raises ConfigEntryNotReady so HA retries."""
+    component = _load_component(monkeypatch)
+    api_class = _fake_api_class(RuntimeError("unused"), init_error=init_error)
+    monkeypatch.setattr(component, "PolestarApi", api_class)
+
+    with pytest.raises(FakeConfigEntryNotReady):
         await component.async_setup_entry(FakeHass(), FakeEntry())
 
     assert api_class.instances[0].closed is True

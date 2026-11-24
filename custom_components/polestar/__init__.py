@@ -5,17 +5,19 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+import httpx
+
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 
 from .const import CONF_DEMO, CONF_VIN, DOMAIN, PLATFORMS
 from .coordinator import PolestarCoordinator
 from .demo import DemoVehicle
 from polestar_api import PolestarApi, Vehicle
-from polestar_api.exceptions import ApiError, AuthError
+from polestar_api.exceptions import ApiError, AuthError, NetworkError
 from .services import async_register_services, async_unregister_services
 from .token_store import HassTokenStore
 
@@ -50,6 +52,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except AuthError as err:
         await api.close()
         raise ConfigEntryAuthFailed(str(err)) from err
+    except (httpx.HTTPError, NetworkError, ApiError, TimeoutError, OSError) as err:
+        # Network down / DNS not ready / Polestar unreachable at startup:
+        # let HA retry the setup instead of failing for good.
+        await api.close()
+        raise ConfigEntryNotReady(f"Polestar not reachable: {type(err).__name__}") from err
     except Exception:
         await api.close()
         raise
@@ -67,7 +74,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         vehicle = Vehicle(vin=configured_vin, connection=api._connection)
 
     coordinator = PolestarCoordinator(hass, vehicle, entry)
-    await coordinator.async_config_entry_first_refresh()
+    try:
+        await coordinator.async_config_entry_first_refresh()
+    except Exception:
+        await api.close()
+        raise
     await coordinator.async_start_streams()
     coordinators: dict[str, PolestarCoordinator] = {vehicle.vin: coordinator}
 
