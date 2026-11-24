@@ -8,6 +8,6 @@
   "integration_type": "device",
   "iot_class": "cloud_push",
   "issue_tracker": "https://github.com/kildahldev/unofficial-polestar-api/issues",
-  "requirements": ["unofficial-polestar-api==0.3.1"],
-  "version": "0.3.2"
+  "requirements": ["unofficial-polestar-api==0.4.0b1"],
+  "version": "0.4.0-beta.1"
 }
