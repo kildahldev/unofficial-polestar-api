@@ -19,12 +19,14 @@ Not all features are available on all models. Look at the features list for some
 
 ### Home Assistant
 
-Requires [HACS](https://hacs.xyz/) installed on your Home Assistant instance.
+[![Open your Home Assistant instance and open the repository](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=kildahldev&repository=unofficial-polestar-api&category=integration)
 
-1. In HA, go to **HACS → ⋮ (top right) → Custom repositories**
-2. Paste `kildahldev/unofficial-polestar-api` and select **Integration**
-3. Click **Add**, then find **Unofficial Polestar** in HACS and click **Download**
-4. Restart Home Assistant
+Unofficial Polestar is in the default community store, so you don't need to add a custom repository.
+
+- **Home Assistant 2026.11 or newer:** go to **Settings → Marketplace**, search for **Unofficial Polestar** and select **Install**.
+- **Older versions:** install [HACS](https://hacs.xyz/), then open **HACS**, search for **Unofficial Polestar**, click **Download** and restart Home Assistant.
+
+**Beta versions:** in the Marketplace, open Unofficial Polestar → ⋮ → **Include pre-releases**. In HACS, use ⋮ → **Redownload**, turn on **Show beta versions** and pick the beta.
 
 Then add the integration via **Settings → Devices & Services → Add Integration → Polestar**. Enter your Polestar ID email and password — the integration discovers the cars on your account and lets you **pick your vehicle from a list** and set the polling interval. Each config entry sets up one vehicle — to add more than one car, add the integration again and pick the other vehicle.
 
