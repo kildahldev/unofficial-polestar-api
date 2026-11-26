@@ -6,6 +6,11 @@ Dates are 2026.
 
 ## Unreleased
 
+### Fixed
+
+- **Sign-in works again.** Since 26 November Polestar ID hands the login over to a new Keycloak page on `auth.polestar.com`, so every new setup and reauth failed with "Could not find resume path in auth response". The integration now signs in on that page and follows the redirects back to the app. The old login page is still supported if Polestar switches back. Refresh tokens and the token exchange are unchanged. Upstream fix by TheOriginal92 ([kildahldev/unofficial-polestar-api#47](https://github.com/kildahldev/unofficial-polestar-api/pull/47)), tested upstream on a Polestar 4 and with simulated replies here, not yet on our Polestar 2.
+- **One-time code (2FA) prompt:** if Polestar asks for a one-time code after the password, the setup and reauth forms now say so ("sign in once at polestar.com with this account, then try again") instead of "Invalid email or password". Entering the code in Home Assistant is not supported.
+
 ### Changed
 
 - **README rewritten** for this project (it was still the upstream library's README), with an unofficial and unsupported warning that points to Polestar's official Data Portal where it is available. The separate integration README is folded into it.

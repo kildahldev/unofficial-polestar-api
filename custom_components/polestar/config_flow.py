@@ -12,7 +12,7 @@ from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 
 from polestar_api import PolestarApi
 from polestar_api.auth import MemoryTokenStore
-from polestar_api.exceptions import AuthError
+from polestar_api.exceptions import AuthError, MfaRequiredError
 
 from .utils import entry_title
 from .const import (
@@ -155,6 +155,8 @@ class PolestarConfigFlow(ConfigFlow, domain=DOMAIN):
             try:
                 await api.async_init()
                 vehicles = await api.get_vehicles()
+            except MfaRequiredError:
+                errors["base"] = "mfa_required"
             except AuthError:
                 errors["base"] = "invalid_auth"
             except Exception:
@@ -291,6 +293,8 @@ class PolestarConfigFlow(ConfigFlow, domain=DOMAIN):
             api = PolestarApi(self._email, password, token_store=MemoryTokenStore())
             try:
                 await api.async_init()
+            except MfaRequiredError:
+                errors["base"] = "mfa_required"
             except AuthError:
                 errors["base"] = "invalid_auth"
             except Exception:
@@ -336,6 +340,8 @@ class PolestarConfigFlow(ConfigFlow, domain=DOMAIN):
             api = PolestarApi(email, password, token_store=MemoryTokenStore())
             try:
                 await api.async_init()
+            except MfaRequiredError:
+                errors["base"] = "mfa_required"
             except AuthError:
                 errors["base"] = "invalid_auth"
             except Exception:

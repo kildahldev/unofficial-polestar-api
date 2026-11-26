@@ -13,6 +13,10 @@ class TokenExpiredError(AuthError):
     """Token has expired and refresh failed."""
 
 
+class MfaRequiredError(AuthError):
+    """Polestar ID asked for a one-time code (2FA) that cannot be answered here."""
+
+
 class ApiError(PolestarError):
     """An API call failed."""
 

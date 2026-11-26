@@ -184,7 +184,7 @@ A design for sharing this library with Volvo C3 is in the [Volvo C3 repository](
 
 ## Credits
 
-This started as a fork of [kildahldev/unofficial-polestar-api](https://github.com/kildahldev/unofficial-polestar-api) (MIT) and has since been reworked. Thanks to its author and the contributors whose fixes were taken from the upstream project: mvillarejo, ericyew, Martin Leisssoo (`MartinLeisssoo`), vladyspavlov and Rick van der Staaij (`rick-nu`). See the [changelog](CHANGELOG.md) for what came from where.
+This started as a fork of [kildahldev/unofficial-polestar-api](https://github.com/kildahldev/unofficial-polestar-api) (MIT) and has since been reworked. Thanks to its author and the contributors whose fixes were taken from the upstream project: mvillarejo, ericyew, Martin Leisssoo (`MartinLeisssoo`), vladyspavlov, Rick van der Staaij (`rick-nu`) and TheOriginal92. See the [changelog](CHANGELOG.md) for what came from where.
 
 ## ☕ Support
 
