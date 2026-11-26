@@ -4,7 +4,7 @@ All notable changes to Polestar C3 (domain `polestar`), the Home Assistant integ
 
 Dates are 2026.
 
-## Unreleased
+## 0.4.2 (27 November)
 
 ### Fixed
 
