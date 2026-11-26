@@ -12,7 +12,7 @@ from types import SimpleNamespace
 import pytest
 
 from polestar_api.auth import TokenData
-from polestar_api.exceptions import ApiError, AuthError
+from polestar_api.exceptions import ApiError, AuthError, MfaRequiredError
 
 VIN = "YV4TEST000T0000001"
 
@@ -239,6 +239,7 @@ async def test_loaded_entry_is_reloaded_by_update_listener_only(monkeypatch, com
     ("kwargs", "error"),
     [
         ({"init_error": AuthError("bad credentials")}, "invalid_auth"),
+        ({"init_error": MfaRequiredError("one-time code")}, "mfa_required"),
         ({"init_error": RuntimeError("boom")}, "cannot_connect"),
         ({"vehicles_error": AuthError("expired")}, "invalid_auth"),
         ({"vehicles": ["YV4OTHER0000000002"]}, "vin_mismatch"),

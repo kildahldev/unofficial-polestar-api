@@ -18,7 +18,7 @@ from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 
 from polestar_api import PolestarApi
 from polestar_api.auth import MemoryTokenStore
-from polestar_api.exceptions import ApiError, AuthError
+from polestar_api.exceptions import ApiError, AuthError, MfaRequiredError
 
 from .const import CONF_DEMO, CONF_UPDATE_INTERVAL, CONF_VIN, DEFAULT_UPDATE_INTERVAL, DOMAIN
 
@@ -129,6 +129,8 @@ class PolestarConfigFlow(ConfigFlow, domain=DOMAIN):
             try:
                 await api.async_init()
                 vehicles = await api.get_vehicles()
+            except MfaRequiredError:
+                errors["base"] = "mfa_required"
             except AuthError:
                 errors["base"] = "invalid_auth"
             except Exception:
@@ -264,6 +266,8 @@ class PolestarConfigFlow(ConfigFlow, domain=DOMAIN):
                 # credentials. Access is validated at runtime instead.
                 _LOGGER.debug("Vehicle list lookup failed; skipping VIN check")
                 return None
+        except MfaRequiredError:
+            return "mfa_required"
         except AuthError:
             return "invalid_auth"
         except Exception:
