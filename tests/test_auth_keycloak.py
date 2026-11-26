@@ -40,9 +40,17 @@ def _kc_page(page_id: str, summary: str | None = None) -> str:
 class FakePolestarId:
     """Mock transport: PingFederate -> Keycloak -> PingFederate -> app redirect."""
 
-    def __init__(self, password: str = "secret", after_password: str | None = None):
+    def __init__(
+        self,
+        password: str = "secret",
+        after_password: str | None = None,
+        required_action: str | None = None,
+    ):
         self.password = password
         self.after_password = after_password  # e.g. "login-otp" to simulate 2FA
+        # e.g. "otp-phone": redirect to /login-actions/required-action, as seen live
+        self.required_action = required_action
+        self.password_posts = 0
         self.login_form: dict[str, list[str]] | None = None
         self.state: str | None = None
 
@@ -70,11 +78,19 @@ class FakePolestarId:
                 return httpx.Response(
                     200, text=_kc_page("login", "Invalid username or password.")
                 )
+            self.password_posts += 1
             if self.after_password:
                 return httpx.Response(200, text=_kc_page(self.after_password))
+            if self.required_action:
+                return httpx.Response(
+                    302,
+                    headers={"location": "/realms/polestar/login-actions/required-action?execution=x"},
+                )
             return httpx.Response(
                 302, headers={"location": f"{PING}/sp/abc/cb.openid?code=kc-code&state=kc"}
             )
+        if request.method == "GET" and url.path.endswith("/login-actions/required-action"):
+            return httpx.Response(200, text=_kc_page(self.required_action or "otp-phone"))
         if url.path == "/sp/abc/cb.openid":
             # relative redirect, as PingFederate sends it
             return httpx.Response(302, headers={"location": "/as/resume/as/xyz/resume/as/authorization.ping"})
@@ -146,3 +162,41 @@ def test_mfa_error_is_an_auth_error():
 
 def test_unescape_js_url():
     assert auth_mod._unescape_js_url("https:\\/\\/a.b\\/c?x=1&amp;y=2") == "https://a.b/c?x=1&y=2"
+
+
+@pytest.mark.parametrize("page_id", ["otp-phone", "terms-and-conditions"])
+async def test_required_action_after_redirect_is_reported(fake_id, page_id):
+    # Live in November 2026: the password POST redirects to required-action,
+    # which shows otp-phone (one-time SMS code). Terms would land there too.
+    fake_id(FakePolestarId(required_action=page_id))
+    manager = AuthManager()
+
+    with pytest.raises(MfaRequiredError, match=page_id):
+        await manager.authenticate("user@example.com", "secret")
+
+
+async def test_required_action_stops_automatic_password_logins(fake_id, monkeypatch):
+    # Each password login can text the user another code, so after one
+    # MfaRequiredError the background re-login must not try again by itself.
+    server = fake_id(FakePolestarId())
+    manager = AuthManager()
+    await manager.authenticate("user@example.com", "secret")
+    assert server.password_posts == 1
+
+    server.required_action = "otp-phone"
+    monkeypatch.setattr(auth_mod, "REAUTH_COOLDOWN", 0)
+    manager._tokens.refresh_token = None
+    manager._tokens.obtained_at = 0
+
+    with pytest.raises(MfaRequiredError):
+        await manager.ensure_valid_token()
+    assert server.password_posts == 2
+
+    with pytest.raises(MfaRequiredError):
+        await manager.ensure_valid_token()
+    assert server.password_posts == 2  # no new password login, so no new SMS
+
+    # Signing in again (the reauth flow) clears the block.
+    server.required_action = None
+    await manager.authenticate("user@example.com", "secret")
+    assert server.password_posts == 3

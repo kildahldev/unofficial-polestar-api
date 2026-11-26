@@ -39,6 +39,7 @@ _KC_LOGIN_ACTION_RE = re.compile(r'"loginAction":\s*"([^"]+)"')
 _KC_PAGE_ID_RE = re.compile(r'"pageId":\s*"([^"]+)"')
 _KC_INVALID_CREDENTIALS = "Invalid username or password"
 _MAX_REDIRECTS = 10
+_REDIRECT_STATUSES = (301, 302, 303, 307, 308)
 
 
 @dataclass
@@ -133,6 +134,25 @@ def _kc_page_id(text: str) -> str | None:
     return match.group(1) if match else None
 
 
+def _raise_for_kc_step(r: httpx.Response) -> None:
+    """Raise ``MfaRequiredError`` if ``r`` is a Keycloak page asking for another step.
+
+    Seen in November 2026: after the password, accounts with a pending
+    "required action" are sent to ``/login-actions/required-action``, for
+    example ``otp-phone`` (a one-time SMS code to verify the phone number).
+    It happens once per account; signing in once at polestar.com or in the
+    Polestar app clears it. Accepting new terms would land on the same path.
+    """
+    page_id = _kc_page_id(r.text)
+    on_required_action = "/login-actions/required-action" in r.url.path
+    if on_required_action or (page_id and page_id != "login"):
+        raise MfaRequiredError(
+            f"Polestar ID asked for another step after the password ({page_id or 'required action'}), "
+            "for example a one-time code by SMS or accepting new terms. "
+            "Sign in once at polestar.com or in the Polestar app with the same account, then retry."
+        )
+
+
 def _should_follow_callback(location: str) -> bool:
     """Return whether the callback URL can be fetched over HTTP."""
     return urlparse(location).scheme in {"http", "https"}
@@ -150,6 +170,9 @@ class AuthManager:
         self._password: str | None = None
         self._refresh_lock = asyncio.Lock()
         self._last_reauth: float | None = None
+        # Set when Polestar ID asks for a step we can't do (see _raise_for_kc_step);
+        # blocks further automatic password logins until authenticate() is called.
+        self._pending_step: str | None = None
 
     @property
     def access_token(self) -> str | None:
@@ -159,6 +182,7 @@ class AuthManager:
         """Full OIDC/PKCE auth flow. Tries token refresh first if available."""
         self._email = email
         self._password = password
+        self._pending_step = None
 
         # Try loading stored tokens
         self._tokens = await self._token_store.load()
@@ -207,8 +231,15 @@ class AuthManager:
             # Re-authenticate with stored credentials
             if not (self._email and self._password):
                 raise TokenExpiredError("Token expired and no credentials available for re-auth")
+            if self._pending_step is not None:
+                # Each password login can send another SMS; wait for the user.
+                raise MfaRequiredError(self._pending_step)
             self._last_reauth = time.monotonic()
-            await self._full_auth(self._email, self._password)
+            try:
+                await self._full_auth(self._email, self._password)
+            except MfaRequiredError as err:
+                self._pending_step = str(err)
+                raise
 
         return self._tokens.access_token
 
@@ -322,17 +353,13 @@ class AuthManager:
             data={"username": email, "password": password, "credentialId": ""},
             follow_redirects=False,
         )
-        if r.status_code not in (301, 302, 303, 307, 308):
-            page_id = _kc_page_id(r.text)
+        if r.status_code not in _REDIRECT_STATUSES:
             if _KC_INVALID_CREDENTIALS in r.text:
                 raise AuthError("Invalid username or password")
-            if page_id and page_id != "login":
-                # e.g. a one-time code sent by SMS or e-mail
-                raise MfaRequiredError(
-                    f"Polestar ID asked for an additional step after the password ({page_id}), "
-                    "e.g. a one-time code. Sign in once at polestar.com with the same account, then retry."
-                )
-            raise AuthError(f"Keycloak login failed (status {r.status_code}, page {page_id or 'unknown'})")
+            _raise_for_kc_step(r)
+            raise AuthError(
+                f"Keycloak login failed (status {r.status_code}, page {_kc_page_id(r.text) or 'unknown'})"
+            )
 
         # Keycloak -> PingFederate (/sp/.../cb.openid) -> app redirect URI with ?code=
         location = ""
@@ -341,7 +368,11 @@ class AuthManager:
             if not _should_follow_callback(location) or location.startswith(REDIRECT_URI):
                 break
             r = await client.get(location, follow_redirects=False)
-            if r.status_code not in (301, 302, 303, 307, 308):
+            if r.status_code not in _REDIRECT_STATUSES:
+                # A Keycloak page here (rather than a redirect onwards) is a step
+                # the account must finish first, e.g. a one-time SMS code to
+                # verify the phone number or accepting new terms.
+                _raise_for_kc_step(r)
                 break
         else:
             raise AuthError("Too many redirects after Keycloak login")

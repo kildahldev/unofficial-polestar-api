@@ -4,6 +4,13 @@ All notable changes to Polestar C3 (domain `polestar`), the Home Assistant integ
 
 Dates are 2026.
 
+## 0.4.3 (27 November)
+
+### Fixed
+
+- **Accounts asked for a one-time SMS code after the password** got a generic sign-in error in setup and reauth. Polestar ID now sends some accounts to a "required action" page first, usually a one-time text message code to verify the phone number (`otp-phone`). It happens once per account. Setup, reauth and reconfigure now say to sign in once at polestar.com or in the Polestar app, then try again. Accepting new terms lands on the same page and gets the same message. Entering the code in Home Assistant is not supported. Checked against the live flow on two accounts: one with the step pending, one without.
+- **No repeated texts.** After Polestar asks for that step, the integration stops signing in with your password by itself (each attempt could text you another code) until you sign in again from Home Assistant.
+
 ## 0.4.2 (27 November)
 
 ### Fixed

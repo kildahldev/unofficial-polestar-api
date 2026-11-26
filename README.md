@@ -168,6 +168,9 @@ Example automations for a charging and a climate (preconditioning) Live Activity
 **The charging switch doesn't do anything.**
 It uses the same start and stop override calls as the Polestar app, which only override an *active* charging schedule. If no schedule is active and the car is charging freely, there is nothing to override. A reliable way to stop a free charge is to set a charging schedule that excludes the current time, or to set the target SoC below the current level.
 
+**Setup or reauth says Polestar wants this account to finish a step first.**
+Since late November 2026 some Polestar ID accounts are asked for one more step after the password, usually a one-time code sent by text message to verify the phone number. It happens once per account. Home Assistant can't enter the code, so sign in once at [polestar.com](https://www.polestar.com) or in the Polestar app with the same account, enter the code there, then try again in Home Assistant. Accepting new terms works the same way. Until then, the integration stops signing in on its own, so it won't keep sending you codes.
+
 **An entity is missing.**
 The integration hides entities for features the car says it doesn't have (for example tyre pressures on a car without TPMS, or the climate settings on a car without rear seat settings). The Polestar 2 does not send average speed.
 

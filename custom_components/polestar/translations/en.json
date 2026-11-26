@@ -67,7 +67,7 @@
     },
     "error": {
       "invalid_auth": "Invalid email or password",
-      "mfa_required": "Polestar asked for a one-time code (2FA). Sign in once at polestar.com with this account, then try again.",
+      "mfa_required": "Polestar wants this account to finish a step first, such as a one-time code by text message or accepting new terms. Sign in once at polestar.com or in the Polestar app with this account, then try again.",
       "cannot_connect": "Could not connect to Polestar"
     },
     "abort": {

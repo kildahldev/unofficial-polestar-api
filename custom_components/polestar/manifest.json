@@ -9,5 +9,5 @@
   "iot_class": "cloud_push",
   "issue_tracker": "https://github.com/BeauGiles/ha-polestar-c3/issues",
   "requirements": ["httpx>=0.27", "grpclib>=0.4.7"],
-  "version": "0.4.2"
+  "version": "0.4.3"
 }
