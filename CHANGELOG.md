@@ -9,8 +9,8 @@ Dates are 2026.
 ### Added
 
 - **Cold battery** sensor: whether the high-voltage battery is cold, or predicted to be cold, optionally with low charge (battery field 30). Useful for preconditioning in winter. From ericyew ([5ebf781](https://github.com/ericyew/unofficial-polestar-api/commit/5ebf781e15ea2be9229a3f9fee5e4cc9d3fe5158)), found by comparing Polestar app 5.13.0 and 5.15.1. Not yet seen from a real car.
-- **Battery thermal event** binary sensor (safety): a high-voltage battery thermal event reported by the car (health field 48). The car leaves the field out when there is no event, so it reads off. Same source; the Volvo app has the same field and a help screen for it. Not yet seen from a real car.
-- **Open tailgate** and **Close tailgate** buttons for cars with a power tailgate. They use the same command as the Volvo app (`TailgateControl`) and only appear when the car reports power tailgate control (car record, locks field 7); the Polestar 2 reports it. Not yet tried on a Polestar.
+- **Battery thermal event** binary sensor (safety): a high-voltage battery thermal event reported by the car (health field 48). The car leaves the field out when there is no event, so it reads off. Same source; the Volvo app has the same field and a help screen for it. Listed under Diagnostic. Reads Safe on a Polestar 2.
+- **Open boot** and **Close boot** buttons for cars with a power tailgate. They use the same command as the Volvo app (`TailgateControl`) and only appear when the car reports power tailgate control (car record, locks field 7); the Polestar 2 reports it. Open and close both work on a Polestar 2 (27 November).
 - **Service plan** diagnostic sensor: the car's prepaid service contract as the Polestar app's Service screen shows it. The state is the plan name; attributes give its status, last day, and each product's start, end and mileage limit (for example car wash, scheduled maintenance, pick-up and delivery). It only appears when Polestar returns a plan for the car, read at startup and every 3 days; a plan that appears later shows after a restart. Many accounts get none (an Australian fleet order did not); a UK-market account reported one. Investigation in [#37](https://github.com/BeauGiles/ha-polestar-c3/pull/37).
 
 ### Fixed
@@ -21,6 +21,13 @@ Dates are 2026.
 
 ### Changed
 
+- **Boot and bonnet, not tailgate and hood.** The Tailgate binary sensor is now called **Boot** and Hood is **Bonnet**, matching Boot lock and the Australian (and UK) wording. Only the names change; existing entity IDs stay.
+- **Entity sections tidied** (one rule for both integrations: Diagnostic for health warnings that normally read OK, technical details and versions):
+  - to Diagnostic: **12V battery**, **Brake fluid**, **Light status**, **Online** (Connection and In use cover the main view) and **Software version**;
+  - to the main section: **Climate time remaining**, which is useful on a dashboard while the climate runs.
+- **Name casing:** Battery capacity, Internet activation and Vehicle info (were Battery Capacity, Internet Activation, Vehicle Info).
+- **Software update status** (was Software state): the car's over-the-air update progress, with a download icon. "Unknown" now reads **No update** when nothing is downloading or installing; two other states read more clearly.
+- **Software update** uses Home Assistant's standard update icons (a package, with an arrow when an update is available) instead of the Polestar logo.
 - **Connection reads "In use" while the car is being used**, matching the Polestar app, instead of "Offline: car in use". Polestar reports the car unavailable for remote commands while it is driven, so it never really was offline. Other reasons still read "Offline: …". The In use binary sensor is unchanged.
 - The `X-Polestar-Force-Update-Version` header is now `5.15.1`, matching the app version in the user agent (`5.15.1b9417`).
 

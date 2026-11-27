@@ -13,6 +13,7 @@ from homeassistant.components.binary_sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from polestar_api.models.exterior import OpenStatus
@@ -150,6 +151,7 @@ BINARY_SENSORS: tuple[PolestarBinarySensorDescription, ...] = (
         key="available",
         translation_key="available",
         device_class=BinarySensorDeviceClass.CONNECTIVITY,
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d: d.availability.is_available if d.availability else None,
     ),
     PolestarBinarySensorDescription(
@@ -178,6 +180,7 @@ BINARY_SENSORS: tuple[PolestarBinarySensorDescription, ...] = (
         icon_on="mdi:alert-circle",
         translation_key="light_failure",
         device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d: d.health.any_light_failure if d.health else None,
         attrs_fn=lambda d: light_attributes(d.health) if d.health else {},
     ),
@@ -187,6 +190,7 @@ BINARY_SENSORS: tuple[PolestarBinarySensorDescription, ...] = (
         icon_on="mdi:alert-circle",
         translation_key="brake_fluid_problem",
         device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d: _level_problem(d.health.brake_fluid_level_warning) if d.health else None,
     ),
     PolestarBinarySensorDescription(
@@ -222,6 +226,7 @@ BINARY_SENSORS: tuple[PolestarBinarySensorDescription, ...] = (
         icon_on="mdi:battery-alert",
         translation_key="low_voltage_battery",
         device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d: d.health.low_voltage_battery_warning == LowVoltageBatteryWarning.TOO_LOW if d.health else None,
     ),
     PolestarBinarySensorDescription(
@@ -230,6 +235,7 @@ BINARY_SENSORS: tuple[PolestarBinarySensorDescription, ...] = (
         icon_on="mdi:fire-alert",
         translation_key="battery_thermal_event",
         device_class=BinarySensorDeviceClass.SAFETY,
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d: d.health.battery_thermal_event_triggered if d.health else None,
     ),
     PolestarBinarySensorDescription(

@@ -53,6 +53,10 @@ class PolestarOtaUpdate(PolestarEntity, UpdateEntity, RestoreEntity):
     _attr_translation_key = "software_update"
     _attr_supported_features = UpdateEntityFeature.INSTALL
 
+    # Home Assistant shows the brand logo for an update entity unless it has its own picture; None gives
+    # the standard update icons (a package, with an arrow when an update is available) like other devices.
+    _attr_entity_picture = None
+
     def __init__(self, coordinator: PolestarCoordinator) -> None:
         super().__init__(coordinator)
         self.entity_description = UpdateEntityDescription(key="software_update")

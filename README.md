@@ -39,7 +39,7 @@ Reports of what works and what doesn't on your model are welcome. Please [open a
 | Saved charge locations, "at charge location" | ✅ | ➖ |
 | Location, with address | ✅ | ✅ |
 | Parked location, altitude, heading, speed | ✅ | ➖ |
-| Doors, windows, hood, tailgate | ✅ | ✅ |
+| Doors, windows, bonnet, boot | ✅ | ✅ |
 | Sunroof | ➖ | ◐ |
 | Central lock, boot lock | ✅ | ✅ |
 | Alarm triggered, In use, Online, Connection | ✅ | ✅ |
@@ -64,8 +64,8 @@ Reports of what works and what doesn't on your model are welcome. Please [open a
 | Feature | Polestar C3 | Volvo C3 |
 | --- | :---: | :---: |
 | Lock, unlock, lock with reduced alarm | ✅ | ✅ |
-| Boot lock (unlock the tailgate only) | ✅ | ✅ |
-| Open and close tailgate | 🧪 | ✅ |
+| Boot lock (unlock the boot only) | ✅ | ✅ |
+| Open and close boot (power tailgate) | ✅ | ✅ |
 | Flash lights, honk, honk and flash | ✅ | ✅ |
 | Open and close all windows | ✅ | ✅ |
 | Start and stop climate | ✅ | ✅ |
@@ -100,13 +100,13 @@ Reports of what works and what doesn't on your model are welcome. Please [open a
 | Platform | Examples |
 | --- | --- |
 | Sensor | State of charge, range, charging status, charger connection, Cold battery, climate status, odometer, service sensors, tyre pressures, software version, Connection, Vehicle info, Service plan (only when Polestar has one for the car) |
-| Binary sensor | Online, In use, Plugged in, Alarm triggered, Tyre warning, Service required, 12V battery, Brake fluid, Washer fluid, Light status, Battery thermal event, doors, windows, hood, tailgate, charge port |
+| Binary sensor | Online, In use, Plugged in, Alarm triggered, Tyre warning, Service required, 12V battery, Brake fluid, Washer fluid, Light status, Battery thermal event, doors, windows, bonnet, boot, charge port |
 | Device tracker | Location, Parked location |
 | Lock | Lock, Boot lock |
 | Switch | Climate, Charging, Charging schedule, Air purification |
 | Number | Target SoC, Charging amp limit, Climate target temperature, Timer target temperature |
 | Select | Seat and steering wheel heating, Target SoC mode, timer heating and battery preconditioning |
-| Button | Flash lights, Honk, Honk and flash, Lock with reduced alarm, Open and Close windows, Open and Close tailgate, Refresh |
+| Button | Flash lights, Honk, Honk and flash, Lock with reduced alarm, Open and Close windows, Open and Close boot, Refresh |
 | Time | Charging schedule start and end |
 | Calendar | Three parking climate timer slots (in the Configuration category and off by default) |
 | Update | Software update |

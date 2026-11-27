@@ -507,11 +507,13 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         key="software_version",
         translation_key="software_version",
         icon="mdi:update",
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d: d.software.new_sw_version if d.software else None,
     ),
     PolestarSensorDescription(
         key="software_state",
         translation_key="software_state",
+        icon="mdi:progress-download",
         device_class=SensorDeviceClass.ENUM,
         entity_category=EntityCategory.DIAGNOSTIC,
         options=enum_options(SoftwareState, exclude_unspecified=False),
@@ -539,7 +541,6 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UnitOfTime.MINUTES,
         suggested_display_precision=0,
-        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d: climate_minutes_remaining(d.climate, dt_util.utcnow().timestamp()),
     ),
     PolestarSensorDescription(

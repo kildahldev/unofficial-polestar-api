@@ -109,7 +109,7 @@
         "name": "Rear right door"
       },
       "hood": {
-        "name": "Hood"
+        "name": "Bonnet"
       },
       "in_use": {
         "name": "In use"
@@ -130,7 +130,7 @@
         "name": "Service required"
       },
       "tailgate": {
-        "name": "Tailgate"
+        "name": "Boot"
       },
       "tank_lid": {
         "name": "Charge port"
@@ -156,7 +156,7 @@
     },
     "button": {
       "close_tailgate": {
-        "name": "Close tailgate"
+        "name": "Close boot"
       },
       "close_windows": {
         "name": "Close windows"
@@ -174,7 +174,7 @@
         "name": "Lock with reduced alarm"
       },
       "open_tailgate": {
-        "name": "Open tailgate"
+        "name": "Open boot"
       },
       "open_windows": {
         "name": "Open windows"
@@ -292,7 +292,7 @@
         "name": "Average consumption since charge"
       },
       "battery_capacity": {
-        "name": "Battery Capacity"
+        "name": "Battery capacity"
       },
       "battery_level": {
         "name": "State of charge"
@@ -415,7 +415,7 @@
         "name": "Heading"
       },
       "internet_activation": {
-        "name": "Internet Activation"
+        "name": "Internet activation"
       },
       "location_address": {
         "name": "Location address"
@@ -436,9 +436,9 @@
         "name": "Rear right tyre pressure"
       },
       "software_state": {
-        "name": "Software state",
+        "name": "Software update status",
         "state": {
-          "unknown": "Unknown",
+          "unknown": "No update",
           "download_ready": "Download ready",
           "download_started": "Download started",
           "download_completed": "Download completed",
@@ -449,10 +449,10 @@
           "installation_failed": "Installation failed",
           "installation_completed": "Installation completed",
           "installation_deferred": "Installation deferred",
-          "installation_failed_critical": "Installation failed critical",
+          "installation_failed_critical": "Installation failed (critical)",
           "installation_scheduled": "Installation scheduled",
           "installation_schedule_triggered": "Installation schedule triggered",
-          "installation_unknown": "Installation unknown"
+          "installation_unknown": "Installation status unknown"
         }
       },
       "service_plan": {
@@ -480,7 +480,7 @@
         "name": "Trip meter (manual)"
       },
       "vehicle_info": {
-        "name": "Vehicle Info"
+        "name": "Vehicle info"
       },
       "vin": {
         "name": "VIN"
