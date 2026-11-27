@@ -10,13 +10,17 @@ Dates are 2026.
 
 - **Cold battery** sensor: whether the high-voltage battery is cold, or predicted to be cold, optionally with low charge (battery field 30). Useful for preconditioning in winter. From ericyew ([5ebf781](https://github.com/ericyew/unofficial-polestar-api/commit/5ebf781e15ea2be9229a3f9fee5e4cc9d3fe5158)), found by comparing Polestar app 5.13.0 and 5.15.1. Not yet seen from a real car.
 - **Battery thermal event** binary sensor (safety): a high-voltage battery thermal event reported by the car (health field 48). The car leaves the field out when there is no event, so it reads off. Same source; the Volvo app has the same field and a help screen for it. Not yet seen from a real car.
+- **Open tailgate** and **Close tailgate** buttons for cars with a power tailgate. They use the same command as the Volvo app (`TailgateControl`) and only appear when the car reports power tailgate control (car record, locks field 7); the Polestar 2 reports it. Not yet tried on a Polestar.
 
 ### Fixed
 
+- **Cold battery is hidden on cars that don't report it.** The Polestar 2 leaves the field empty, so the sensor only ever read Unknown. It is now disabled when the car reports nothing for it, and comes back by itself if the car starts sending it (Polestar 3 and 4 are expected to).
+- **Clearer idle states.** Climate request type and Climate running status show "Not running" instead of "Undefined". Unavailable reason shows "Not applicable" while the car is available, instead of Unknown. The state values (`undefined`, `none`) are what automations see.
 - **Streamed values survive a full poll.** If a poll endpoint is unsupported for a value that a live stream delivers (for example an odometer that only arrives by stream), the poll used to clear it. The streamed value is now kept, and the poll result is built on the current data so nothing it did not fetch is reset. Port of ericyew's [0da9bc1](https://github.com/ericyew/unofficial-polestar-api/commit/0da9bc1b692d86bf5f115464cd1ed80f2829f6eb); on this fork it only mattered for cars whose poll endpoint is unsupported.
 
 ### Changed
 
+- **Connection reads "In use" while the car is being used**, matching the Polestar app, instead of "Offline: car in use". Polestar reports the car unavailable for remote commands while it is driven, so it never really was offline. Other reasons still read "Offline: …". The In use binary sensor is unchanged.
 - The `X-Polestar-Force-Update-Version` header is now `5.15.1`, matching the app version in the user agent (`5.15.1b9417`).
 
 ## 0.4.3 (27 November)

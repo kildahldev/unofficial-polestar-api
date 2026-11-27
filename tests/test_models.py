@@ -1,5 +1,7 @@
 """Tests for all domain models — round-trip encode/decode."""
 
+import pytest
+
 from polestar_api.models.exterior import (
     AlarmStatus,
     CentralLockStatus,
@@ -56,7 +58,7 @@ from polestar_api.models.climatization import (
     ClimatizationStartRequest,
     HeatingIntensity,
 )
-from polestar_api.models.invocation import InvocationResponse, InvocationStatus
+from polestar_api.models.invocation import InvocationRequest, InvocationResponse, InvocationStatus
 from polestar_api.models.health import (
     Health,
     ServiceWarning,
@@ -74,6 +76,7 @@ from polestar_api.models.ota import (
     ScheduleSetBy,
 )
 from polestar_api.models.weather import WeatherReport
+from polestar_api.models.tailgate import TailgateControlRequest, TailgateControlType
 from polestar_api.models.window import WindowControlRequest, WindowControlType
 from polestar_api.models.odometer import OdometerStatus
 from polestar_api.models.wakeup import WakeUpRequest, WakeUpResponse, WakeUpReason
@@ -499,6 +502,19 @@ class TestWindowControl:
         data = req.to_bytes()
         restored = WindowControlRequest.from_bytes(data)
         assert restored.windows_control == WindowControlType.CLOSE_ALL
+
+
+# -- Tailgate Control --
+
+
+class TestTailgateControl:
+    @pytest.mark.parametrize(("action", "mode"), [(TailgateControlType.OPEN, b"\x10\x01"), (TailgateControlType.CLOSE, b"\x10\x02")])
+    def test_matches_the_volvo_request_bytes(self, action, mode):
+        # Volvo C3 sends field 1 = {1: VIN} and field 2 = 1 (open) or 2 (close); the Polestar request must match.
+        vin = b"VIN0000000000001"
+        req = TailgateControlRequest(request=InvocationRequest(vin=vin.decode()), tailgate_control=action)
+        assert req.to_bytes() == b"\x0a" + bytes([len(vin) + 2]) + b"\x0a" + bytes([len(vin)]) + vin + mode
+        assert TailgateControlRequest.from_bytes(req.to_bytes()).tailgate_control == action
 
 
 # -- Climatization Start/Stop --

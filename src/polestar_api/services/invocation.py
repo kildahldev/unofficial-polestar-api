@@ -1,4 +1,4 @@
-"""Invocation service — lock, unlock, climate, windows, pre-cleaning, honk/flash."""
+"""Invocation service — lock, unlock, climate, windows, tailgate, pre-cleaning, honk/flash."""
 
 from __future__ import annotations
 
@@ -31,6 +31,7 @@ from ..models.climatization import (
 )
 from ..models.precleaning import PreCleaningRequest
 from ..models.wakeup import WakeUpReason, WakeUpResponse
+from ..models.tailgate import TailgateControlRequest, TailgateControlResponse, TailgateControlType
 from ..models.window import WindowControlRequest, WindowControlType
 from ..exceptions import ApiError
 
@@ -211,3 +212,9 @@ class InvocationServiceClient:
         req = WindowControlRequest(request=self._request(), windows_control=action)
         data = await self._call("WindowControl", req.to_bytes())
         return ClimatizationResponse.from_bytes(data)
+
+    async def tailgate_control(self, action: TailgateControlType) -> TailgateControlResponse:
+        """Open or close a power tailgate (the same call and fields as the Volvo app's)."""
+        req = TailgateControlRequest(request=self._request(), tailgate_control=action)
+        data = await self._call("TailgateControl", req.to_bytes())
+        return TailgateControlResponse.from_bytes(data)

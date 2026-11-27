@@ -101,6 +101,7 @@ _INVOCATION_REFRESH_ATTRS: dict[str, tuple[str, ...]] = {
     "Lock": ("exterior",),
     "Unlock": ("exterior",),
     "WindowControl": ("exterior",),
+    "TailgateControl": ("exterior",),
     "ClimatizationStart": ("climate",),
     "ClimatizationStop": ("climate",),
     "PreCleaning": ("precleaning",),
@@ -112,6 +113,7 @@ _CLIMATE_START_LAG = 60.0
 _CAPABILITY_FETCHES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("supports_charge_locations", ("charge_locations", "current_charge_location")),
     ("supports_window_control", ("window_control",)),
+    ("supports_tailgate_control", ("tailgate_control",)),
     ("supports_sunroof_control", ("sunroof",)),
     ("supports_reduced_alarm_lock", ("lock_reduced_alarm_button",)),
     ("supports_target_soc_presets", ("target_soc_presets",)),
@@ -1146,6 +1148,26 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
             self.vehicle.close_windows,
             error_message="Close windows command failed",
             capability="close_windows",
+        )
+        self._schedule_background_refresh("exterior")
+        return response
+
+    async def async_open_tailgate(self) -> Any:
+        """Open a power tailgate."""
+        response = await self.async_run_command(
+            self.vehicle.open_tailgate,
+            error_message="Open tailgate command failed",
+            capability="tailgate_control",
+        )
+        self._schedule_background_refresh("exterior")
+        return response
+
+    async def async_close_tailgate(self) -> Any:
+        """Close a power tailgate."""
+        response = await self.async_run_command(
+            self.vehicle.close_tailgate,
+            error_message="Close tailgate command failed",
+            capability="tailgate_control",
         )
         self._schedule_background_refresh("exterior")
         return response

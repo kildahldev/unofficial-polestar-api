@@ -242,6 +242,7 @@ async def test_window_and_sunroof_support_is_unknown_without_a_locks_block(monke
 
     assert vehicle.supports_window_control is None
     assert vehicle.supports_sunroof_control is None
+    assert vehicle.supports_tailgate_control is None
 
 
 # What a Polestar 4 reports: consumption since the last trip but not overall or since charge, no target
@@ -367,3 +368,13 @@ async def test_reduced_alarm_lock_support_comes_from_the_car(monkeypatch, lock_t
     await vehicle.async_load_car_information()
 
     assert vehicle.supports_reduced_alarm_lock is expected
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("locks", "expected"), [(encode_int32(7, 1), True), (encode_int32(5, 1), False)])
+async def test_tailgate_control_support_comes_from_the_car(monkeypatch, locks, expected):
+    vehicle = _vehicle(monkeypatch, _response(_my_car("VIN0000000000001", "Polestar 2", extra=encode_message(36, locks))))
+
+    await vehicle.async_load_car_information()
+
+    assert vehicle.supports_tailgate_control is expected

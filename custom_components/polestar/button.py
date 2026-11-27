@@ -96,6 +96,22 @@ BUTTONS: tuple[PolestarButtonDescription, ...] = (
         press_fn=lambda button: button.coordinator.async_close_windows(),
         capability="close_windows",
     ),
+    PolestarButtonDescription(
+        key="open_tailgate",
+        fetch_attr="tailgate_control",
+        translation_key="open_tailgate",
+        icon="mdi:truck-tailgate",
+        press_fn=lambda button: button.coordinator.async_open_tailgate(),
+        capability="tailgate_control",
+    ),
+    PolestarButtonDescription(
+        key="close_tailgate",
+        fetch_attr="tailgate_control",
+        translation_key="close_tailgate",
+        icon="mdi:truck-tailgate-closed",
+        press_fn=lambda button: button.coordinator.async_close_tailgate(),
+        capability="tailgate_control",
+    ),
 )
 
 # Buttons replaced by other entities; their registry entries are removed at setup.

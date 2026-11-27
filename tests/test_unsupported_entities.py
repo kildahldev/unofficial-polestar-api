@@ -554,6 +554,17 @@ def test_window_and_sunroof_stay_enabled_when_supported_or_unknown(monkeypatch):
     assert module.PolestarCoordinator(None, FakeVehicle({}), SimpleNamespace(options={})).is_fetch_supported("sunroof")
 
 
+def test_tailgate_buttons_follow_the_car_flag(monkeypatch):
+    module, _ = _load(monkeypatch, FakeRegistry())
+    without = FakeVehicle({})
+    without.supports_tailgate_control = False
+    with_power_tailgate = FakeVehicle({})
+    with_power_tailgate.supports_tailgate_control = True
+
+    assert not module.PolestarCoordinator(None, without, SimpleNamespace(options={})).is_fetch_supported("tailgate_control")
+    assert module.PolestarCoordinator(None, with_power_tailgate, SimpleNamespace(options={})).is_fetch_supported("tailgate_control")
+
+
 def _coordinator_for(module, **flags):
     vehicle = FakeVehicle({})
     for name, value in flags.items():

@@ -155,6 +155,9 @@
       }
     },
     "button": {
+      "close_tailgate": {
+        "name": "Close tailgate"
+      },
       "close_windows": {
         "name": "Close windows"
       },
@@ -169,6 +172,9 @@
       },
       "lock_reduced_alarm": {
         "name": "Lock with reduced alarm"
+      },
+      "open_tailgate": {
+        "name": "Open tailgate"
       },
       "open_windows": {
         "name": "Open windows"
@@ -255,6 +261,7 @@
       "availability_unavailable_reason": {
         "name": "Unavailable reason",
         "state": {
+          "none": "Not applicable",
           "no_internet": "No internet",
           "power_saving_mode": "Power saving mode",
           "car_in_use": "Car in use",
@@ -355,7 +362,7 @@
       "climate_request_type": {
         "name": "Climate request type",
         "state": {
-          "undefined": "Undefined",
+          "undefined": "Not running",
           "no_request": "No request",
           "timer": "Timer",
           "now_from_hmi": "Now from car",
@@ -368,7 +375,7 @@
       "climate_running_status": {
         "name": "Climate running status",
         "state": {
-          "undefined": "Undefined",
+          "undefined": "Not running",
           "idle": "Idle",
           "start_attempt": "Start attempt",
           "start_after_delay": "Start after delay",

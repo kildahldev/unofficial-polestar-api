@@ -226,7 +226,7 @@ def test_connection_text(utils):
     assert utils.connection_text(_data(True)) == "Online"
     # Short, and no clock time in the state, or every update would be a new history entry.
     assert utils.connection_text(_data(False, "NO_INTERNET")) == "Offline: no internet"
-    assert utils.connection_text(_data(False, "CAR_IN_USE")) == "Offline: car in use"
+    assert utils.connection_text(_data(False, "CAR_IN_USE")) == "In use"
     assert utils.connection_text(type("D", (), {"availability": None})()) == "Unknown"
     assert utils.connection_attributes(_data(True)) == {"detail": "The car can receive commands."}
     detail = utils.connection_attributes(_data(False, "CAR_IN_USE"))["detail"]

@@ -33,6 +33,7 @@ from .models.locks import CarLockResponse, CarUnlockResponse, LockAlarmLevel, Lo
 from .models.odometer import OdometerStatus
 from .models.wakeup import WakeUpReason, WakeUpResponse
 from .models.weather import WeatherReport
+from .models.tailgate import TailgateControlResponse, TailgateControlType
 from .models.window import WindowControlType
 from .services.amp_limit import AmpLimitServiceClient
 from .services.availability import AvailabilityServiceClient
@@ -135,6 +136,8 @@ class Vehicle:
         self.car_capabilities: dict = {}
         self.supports_charge_locations: bool | None = None
         self.supports_window_control: bool | None = None
+        # Power tailgate open and close (car record, locks field 7); None until the record has been read.
+        self.supports_tailgate_control: bool | None = None
         self.supports_sunroof_control: bool | None = None
         self.supports_reduced_alarm_lock: bool | None = None
         self.supports_target_soc_presets: bool | None = None
@@ -197,6 +200,7 @@ class Vehicle:
             self.max_climate_timers = timers.max_number if timers is not None else 0
         if car is not None and car.locks is not None:
             self.supports_window_control = bool(car.locks.supports_window_control)
+            self.supports_tailgate_control = bool(car.locks.supports_trunk_control)
             self.supports_sunroof_control = bool(car.locks.supports_sunroof_control)
             self.supports_reduced_alarm_lock = car.locks.supports_reduced_alarm_lock
         if car is not None:
@@ -417,6 +421,16 @@ class Vehicle:
     async def close_windows(self) -> ClimatizationResponse:
         """Close all windows."""
         return await self._invocation.window_control(WindowControlType.CLOSE_ALL)
+
+    # -- Tailgate --
+
+    async def open_tailgate(self) -> TailgateControlResponse:
+        """Open a power tailgate."""
+        return await self._invocation.tailgate_control(TailgateControlType.OPEN)
+
+    async def close_tailgate(self) -> TailgateControlResponse:
+        """Close a power tailgate."""
+        return await self._invocation.tailgate_control(TailgateControlType.CLOSE)
 
     # -- Charge Now --
 

@@ -487,6 +487,12 @@ class DemoVehicle:
         _LOGGER.info("Demo: close windows")
         self._windows_open = False
 
+    async def open_tailgate(self) -> None:
+        _LOGGER.info("Demo: open tailgate")
+
+    async def close_tailgate(self) -> None:
+        _LOGGER.info("Demo: close tailgate")
+
     async def create_charge_location(
         self,
         alias: str,
