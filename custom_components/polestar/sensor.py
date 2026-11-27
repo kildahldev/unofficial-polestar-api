@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 import time
+from datetime import timedelta
 
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -33,6 +35,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.typing import StateType
 from homeassistant.util import dt as dt_util
 
@@ -66,6 +69,7 @@ from . import geocode
 from .utils import (
     connection_attributes,
     connection_text,
+    service_plan_attributes,
     flatten_attributes,
     weather_attributes,
     climate_end_time,
@@ -76,6 +80,11 @@ from .utils import (
     enum_options,
     serialize_charge_location,
 )
+
+_LOGGER = logging.getLogger(__name__)
+
+# The service plan rarely changes: read it at startup and then every few days.
+_SERVICE_PLAN_REFRESH = timedelta(days=3)
 
 PARALLEL_UPDATES = 0
 
@@ -615,6 +624,8 @@ async def async_setup_entry(
             info_entities.append(PolestarBatteryCapacitySensor(coordinator))
         if getattr(vehicle, "internet_activation", None):
             info_entities.append(PolestarInternetActivationSensor(coordinator))
+        if getattr(vehicle, "service_plan", None):
+            info_entities.append(PolestarServicePlanSensor(coordinator, data.get("api")))
         async_add_entities(info_entities)
         async_add_entities([PolestarLocationAddress(coordinator)])
 
@@ -718,6 +729,45 @@ class PolestarInternetActivationSensor(PolestarEntity, SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         info = getattr(self._vehicle, "internet_activation", None) or {}
         return {"as_of": info["timestamp"]} if info.get("timestamp") else {}
+
+
+class PolestarServicePlanSensor(PolestarEntity, SensorEntity):
+    """The car's service plan (prepaid service contract) from the Polestar app's Service screen.
+
+    Only created when Polestar returns a plan for the car; read when the entry loads and again every 3 days.
+    """
+
+    _attr_translation_key = "service_plan"
+    _attr_icon = "mdi:wrench-clock"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator, api: Any) -> None:
+        super().__init__(coordinator)
+        self._api = api
+        self._attr_unique_id = f"{self._vehicle.vin}_service_plan"
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        if self._api is not None and hasattr(self._api, "async_refresh_service_plan"):
+            self.async_on_remove(async_track_time_interval(self.hass, self._async_refresh, _SERVICE_PLAN_REFRESH))
+
+    async def _async_refresh(self, _now: Any = None) -> None:
+        try:
+            await self._api.async_refresh_service_plan(self._vehicle)
+        except Exception as err:  # noqa: BLE001 - a failed daily read keeps the last plan
+            _LOGGER.debug("Service plan refresh failed: %s", err)
+            return
+        self.async_write_ha_state()
+
+    @property
+    def native_value(self) -> str | None:
+        plan = getattr(self._vehicle, "service_plan", None) or {}
+        name = plan.get("name")
+        return name[:255] if name else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return service_plan_attributes(getattr(self._vehicle, "service_plan", None))
 
 
 class PolestarVehicleInfoSensor(PolestarEntity, SensorEntity):

@@ -53,6 +53,12 @@ APP_BACKEND_INTERNET_ACTIVATION_QUERY = (
     "status(vin: $vin) { mnoStatus timestamp } } }"
 )
 # Order details (no prices, postcode or order id) matched to a car by its VIN.
+# The car's service plan (prepaid service contract), as the Polestar app's Service screen reads it. Empty for
+# many accounts (an Australian fleet order, Nov 2026); a UK-market account returned a plan with three products.
+APP_BACKEND_SERVICE_PLAN_QUERY = (
+    "query PolestarServicePlansForVin($vin: String!) { servicePlan { getServicePlan(vin: $vin) { "
+    "name mileageUnit status productStatus products { name startDate endDate mileage } } } }"
+)
 APP_BACKEND_ORDERS_QUERY = (
     "query GetOrdersV2 { poms { getOrders { data { car { edition engine exterior interior model "
     "modelYear vin wheels } orderV2 { configuration { specifications { label value } "
@@ -384,3 +390,38 @@ def _string_or_none(value: object) -> str | None:
     """Return strings unchanged and coerce everything else to None."""
     return value if isinstance(value, str) and value else None
 
+
+def _date_only(value: Any) -> str | None:
+    """``2030-10-28T00:00:00+00:00`` -> ``2030-10-28`` (the plan's dates are whole days)."""
+    text = _string_or_none(value)
+    return text[:10] if text else None
+
+
+async def get_service_plan(access_token: str, vin: str) -> dict[str, Any] | None:
+    """The car's service plan: name, status, mileage unit and products, or ``None`` when there is none.
+
+    Only the first plan is returned in full; ``other_plans`` names any others. No ids or VIN are kept.
+    """
+    data = await _app_backend_query(access_token, "PolestarServicePlansForVin", APP_BACKEND_SERVICE_PLAN_QUERY, {"vin": vin})
+    plans = [p for p in (((data or {}).get("servicePlan") or {}).get("getServicePlan") or []) if isinstance(p, dict)]
+    if not plans:
+        return None
+    plan = plans[0]
+    products = [
+        {
+            "name": _string_or_none(p.get("name")),
+            "start": _date_only(p.get("startDate")),
+            "end": _date_only(p.get("endDate")),
+            "mileage": p.get("mileage") if isinstance(p.get("mileage"), (int, float)) else None,
+        }
+        for p in plan.get("products") or []
+        if isinstance(p, dict)
+    ]
+    return {
+        "name": _string_or_none(plan.get("name")),
+        "status": _string_or_none(plan.get("status")),
+        "product_status": _string_or_none(plan.get("productStatus")),
+        "mileage_unit": _string_or_none(plan.get("mileageUnit")),
+        "products": products,
+        "other_plans": [_string_or_none(p.get("name")) for p in plans[1:]],
+    }

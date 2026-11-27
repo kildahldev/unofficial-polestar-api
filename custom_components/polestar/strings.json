@@ -455,6 +455,9 @@
           "installation_unknown": "Installation unknown"
         }
       },
+      "service_plan": {
+        "name": "Service plan"
+      },
       "software_version": {
         "name": "Software version"
       },

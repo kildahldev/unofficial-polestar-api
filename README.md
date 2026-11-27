@@ -23,72 +23,73 @@ Reports of what works and what doesn't on your model are welcome. Please [open a
 
 ## Features
 
-[Volvo C3](https://github.com/BeauGiles/ha-volvo-c3) and Polestar C3 talk to the same Volvo Cars C3 platform, so most features are the same. This table is shared by both READMEs.
+[Volvo C3](https://github.com/BeauGiles/ha-volvo-c3) and Polestar C3 talk to the same Volvo Cars C3 platform, so most features are the same. Both READMEs share this table, each with its own integration in the first column.
 
 ✅ supported · 🧪 experimental (limited testing) · ◐ only on cars that report it · ➖ not available
 
 ### Read
 
-| Feature | Volvo C3 | Polestar C3 |
+| Feature | Polestar C3 | Volvo C3 |
 | --- | :---: | :---: |
 | State of charge, range | ✅ | ✅ |
 | Charging status, power, current, voltage, charger connection | ✅ | ✅ |
 | Time to full charge | ✅ | ✅ |
-| Time to target charge and to minimum SoC | ➖ | ✅ |
+| Time to target charge and to minimum SoC | ✅ | ➖ |
 | Charge port, plugged in | ✅ | ✅ |
-| Saved charge locations, "at charge location" | ➖ | ✅ |
+| Saved charge locations, "at charge location" | ✅ | ➖ |
 | Location, with address | ✅ | ✅ |
-| Parked location, altitude, heading, speed | ➖ | ✅ |
+| Parked location, altitude, heading, speed | ✅ | ➖ |
 | Doors, windows, hood, tailgate | ✅ | ✅ |
-| Sunroof | ◐ | ➖ |
+| Sunroof | ➖ | ◐ |
 | Central lock, boot lock | ✅ | ✅ |
 | Alarm triggered, In use, Online, Connection | ✅ | ✅ |
-| Odometer, trip meters, average consumption, average speed | ✅ | ✅ (average speed hidden on the Polestar 2) |
+| Odometer, trip meters, average consumption, average speed | ✅ (average speed hidden on the Polestar 2) | ✅ |
 | Outside temperature | ✅ | ✅ |
 | Service required (with urgency), days, distance and engine hours to service | ✅ | ✅ |
+| Service plan (prepaid service contract: products, end dates, mileage limits) | 🧪 | ➖ |
 | Tyre warning, per-wheel grades | ◐ | ◐ |
 | Per-wheel tyre pressures | ◐ | ◐ |
 | 12V battery, brake fluid, washer fluid, light status | ✅ | ✅ |
 | Battery thermal event (high-voltage battery safety) | 🧪 | 🧪 |
-| Cold battery status | ➖ | 🧪 |
-| Engine coolant, oil level (combustion cars) | ◐ | ➖ |
-| Climate status and time remaining | ➖ | ✅ |
+| Cold battery status | 🧪 | ➖ |
+| Engine coolant, oil level (combustion cars) | ➖ | ◐ |
+| Climate status and time remaining | ✅ | ➖ |
 | Cabin air quality | ✅ | ✅ |
 | Software version | ✅ | ✅ |
-| Driving journal: last trip, trips and distance this month (opt in) | ✅ | ➖ |
+| Driving journal: last trip, trips and distance this month (opt in) | ➖ | ✅ |
 | VIN, vehicle info, registration plate | ✅ | ✅ |
 
 ### Control
 
-| Feature | Volvo C3 | Polestar C3 |
+| Feature | Polestar C3 | Volvo C3 |
 | --- | :---: | :---: |
 | Lock, unlock, lock with reduced alarm | ✅ | ✅ |
 | Boot lock (unlock the tailgate only) | ✅ | ✅ |
-| Open and close tailgate | ✅ | 🧪 |
+| Open and close tailgate | 🧪 | ✅ |
 | Flash lights, honk, honk and flash | ✅ | ✅ |
 | Open and close all windows | ✅ | ✅ |
 | Start and stop climate | ✅ | ✅ |
 | Climate target temperature | ◐ | ◐ |
-| Seat and steering wheel heating | 🧪 ◐ | ◐ |
-| Engine remote start (starts cabin climate on an EV) | ✅ | ➖ |
+| Seat and steering wheel heating | ◐ | 🧪 ◐ |
+| Engine remote start (starts cabin climate on an EV) | ➖ | ✅ |
 | Air purification | ✅ | ✅ |
 | Target SoC, charging amp limit | ✅ | ✅ |
 | Charging schedule: switch, start and end times | ✅ | ✅ |
 | Start and stop charging | ✅ | ✅ |
-| Parking climate timers (calendars) | ➖ | ✅ |
-| Software update: schedule, install, cancel | ➖ | ✅ |
-| Manage saved charge locations (services) | ➖ | ✅ |
+| Parking climate timers (calendars) | ✅ | ➖ |
+| Software update: schedule, install, cancel | ✅ | ➖ |
+| Manage saved charge locations (services) | ✅ | ➖ |
 
 ### Behaviour
 
-| Feature | Volvo C3 | Polestar C3 |
+| Feature | Polestar C3 | Volvo C3 |
 | --- | :---: | :---: |
-| Clear error when a command is refused (offline, privacy mode, in use, busy, timeout) | 🧪 | ✅ |
-| Live updates streamed from the car's cloud | 🧪 | ✅ |
+| Clear error when a command is refused (offline, privacy mode, in use, busy, timeout) | ✅ | 🧪 |
+| Live updates streamed from the car's cloud | ✅ | 🧪 |
 | Adaptive polling (faster while charging, driving or running climate) | ✅ | ✅ |
 | Entities hidden for features the car doesn't have | ✅ | ✅ |
 | Reconfigure flow, diagnostics download | ✅ | ✅ |
-| Demo mode | ➖ | ✅ |
+| Demo mode | ✅ | ➖ |
 | More than one car (one entry per car) | ✅ | ✅ |
 
 > [!CAUTION]
@@ -98,7 +99,7 @@ Reports of what works and what doesn't on your model are welcome. Please [open a
 
 | Platform | Examples |
 | --- | --- |
-| Sensor | State of charge, range, charging status, charger connection, Cold battery, climate status, odometer, service sensors, tyre pressures, software version, Connection, Vehicle info |
+| Sensor | State of charge, range, charging status, charger connection, Cold battery, climate status, odometer, service sensors, tyre pressures, software version, Connection, Vehicle info, Service plan (only when Polestar has one for the car) |
 | Binary sensor | Online, In use, Plugged in, Alarm triggered, Tyre warning, Service required, 12V battery, Brake fluid, Washer fluid, Light status, Battery thermal event, doors, windows, hood, tailgate, charge port |
 | Device tracker | Location, Parked location |
 | Lock | Lock, Boot lock |

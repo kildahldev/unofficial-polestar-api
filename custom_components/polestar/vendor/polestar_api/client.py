@@ -11,6 +11,7 @@ from .discovery import (
     get_car_information_by_vins,
     get_internet_activation,
     get_order_specification,
+    get_service_plan,
     get_vehicles,
 )
 from .vehicle import Vehicle
@@ -89,6 +90,7 @@ class PolestarApi:
         for vehicle in vehicles:
             vehicle.internet_activation = await get_internet_activation(token, vehicle.vin)
             vehicle.order_specification = await get_order_specification(token, vehicle.vin)
+            vehicle.service_plan = await get_service_plan(token, vehicle.vin)
         return vehicles
 
     async def async_enrich_vehicle(self, vehicle: Vehicle) -> None:
@@ -111,6 +113,12 @@ class PolestarApi:
             vehicle.is_bst_edition = found.is_bst_edition
         vehicle.internet_activation = await get_internet_activation(token, vehicle.vin)
         vehicle.order_specification = await get_order_specification(token, vehicle.vin)
+        vehicle.service_plan = await get_service_plan(token, vehicle.vin)
+
+    async def async_refresh_service_plan(self, vehicle: Vehicle) -> None:
+        """Read the car's service plan again (it changes rarely; Home Assistant asks every 3 days)."""
+        token = await self._auth.ensure_valid_token()
+        vehicle.service_plan = await get_service_plan(token, vehicle.vin)
 
     async def get_vehicle(self, vin: str) -> Vehicle:
         """Get a specific vehicle by VIN."""

@@ -525,3 +525,36 @@ def reports_cold_battery(battery: Any) -> bool:
     if battery is None:
         return True
     return int(getattr(battery, "cold_battery_status", 0)) != 0
+
+
+def service_plan_attributes(plan: dict[str, Any] | None) -> dict[str, Any]:
+    """Flat attributes for the Service plan sensor: status, the plan's last day, and each product's dates and limit.
+
+    Product names become prefixes (``car_wash_end``, ``scheduled_maintenance_mileage_limit``).
+    """
+    import re
+
+    if not plan:
+        return {}
+    out: dict[str, Any] = {}
+    for key in ("status", "product_status"):
+        if plan.get(key):
+            out[key] = str(plan[key]).lower()
+    ends = [p["end"] for p in plan.get("products") or [] if p.get("end")]
+    if ends:
+        out["ends"] = max(ends)
+    unit = plan.get("mileage_unit")
+    for product in plan.get("products") or []:
+        name = re.sub(r"[^0-9a-z]+", "_", str(product.get("name") or "").lower()).strip("_")
+        if not name:
+            continue
+        if product.get("start"):
+            out[f"{name}_start"] = product["start"]
+        if product.get("end"):
+            out[f"{name}_end"] = product["end"]
+        if product.get("mileage") is not None:
+            out[f"{name}_mileage_limit"] = f"{product['mileage']} {unit}" if unit else product["mileage"]
+    others = [n for n in plan.get("other_plans") or [] if n]
+    if others:
+        out["other_plans"] = ", ".join(others)
+    return out

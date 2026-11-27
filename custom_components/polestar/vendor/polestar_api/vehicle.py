@@ -114,6 +114,8 @@ class Vehicle:
         # From the app's own queries (None when unavailable)
         self.internet_activation: dict[str, str | None] | None = None
         self.order_specification: dict | None = None
+        # The service plan from the app backend (discovery.get_service_plan), or None when there is none.
+        self.service_plan: dict | None = None
         # From the C3 car-information service
         self.battery_capacity_kwh: float | None = None
         self.engine_type: str | None = None
