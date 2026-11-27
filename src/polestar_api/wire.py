@@ -129,6 +129,9 @@ class ProtoMessage:
             if isinstance(py_type, type) and issubclass(py_type, ProtoMessage):
                 val = py_type.from_bytes(val)
             elif isinstance(py_type, type) and issubclass(py_type, IntEnum):
-                val = py_type(val)
+                try:
+                    val = py_type(val)
+                except ValueError:
+                    val = py_type(0)
             kwargs[name] = val
         return cls(**kwargs)
