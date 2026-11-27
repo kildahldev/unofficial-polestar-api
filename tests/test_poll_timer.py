@@ -196,3 +196,61 @@ async def test_partial_refresh_after_command_does_not_reset_poll_timer(monkeypat
 
     assert coordinator.data.battery == "battery"
     assert coordinator.listener_calls == 1
+
+
+# Ported from ericyew/unofficial-polestar-api 0da9bc1: a full poll must not
+# clear values it did not fetch, such as an odometer that only streams.
+
+
+def _polling_coordinator(module, during_fetch=lambda coordinator: None, polled=None):
+    coordinator = _push_coordinator(module)
+    coordinator.data = module.PolestarVehicleData(odometer="before-poll")
+    async def no_restart():
+        return None
+
+    coordinator._restart_dead_streams = no_restart
+    coordinator._unsupported_commands = set()
+    coordinator._update_installed_version_cache = lambda software: None
+    coordinator._adapt_poll_interval = lambda data: None
+
+    async def fetch(attrs, previous, **kwargs):
+        during_fetch(coordinator)
+        return dict(polled or {"battery": "polled"}), 1
+
+    coordinator._async_fetch_values = fetch
+    return coordinator
+
+
+@pytest.mark.asyncio
+async def test_full_poll_keeps_stream_only_odometer(monkeypatch):
+    module, _ = _load(monkeypatch, FakeRegistry())
+
+    data = await _polling_coordinator(module)._async_update_data()
+
+    assert data.odometer == "before-poll"
+    assert data.battery == "polled"
+
+
+@pytest.mark.asyncio
+async def test_full_poll_keeps_odometer_pushed_while_it_was_running(monkeypatch):
+    module, _ = _load(monkeypatch, FakeRegistry())
+
+    def push(coordinator):
+        coordinator._async_apply_values(
+            {"odometer": "during-poll"}, coordinator.next_fetch_generation()
+        )
+
+    data = await _polling_coordinator(module, push)._async_update_data()
+
+    assert data.odometer == "during-poll"
+
+
+def test_unsupported_poll_keeps_a_streamed_value_but_clears_others(monkeypatch):
+    module, _ = _load(monkeypatch, FakeRegistry())
+    coordinator = _push_coordinator(module)
+    previous = module.PolestarVehicleData(odometer="streamed", weather="old")
+    coordinator.data = previous
+    coordinator._streamed_attrs.add("odometer")
+
+    assert coordinator._unsupported_value("odometer", previous) == "streamed"
+    assert coordinator._unsupported_value("weather", previous) is None

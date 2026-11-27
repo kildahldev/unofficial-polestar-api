@@ -189,6 +189,7 @@ def _coordinator(module, vehicle):
     coordinator = module.PolestarCoordinator.__new__(module.PolestarCoordinator)
     coordinator.vehicle = vehicle
     coordinator._unsupported_fetches = set()
+    coordinator._streamed_attrs = set()
     coordinator._invalid_argument_counts = {}
     coordinator._empty_fetches = set()
     coordinator._failing_fetches = set()

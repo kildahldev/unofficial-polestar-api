@@ -225,6 +225,14 @@ BINARY_SENSORS: tuple[PolestarBinarySensorDescription, ...] = (
         value_fn=lambda d: d.health.low_voltage_battery_warning == LowVoltageBatteryWarning.TOO_LOW if d.health else None,
     ),
     PolestarBinarySensorDescription(
+        key="battery_thermal_event",
+        icon_off="mdi:car-battery",
+        icon_on="mdi:fire-alert",
+        translation_key="battery_thermal_event",
+        device_class=BinarySensorDeviceClass.SAFETY,
+        value_fn=lambda d: d.health.battery_thermal_event_triggered if d.health else None,
+    ),
+    PolestarBinarySensorDescription(
         key="climate_active",
         translation_key="climate_active",
         device_class=BinarySensorDeviceClass.RUNNING,

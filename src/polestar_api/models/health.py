@@ -189,6 +189,8 @@ class Health(ProtoMessage, schema={
     44: "rear_tyres_reference_pressure_kpa",
     # TPMS status
     47: "tyre_status",
+    # High-voltage battery safety (ericyew, from Polestar app 5.15.1)
+    48: "battery_thermal_event_triggered",
 }):
     timestamp: Timestamp | None = None
     # Service
@@ -246,6 +248,8 @@ class Health(ProtoMessage, schema={
     rear_tyres_reference_pressure_kpa: float = 0.0
     # TPMS status
     tyre_status: TyreStatus | None = None
+    # The car omits field 48 when no event is triggered, so it reads False.
+    battery_thermal_event_triggered: bool = False
 
     @property
     def any_light_failure(self) -> bool:

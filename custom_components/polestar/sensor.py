@@ -39,6 +39,7 @@ from homeassistant.util import dt as dt_util
 from polestar_api.models.availability import UnavailableReason, UsageMode
 from polestar_api.models.battery import (
     ChargerConnectionStatus,
+    ColdBatteryStatus,
     ChargerPowerStatus,
     ChargingStatus,
     ChargingType,
@@ -263,6 +264,14 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         device_class=SensorDeviceClass.ENUM,
         options=enum_options(ChargerConnectionStatus),
         value_fn=lambda d: enum_name(d.battery.charger_connection_status) if d.battery else None,
+    ),
+    PolestarSensorDescription(
+        key="cold_battery_status",
+        icon="mdi:snowflake-thermometer",
+        translation_key="cold_battery_status",
+        device_class=SensorDeviceClass.ENUM,
+        options=enum_options(ColdBatteryStatus),
+        value_fn=lambda d: enum_name(d.battery.cold_battery_status) if d.battery else None,
     ),
     PolestarSensorDescription(
         key="charging_type",

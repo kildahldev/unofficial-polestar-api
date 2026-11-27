@@ -14,7 +14,7 @@ class TestAppBackendHeaders:
     def test_spoofs_current_official_android_app(self):
         headers = _app_backend_headers("test-token")
 
-        assert APP_FORCE_UPDATE_VERSION == "5.15.0"
+        assert APP_FORCE_UPDATE_VERSION == "5.15.1"
         assert APP_USER_AGENT == "PolestarApp/5.15.1b9417 Android/14"
         assert headers["User-Agent"] == APP_USER_AGENT
         assert headers["X-Polestar-Force-Update-Version"] == APP_FORCE_UPDATE_VERSION
@@ -58,7 +58,7 @@ class TestGetVehicles:
         headers = captured["headers"]
         assert isinstance(headers, dict)
         assert headers["User-Agent"] == "PolestarApp/5.15.1b9417 Android/14"
-        assert headers["X-Polestar-Force-Update-Version"] == "5.15.0"
+        assert headers["X-Polestar-Force-Update-Version"] == "5.15.1"
         assert headers["X-PolestarId-Authorization"] == "Bearer test-token"
         assert len(vehicles) == 1
         assert vehicles[0].vin == "YV4TEST000T0000001"

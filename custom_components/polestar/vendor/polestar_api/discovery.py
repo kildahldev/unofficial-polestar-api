@@ -24,7 +24,7 @@ APP_BACKEND_GRAPHQL_URL = "https://pc-api.polestar.com/eu-north-1/app-backend/ap
 APP_BACKEND_ACCEPT_HEADER = "multipart/mixed;deferSpec=20220824, application/graphql-response+json, application/json"
 APP_BACKEND_OPERATION_NAME = "GetVDMSCars"
 APP_BACKEND_CLIENT_LIBRARY = {"name": "apollo-kotlin", "version": "4.4.1"}
-APP_FORCE_UPDATE_VERSION = "5.15.0"
+APP_FORCE_UPDATE_VERSION = "5.15.1"
 APP_LOCALE = "SE"
 APP_USER_AGENT = "PolestarApp/5.15.1b9417 Android/14"
 

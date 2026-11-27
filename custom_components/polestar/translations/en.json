@@ -123,6 +123,9 @@
       "low_voltage_battery": {
         "name": "12V battery"
       },
+      "battery_thermal_event": {
+        "name": "Battery thermal event"
+      },
       "service_required": {
         "name": "Service required"
       },
@@ -296,6 +299,16 @@
           "connected": "Connected",
           "disconnected": "Disconnected",
           "fault": "Fault"
+        }
+      },
+      "cold_battery_status": {
+        "name": "Cold battery",
+        "state": {
+          "normal": "Normal",
+          "cold_predicted": "Cold predicted",
+          "cold_and_low_soc_predicted": "Cold and low charge predicted",
+          "cold": "Cold",
+          "cold_and_low_soc": "Cold and low charge"
         }
       },
       "charger_power_status": {

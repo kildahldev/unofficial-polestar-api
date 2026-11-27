@@ -277,6 +277,9 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         self._unsupported_streams: set[str] = set()
         self._unsupported_commands: set[str] = set()
         self._unsupported_fetches: set[str] = set()
+        # Attrs a live stream has delivered at least once; their value is kept
+        # when the poll endpoint for them is unsupported (ericyew 0da9bc1).
+        self._streamed_attrs: set[str] = set()
         self._invalid_argument_counts: dict[str, int] = {}
         # What the car says it lacks. Some names are data fetches that are no longer polled; the
         # others are capability names that entities use to say they need the feature.
@@ -484,7 +487,7 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         else:
             attr_names = tuple(a for a in requested if a not in self._unsupported_fetches)
             for attr in self._unsupported_fetches.intersection(requested):
-                values[attr] = _attr_default(attr)
+                values[attr] = self._unsupported_value(attr, previous)
 
         coroutines = [
             asyncio.wait_for(getattr(self.vehicle, _FETCH_ATTR_LOOKUP[attr])(), timeout=15)
@@ -502,8 +505,9 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
                     self._unsupported_fetches.add(attr)
                     # Clear rather than carry the last good value forward: an
                     # endpoint the backend has withdrawn would otherwise pin
-                    # its sensors to a stale snapshot forever.
-                    values[attr] = _attr_default(attr)
+                    # its sensors to a stale snapshot forever. Unless a live
+                    # stream supplies it (see _unsupported_value).
+                    values[attr] = self._unsupported_value(attr, previous)
                     continue
                 if attr not in self._failing_fetches:
                     self._failing_fetches.add(attr)
@@ -533,6 +537,17 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
             successful_fetches += 1
 
         return values, successful_fetches
+
+    def _unsupported_value(self, attr: str, previous: PolestarVehicleData) -> Any:
+        """Value for an attr whose poll endpoint is unsupported.
+
+        Cleared, unless a live stream has delivered it: then the poll has
+        nothing to say about it and the streamed value is kept (for example an
+        odometer that only arrives by stream).
+        """
+        if attr in self._streamed_attrs:
+            return getattr(self.data or previous, attr)
+        return _attr_default(attr)
 
     def _fetch_is_unsupported(self, attr: str, result: BaseException) -> bool:
         """Whether a failed fetch means the backend does not serve this endpoint."""
@@ -594,7 +609,9 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
             elif current is not None:
                 values[attr] = getattr(current, attr)
 
-        data = PolestarVehicleData(**values)
+        # Start from the current data: an attr the poll did not return keeps its
+        # value instead of being reset (ericyew 0da9bc1).
+        data = replace(self.data or previous, **values)
         self._update_installed_version_cache(data.software)
         self._unsupported_commands.clear()
         self._adapt_poll_interval(data)
@@ -810,6 +827,7 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
                     self._stream_last_data[attr] = time.monotonic()
                     current = self.data or PolestarVehicleData()
                     merged_value = self._merge_partial_update(attr, getattr(current, attr), value)
+                    self._streamed_attrs.add(attr)
                     self._async_apply_values({attr: merged_value}, self.next_fetch_generation())
                 if received:
                     # Server closed a subscription after delivering data (normal

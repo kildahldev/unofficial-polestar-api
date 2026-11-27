@@ -49,6 +49,8 @@ Reports of what works and what doesn't on your model are welcome. Please [open a
 | Tyre warning, per-wheel grades | ◐ | ◐ |
 | Per-wheel tyre pressures | ◐ | ◐ |
 | 12V battery, brake fluid, washer fluid, light status | ✅ | ✅ |
+| Battery thermal event (high-voltage battery safety) | 🧪 | 🧪 |
+| Cold battery status | ➖ | 🧪 |
 | Engine coolant, oil level (combustion cars) | ◐ | ➖ |
 | Climate status and time remaining | ➖ | ✅ |
 | Cabin air quality | ✅ | ✅ |
@@ -96,8 +98,8 @@ Reports of what works and what doesn't on your model are welcome. Please [open a
 
 | Platform | Examples |
 | --- | --- |
-| Sensor | State of charge, range, charging status, charger connection, climate status, odometer, service sensors, tyre pressures, software version, Connection, Vehicle info |
-| Binary sensor | Online, In use, Plugged in, Alarm triggered, Tyre warning, Service required, 12V battery, Brake fluid, Washer fluid, Light status, doors, windows, hood, tailgate, charge port |
+| Sensor | State of charge, range, charging status, charger connection, Cold battery, climate status, odometer, service sensors, tyre pressures, software version, Connection, Vehicle info |
+| Binary sensor | Online, In use, Plugged in, Alarm triggered, Tyre warning, Service required, 12V battery, Brake fluid, Washer fluid, Light status, Battery thermal event, doors, windows, hood, tailgate, charge port |
 | Device tracker | Location, Parked location |
 | Lock | Lock, Boot lock |
 | Switch | Climate, Charging, Charging schedule, Air purification |
