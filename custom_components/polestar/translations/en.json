@@ -60,6 +60,7 @@
     },
     "error": {
       "invalid_auth": "Invalid email or password",
+      "mfa_required": "Polestar asked for a one-time code (2FA). Sign in once at polestar.com with this account, then try again.",
       "cannot_connect": "Could not connect to Polestar",
       "vin_mismatch": "This account does not have access to the vehicle configured for this entry"
     },
