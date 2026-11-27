@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import logging
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
@@ -54,6 +56,8 @@ from .services.weather import WeatherServiceClient
 
 if TYPE_CHECKING:
     from .connection import GrpcConnection
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class Vehicle:
@@ -361,6 +365,21 @@ class Vehicle:
         see MyCarsServiceClient's docstring for why the two differ.
         """
         return await self._mycars.get_mycars()
+
+    async def async_load_model_name(self) -> None:
+        """Fill in ``model_name`` from MyCars when discovery did not provide it.
+
+        The vehicle list can return only the VIN. A failure leaves the vehicle unchanged.
+        """
+        if self.model_name:
+            return
+        try:
+            entry = await asyncio.wait_for(self.get_mycars(), timeout=15)
+        except Exception:  # noqa: BLE001
+            _LOGGER.debug("Could not load the model name from MyCars", exc_info=True)
+            return
+        if entry is not None and entry.details is not None and entry.details.model_name:
+            self.model_name = entry.details.model_name
 
     # -- OTA --
 
