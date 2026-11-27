@@ -87,6 +87,8 @@ class PolestarEntity(CoordinatorEntity[PolestarCoordinator]):
     required_data: Callable[[Any], bool] | None = None
     # True for entities that only make sense on a car with a combustion engine (diesel, petrol or hybrid).
     requires_combustion_engine: bool = False
+    # True for the charge port status, which the Polestar 2 never updates (see reports_charge_port).
+    requires_charge_port_status: bool = False
 
     def __init__(self, coordinator: PolestarCoordinator) -> None:
         super().__init__(coordinator)
@@ -169,12 +171,15 @@ def async_filter_supported_entities(
         attr = entity.required_fetch
         check = entity.required_data
         combustion_only = getattr(entity, "requires_combustion_engine", False)
-        if attr is None and check is None and not combustion_only:
+        charge_port = getattr(entity, "requires_charge_port_status", False)
+        if attr is None and check is None and not combustion_only and not charge_port:
             supported.append(entity)
             continue
         is_supported = attr is None or coordinator.is_fetch_supported(attr)
         if is_supported and combustion_only:
             is_supported = has_combustion_engine(getattr(coordinator, "vehicle", None)) is not False
+        if is_supported and charge_port:
+            is_supported = reports_charge_port(getattr(coordinator, "vehicle", None)) is not False
         if is_supported and check is not None and coordinator.data is not None:
             try:
                 is_supported = bool(check(coordinator.data))
@@ -204,3 +209,16 @@ def async_remove_registered_entities(hass: HomeAssistant, domain: str, unique_id
         entity_id = registry.async_get_entity_id(domain, DOMAIN, unique_id)
         if entity_id is not None:
             registry.async_remove(entity_id)
+
+
+# Cars on the CMA platform (the Polestar 2, like the electric Volvo XC40 and C40) send a charge port status that
+# stays "closed" even with a cable in (checked on a Polestar 2, Nov 2026). No capability flag says so.
+_CMA_MODELS = frozenset({"2"})
+
+
+def reports_charge_port(vehicle: Any) -> bool | None:
+    """False for a Polestar 2, whose charge port status never changes; None when the model is not known."""
+    model = str(getattr(vehicle, "model_name", None) or "").strip().casefold()
+    if not model:
+        return None
+    return model.removeprefix("polestar").strip() not in _CMA_MODELS

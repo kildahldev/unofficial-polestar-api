@@ -53,9 +53,15 @@ class PolestarOtaUpdate(PolestarEntity, UpdateEntity, RestoreEntity):
     _attr_translation_key = "software_update"
     _attr_supported_features = UpdateEntityFeature.INSTALL
 
-    # Home Assistant shows the brand logo for an update entity unless it has its own picture; None gives
-    # the standard update icons (a package, with an arrow when an update is available) like other devices.
-    _attr_entity_picture = None
+    @property
+    def entity_picture(self) -> str | None:
+        """No picture, so Home Assistant shows the standard update icon instead of the Polestar logo.
+
+        UpdateEntity falls back to the brand logo whenever the picture is None, so setting
+        ``_attr_entity_picture = None`` is not enough (the logo was still shown, Nov 2026): the property itself
+        is overridden.
+        """
+        return None
 
     def __init__(self, coordinator: PolestarCoordinator) -> None:
         super().__init__(coordinator)

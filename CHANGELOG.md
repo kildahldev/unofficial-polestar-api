@@ -15,12 +15,15 @@ Dates are 2026.
 
 ### Fixed
 
+- **Software update shows the update icon, not the Polestar logo.** Setting no picture was not enough: Home Assistant's update entity falls back to the brand logo, so the entity now overrides the picture outright.
 - **Cold battery is hidden on cars that don't report it.** The Polestar 2 leaves the field empty, so the sensor only ever read Unknown. It is now disabled when the car reports nothing for it, and comes back by itself if the car starts sending it (Polestar 3 and 4 are expected to).
 - **Clearer idle states.** Climate request type and Climate running status show "Not running" instead of "Undefined". Unavailable reason shows "Not applicable" while the car is available, instead of Unknown. The state values (`undefined`, `none`) are what automations see.
 - **Streamed values survive a full poll.** If a poll endpoint is unsupported for a value that a live stream delivers (for example an odometer that only arrives by stream), the poll used to clear it. The streamed value is now kept, and the poll result is built on the current data so nothing it did not fetch is reset. Port of ericyew's [0da9bc1](https://github.com/ericyew/unofficial-polestar-api/commit/0da9bc1b692d86bf5f115464cd1ed80f2829f6eb); on this fork it only mattered for cars whose poll endpoint is unsupported.
 
 ### Changed
 
+- **Charge port hidden on the Polestar 2.** Its charge port status stays closed even with a cable in (as on the electric Volvo XC40 and C40, the same CMA platform), so the sensor is disabled. It is decided from the model, as no capability flag covers it; you can still enable it.
+- **Honk and flash is now Lights and horn**, as the Polestar app calls it. The entity ID is unchanged.
 - **Boot and bonnet, not tailgate and hood.** The Tailgate binary sensor is now called **Boot** and Hood is **Bonnet**, matching Boot lock and the Australian (and UK) wording. Only the names change; existing entity IDs stay.
 - **Entity sections tidied** (one rule for both integrations: Diagnostic for health warnings that normally read OK, technical details and versions):
   - to Diagnostic: **12V battery**, **Brake fluid**, **Light status**, **Online** (Connection and In use cover the main view) and **Software version**;

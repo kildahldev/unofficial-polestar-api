@@ -50,6 +50,7 @@ class PolestarBinarySensorDescription(BinarySensorEntityDescription):
     fetch_attr: str | None = None
     attrs_fn: Callable[[PolestarVehicleData], dict[str, Any]] | None = None
     required_data: Callable[[PolestarVehicleData], bool] | None = None
+    requires_charge_port_status: bool = False
 
 
 BINARY_SENSORS: tuple[PolestarBinarySensorDescription, ...] = (
@@ -144,6 +145,7 @@ BINARY_SENSORS: tuple[PolestarBinarySensorDescription, ...] = (
     PolestarBinarySensorDescription(
         key="tank_lid",
         translation_key="tank_lid",
+        requires_charge_port_status=True,
         device_class=BinarySensorDeviceClass.DOOR,
         value_fn=lambda d: _is_open(d.exterior.tank_lid.open_status),
     ),
@@ -276,6 +278,7 @@ class PolestarBinarySensor(PolestarEntity, BinarySensorEntity):
         self.entity_description = description
         self.required_fetch = description.fetch_attr
         self.required_data = description.required_data
+        self.requires_charge_port_status = description.requires_charge_port_status
         self._attr_unique_id = f"{self._vehicle.vin}_{description.key}"
 
     @property
