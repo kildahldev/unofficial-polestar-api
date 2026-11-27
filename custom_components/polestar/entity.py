@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
+from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
@@ -23,29 +26,49 @@ class OptimisticStateMixin:
     the new value immediately, and read state through `_resolve_optimistic`
     instead of the raw coordinator value. The override is dropped as soon as
     the coordinator reports a matching value, or after `_OPTIMISTIC_TTL`
-    seconds if the backend never confirms it.
+    seconds if the car never confirms it (the state is rewritten then).
     """
 
-    _OPTIMISTIC_TTL = 10.0
+    _OPTIMISTIC_TTL = 60.0
     _optimistic_value: Any = None
     _optimistic_deadline: float = 0.0
+    _cancel_optimistic_timer: Callable[[], None] | None = None
 
     def _set_optimistic(self, value: Any) -> None:
+        self._cancel_timer()
         self._optimistic_value = value
         self._optimistic_deadline = time.monotonic() + self._OPTIMISTIC_TTL
+        self._cancel_optimistic_timer = async_call_later(self.hass, self._OPTIMISTIC_TTL, self._optimistic_expired)
         self.async_write_ha_state()
 
-    def _clear_optimistic(self) -> None:
+    def _cancel_timer(self) -> None:
+        if self._cancel_optimistic_timer is not None:
+            self._cancel_optimistic_timer()
+            self._cancel_optimistic_timer = None
+
+    def _drop_optimistic(self) -> None:
+        self._cancel_timer()
         self._optimistic_value = None
         self._optimistic_deadline = 0.0
+
+    def _clear_optimistic(self) -> None:
+        self._drop_optimistic()
         self.async_write_ha_state()
+
+    @callback
+    def _optimistic_expired(self, _now: Any) -> None:
+        self._cancel_optimistic_timer = None
+        self._clear_optimistic()
+
+    async def async_will_remove_from_hass(self) -> None:
+        self._cancel_timer()
+        await super().async_will_remove_from_hass()
 
     def _resolve_optimistic(self, real_value: Any) -> Any:
         if self._optimistic_deadline == 0.0:
             return real_value
         if real_value == self._optimistic_value or time.monotonic() >= self._optimistic_deadline:
-            self._optimistic_deadline = 0.0
-            self._optimistic_value = None
+            self._drop_optimistic()
             return real_value
         return self._optimistic_value
 
