@@ -90,8 +90,8 @@ class ClimateServiceClient:
             target_temperature_celsius=float(target_temp) if isinstance(target_temp, (int, float)) else None,
             front_left_seat=cls._map_seat_heating(raw.get(9)),
             front_right_seat=cls._map_seat_heating(raw.get(10)),
-            rear_right_seat=cls._map_seat_heating(raw.get(11)),
-            rear_left_seat=cls._map_seat_heating(raw.get(12)),
+            rear_left_seat=cls._map_seat_heating(raw.get(11)),
+            rear_right_seat=cls._map_seat_heating(raw.get(12)),
             steering_wheel=cls._map_seat_heating(raw.get(13)),
         )
 
