@@ -30,6 +30,8 @@ _HEATING_MAP = {
     "level2": HeatingIntensity.LEVEL2,
     "level3": HeatingIntensity.LEVEL3,
 }
+# Cars with one steering wheel heat level run it at level 3.
+_ONE_LEVEL_HEATING_OPTIONS = ["unspecified", "off", "level3"]
 _TARGET_SOC_OPTIONS = ["daily", "long_trip", "custom"]
 _TARGET_SOC_MAP = {
     "daily": ChargeTargetLevelSettingType.DAILY,
@@ -151,6 +153,14 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
+def _steering_wheel_levels(coordinator: PolestarCoordinator) -> int:
+    """Steering wheel heat levels the car reports, or 0 when unknown."""
+    mycars = coordinator.data.mycars if coordinator.data else None
+    details = mycars.details if mycars else None
+    climate = details.parking_climatization if details else None
+    return climate.steering_wheel_setting_levels if climate else 0
+
+
 class PolestarSelect(OptimisticStateMixin, PolestarEntity, RestoreEntity, SelectEntity):
     """Select entity for local command preferences."""
 
@@ -160,6 +170,17 @@ class PolestarSelect(OptimisticStateMixin, PolestarEntity, RestoreEntity, Select
         super().__init__(coordinator)
         self.entity_description = description
         self._attr_unique_id = f"{self._vehicle.vin}_{description.key}"
+        self._one_level_heat = (
+            description.key == "climate_steering_wheel" and _steering_wheel_levels(coordinator) == 1
+        )
+        if self._one_level_heat:
+            self._attr_options = _ONE_LEVEL_HEATING_OPTIONS
+
+    def _supported_option(self, option: str) -> str:
+        """Map a level the car does not have onto the one it runs instead."""
+        if self._one_level_heat and option in ("level1", "level2"):
+            return "level3"
+        return option
 
     async def async_added_to_hass(self) -> None:
         """Restore helper state."""
@@ -171,8 +192,9 @@ class PolestarSelect(OptimisticStateMixin, PolestarEntity, RestoreEntity, Select
         last_state = await self.async_get_last_state()
         if last_state is None or last_state.state in {"unknown", "unavailable"}:
             return
-        if last_state.state in self.options:
-            await self.async_select_option(last_state.state)
+        restored = self._supported_option(last_state.state)
+        if restored in self.options:
+            await self.async_select_option(restored)
 
     @property
     def current_option(self) -> str | None:
@@ -191,7 +213,7 @@ class PolestarSelect(OptimisticStateMixin, PolestarEntity, RestoreEntity, Select
             return prefs.rear_left_seat.name.lower()
         if key == "climate_rear_right_seat":
             return prefs.rear_right_seat.name.lower()
-        return prefs.steering_wheel.name.lower()
+        return self._supported_option(prefs.steering_wheel.name.lower())
 
     async def async_select_option(self, option: str) -> None:
         key = self.entity_description.key

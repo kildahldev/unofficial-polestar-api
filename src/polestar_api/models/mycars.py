@@ -32,18 +32,31 @@ from ..wire import ProtoMessage
 
 
 @dataclass(frozen=True)
+class ParkingClimatizationCapabilities(ProtoMessage, schema={16: "steering_wheel_setting_levels"}):
+    """What the car supports for parking climate; the field number is the official app's.
+
+    ``steering_wheel_setting_levels`` is the number of heat levels besides off
+    (a Polestar 4 reports 1). It is 0 when the car does not send it.
+    """
+
+    steering_wheel_setting_levels: int = 0
+
+
+@dataclass(frozen=True)
 class CarDetails(ProtoMessage, schema={
     1: "vin",
     6: "model_name",
     7: "model_year",
     9: "installed_software_version",
     10: "market",
+    37: "parking_climatization",
 }):
     vin: str = ""
     model_name: str = ""
     model_year: str = ""
     installed_software_version: str = ""
     market: str = ""
+    parking_climatization: ParkingClimatizationCapabilities | None = None
 
 
 @dataclass(frozen=True)
