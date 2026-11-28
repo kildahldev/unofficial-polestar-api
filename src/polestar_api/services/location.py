@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from .. import grpc as grpc_call
@@ -46,7 +47,13 @@ def _parse_location_message(data: bytes) -> Location:
 
     nested_location = raw.get(2)
     if isinstance(nested_location, bytes):
-        return _parse_compact_location(nested_location)
+        location = _parse_compact_location(nested_location)
+        # LastParkedLocation: field 3 is a bool ``stale`` flag (omitted when false
+        # on the wire, so only set it when present).
+        stale = raw.get(3)
+        if isinstance(stale, int) and not isinstance(stale, bool):
+            location = replace(location, stale=bool(stale))
+        return location
 
     longitude = raw.get(2)
     latitude = raw.get(3)

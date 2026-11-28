@@ -67,3 +67,32 @@ class MyCarEntry(ProtoMessage, schema={
 # decodes the response directly with codec.decode() instead, which
 # naturally accumulates repeated same-numbered fields into a list, and
 # picks the right entry by matching VIN.
+
+
+@dataclass(frozen=True)
+class CarPreview(ProtoMessage, schema={
+    1: "vin",
+    2: "has_owner",
+    3: "has_any_pairings",
+    4: "is_owner_account_linked",
+    5: "vehicle_type_name",
+    6: "model_year",
+    7: "market",
+    9: "supports_device_pairing",
+    10: "vehicle_type_code",
+}):
+    """CarInformation/GetCarPreview payload (live-verified on C3).
+
+    ``vehicle_type_name`` is e.g. ``"Polestar 4"``. Field 8 (account linking,
+    nested) is intentionally ignored.
+    """
+
+    vin: str = ""
+    has_owner: bool = False
+    has_any_pairings: bool = False
+    is_owner_account_linked: bool = False
+    vehicle_type_name: str = ""
+    model_year: str = ""
+    market: str = ""
+    supports_device_pairing: bool = False
+    vehicle_type_code: str = ""

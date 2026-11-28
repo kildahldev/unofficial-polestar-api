@@ -13,10 +13,12 @@ from homeassistant.components.binary_sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from polestar_api.models.exterior import OpenStatus
 from polestar_api.models.health import LowVoltageBatteryWarning, ServiceWarning
+from polestar_api.models.privacy import PrivacySettingType
 
 from .const import DOMAIN
 from .coordinator import PolestarVehicleData
@@ -41,6 +43,28 @@ class PolestarBinarySensorDescription(BinarySensorEntityDescription):
     """Binary sensor description with value extractor."""
 
     value_fn: Callable[[PolestarVehicleData], bool | None]
+    attrs_fn: Callable[[PolestarVehicleData], dict[str, Any]] | None = None
+
+
+def _privacy_value(setting_type: PrivacySettingType) -> Callable[[PolestarVehicleData], bool | None]:
+    def value(data: PolestarVehicleData) -> bool | None:
+        setting = data.privacy_settings.get(setting_type)
+        return setting.enabled if setting else None
+
+    return value
+
+
+def _privacy_attrs(setting_type: PrivacySettingType) -> Callable[[PolestarVehicleData], dict[str, Any]]:
+    def attrs(data: PolestarVehicleData) -> dict[str, Any]:
+        setting = data.privacy_settings.get(setting_type)
+        if setting is None:
+            return {}
+        result: dict[str, Any] = {"read_only": setting.read_only}
+        if setting.service_id:
+            result["service_id"] = setting.service_id
+        return result
+
+    return attrs
 
 
 BINARY_SENSORS: tuple[PolestarBinarySensorDescription, ...] = (
@@ -194,7 +218,34 @@ BINARY_SENSORS: tuple[PolestarBinarySensorDescription, ...] = (
         device_class=BinarySensorDeviceClass.RUNNING,
         value_fn=lambda d: d.precleaning.is_running if d.precleaning else None,
     ),
+    PolestarBinarySensorDescription(
+        key="location_sharing",
+        name="Location sharing",
+        icon="mdi:map-marker-account",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=_privacy_value(PrivacySettingType.VEHICLE_LOCATION_SHARING),
+        attrs_fn=_privacy_attrs(PrivacySettingType.VEHICLE_LOCATION_SHARING),
+    ),
+    PolestarBinarySensorDescription(
+        key="privacy_setting",
+        name="Privacy setting",
+        icon="mdi:shield-account",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=_privacy_value(PrivacySettingType.PRIVACY_SETTING),
+        attrs_fn=_privacy_attrs(PrivacySettingType.PRIVACY_SETTING),
+    ),
+    PolestarBinarySensorDescription(
+        key="data_sharing",
+        name="Data sharing",
+        icon="mdi:database-export",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=_privacy_value(PrivacySettingType.VEHICLE_DATA_SHARING),
+        attrs_fn=_privacy_attrs(PrivacySettingType.VEHICLE_DATA_SHARING),
+    ),
 )
+
+
+_PRIVACY_KEYS = frozenset({"location_sharing", "privacy_setting", "data_sharing"})
 
 
 async def async_setup_entry(
@@ -226,3 +277,16 @@ class PolestarBinarySensor(PolestarEntity, BinarySensorEntity):
         if self.coordinator.data is None:
             return None
         return _safe(self.entity_description.value_fn, self.coordinator.data)
+
+    @property
+    def available(self) -> bool:
+        # Privacy sensors stay unavailable until a message for their type arrives.
+        if self.entity_description.key in _PRIVACY_KEYS:
+            return super().available and self.is_on is not None
+        return super().available
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        if self.coordinator.data is None or self.entity_description.attrs_fn is None:
+            return {}
+        return self.entity_description.attrs_fn(self.coordinator.data)

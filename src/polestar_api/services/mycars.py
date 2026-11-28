@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 
 from .. import grpc as grpc_call
 from ..codec import decode, encode
-from ..models.mycars import MyCarEntry
+from ..models.mycars import CarPreview, MyCarEntry
 
 if TYPE_CHECKING:
     from ..connection import GrpcConnection
@@ -85,3 +85,18 @@ class MyCarsServiceClient:
             )
             return None
         return matching
+
+    async def get_car_preview(self) -> CarPreview | None:
+        """Get the car preview (vehicle type name, model year, market), or ``None``."""
+        metadata = await self._metadata()
+        data = await grpc_call.unary_unary(
+            self._connection.channel,
+            f"{self._service}/GetCarPreview",
+            encode({"vin": (1, "string")}, {"vin": self._vin}),
+            metadata=metadata,
+        )
+        # Response: f1 = CarPreview
+        preview = decode(data).get(1)
+        if not isinstance(preview, bytes):
+            return None
+        return CarPreview.from_bytes(preview)

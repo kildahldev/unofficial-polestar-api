@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from homeassistant.components.device_tracker import SourceType, TrackerEntity
 from homeassistant.config_entries import ConfigEntry
@@ -25,6 +26,12 @@ TRACKERS: tuple[PolestarTrackerDescription, ...] = (
     PolestarTrackerDescription(key="location", name="Location", data_attr="location"),
     PolestarTrackerDescription(key="parked_location", name="Parked location", data_attr="parked_location"),
 )
+
+
+def position_time_iso(location) -> str | None:
+    """ISO-8601 UTC string of the position timestamp, or ``None`` if missing."""
+    moment = location.timestamp.to_datetime() if location.timestamp else None
+    return moment.isoformat() if moment else None
 
 
 async def async_setup_entry(
@@ -73,12 +80,16 @@ class PolestarDeviceTracker(PolestarEntity, TrackerEntity):
         return coord.longitude if coord else None
 
     @property
-    def extra_state_attributes(self) -> dict[str, int | None]:
+    def extra_state_attributes(self) -> dict[str, Any]:
         location = self.location_data
         if location is None:
             return {}
-        return {
+        attrs: dict[str, Any] = {
             "heading": location.heading,
             "speed": location.speed,
             "altitude": location.altitude,
+            "position_time": position_time_iso(location),
         }
+        if self.entity_description.key == "parked_location" and location.stale is not None:
+            attrs["stale"] = location.stale
+        return attrs

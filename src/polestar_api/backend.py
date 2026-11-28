@@ -31,6 +31,7 @@ class BackendProfile:
     target_soc_svc: str = "/chronos.services.v1.TargetSocService"
     amp_limit_svc: str = "/chronos.services.v1.AmpLimitService"
     charge_timer_svc: str = "/chronos.services.v2.GlobalChargeTimerService"
+    error_svc: str = "/chronos.services.v1.ErrorService"
 
     # standalone
     invocation_svc: str = "/invocation.InvocationService"
@@ -42,6 +43,8 @@ class BackendProfile:
     # live-tested end to end (not inferred by analogy like most of the
     # others above) — see pypolestar/pypolestar#79.
     mycars_svc: str = "/car_information.CarInformation"
+    # Privacy toggles (server-streaming, one setting per message). Live-tested on C3.
+    privacy_settings_svc: str = "/userServices.PrivacySettings"
 
 
 C3 = BackendProfile()
@@ -61,6 +64,7 @@ PCCS = BackendProfile(
     target_soc_svc="/pccs.chronos.services.v1.TargetSocService",
     amp_limit_svc="/pccs.chronos.services.v1.AmpLimitService",
     charge_timer_svc="/pccs.chronos.services.v2.GlobalChargeTimerService",
+    error_svc="/pccs.chronos.services.v1.ErrorService",
     invocation_svc="/pccs.invocation.v1.InvocationService",
     location_svc="/pccs.location.v1.LocationService",
 )

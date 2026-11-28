@@ -8,6 +8,7 @@ from .charge_now import ChargeNowServiceClient
 from .charge_timer import ChargeTimerServiceClient
 from .climate import ClimateServiceClient
 from .dashboard import DashboardServiceClient
+from .errors import ErrorServiceClient
 from .exterior import ExteriorServiceClient
 from .health import HealthServiceClient
 from .invocation import InvocationServiceClient
@@ -16,6 +17,7 @@ from .odometer import OdometerServiceClient
 from .ota import OtaServiceClient
 from .parking_climate_timer import ParkingClimateTimerServiceClient
 from .precleaning import PreCleaningServiceClient
+from .privacy import PrivacyServiceClient
 from .target_soc import TargetSocServiceClient
 from .weather import WeatherServiceClient
 
@@ -28,6 +30,7 @@ __all__ = [
     "ChargeTimerServiceClient",
     "ClimateServiceClient",
     "DashboardServiceClient",
+    "ErrorServiceClient",
     "ExteriorServiceClient",
     "HealthServiceClient",
     "InvocationServiceClient",
@@ -36,6 +39,7 @@ __all__ = [
     "OtaServiceClient",
     "ParkingClimateTimerServiceClient",
     "PreCleaningServiceClient",
+    "PrivacyServiceClient",
     "TargetSocServiceClient",
     "WeatherServiceClient",
 ]

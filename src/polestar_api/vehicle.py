@@ -27,7 +27,9 @@ from .models.exterior import ExteriorStatus
 from .models.health import Health
 from .models.honkflash import HonkFlashAction, HonkAndFlashResponse
 from .models.locks import CarLockResponse, CarUnlockResponse, LockAlarmLevel, LockFeedback, UnlockFeedback, TrunkUnlockResponse
-from .models.mycars import MyCarEntry
+from .models.errors import CommandError
+from .models.mycars import CarPreview, MyCarEntry
+from .models.privacy import PrivacySetting
 from .models.odometer import OdometerStatus
 from .models.wakeup import WakeUpReason, WakeUpResponse
 from .models.weather import WeatherReport
@@ -40,6 +42,7 @@ from .services.charge_now import ChargeNowServiceClient
 from .services.charge_timer import ChargeTimerServiceClient
 from .services.climate import ClimateServiceClient
 from .services.dashboard import DashboardServiceClient
+from .services.errors import ErrorServiceClient
 from .services.exterior import ExteriorServiceClient
 from .services.health import HealthServiceClient
 from .services.invocation import InvocationServiceClient
@@ -47,6 +50,7 @@ from .services.location import LocationServiceClient
 from .services.mycars import MyCarsServiceClient
 from .services.odometer import OdometerServiceClient
 from .services.ota import OtaServiceClient
+from .services.privacy import PrivacyServiceClient
 from .services.parking_climate_timer import ParkingClimateTimerServiceClient
 from .services.precleaning import PreCleaningServiceClient
 from .services.target_soc import TargetSocServiceClient
@@ -83,6 +87,7 @@ class Vehicle:
         self._charge_timer = ChargeTimerServiceClient(connection, vin)
         self._climate = ClimateServiceClient(connection, vin)
         self._dashboard = DashboardServiceClient(connection, vin)
+        self._errors = ErrorServiceClient(connection, vin)
         self._exterior = ExteriorServiceClient(connection, vin)
         self._health = HealthServiceClient(connection, vin)
         self._invocation = InvocationServiceClient(connection, vin)
@@ -92,6 +97,7 @@ class Vehicle:
         self._ota = OtaServiceClient(connection, vin)
         self._parking_climate_timer = ParkingClimateTimerServiceClient(connection, vin)
         self._precleaning = PreCleaningServiceClient(connection, vin)
+        self._privacy = PrivacyServiceClient(connection, vin)
         self._target_soc = TargetSocServiceClient(connection, vin)
         self._weather = WeatherServiceClient(connection, vin)
 
@@ -361,6 +367,24 @@ class Vehicle:
         see MyCarsServiceClient's docstring for why the two differ.
         """
         return await self._mycars.get_mycars()
+
+    async def get_car_preview(self) -> CarPreview | None:
+        """Vehicle type name (e.g. ``"Polestar 4"``), model year, and market."""
+        return await self._mycars.get_car_preview()
+
+    # -- Privacy --
+
+    async def stream_privacy_settings(self) -> AsyncIterator[PrivacySetting]:
+        """Privacy settings; each message is one setting (merge by ``setting_type``)."""
+        async for setting in self._privacy.stream():
+            yield setting
+
+    # -- Errors --
+
+    async def stream_errors(self) -> AsyncIterator[CommandError]:
+        """Last command errors (unverified format — see services/errors.py)."""
+        async for error in self._errors.stream():
+            yield error
 
     # -- OTA --
 

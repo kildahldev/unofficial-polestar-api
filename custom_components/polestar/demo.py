@@ -71,6 +71,7 @@ from polestar_api.models.parking_climate_timer import (
     ParkingClimateTimerSettings,
     SeatHeatingSettings,
 )
+from polestar_api.models.privacy import PrivacySetting, PrivacySettingType
 from polestar_api.models.precleaning import (
     PreCleaningErrorType,
     PreCleaningInfo,
@@ -279,6 +280,22 @@ class DemoVehicle:
             heading=0,
             speed=0,
         )
+
+    async def stream_privacy_settings(self):
+        """Stream demo privacy settings, one per message like the real service."""
+        yield PrivacySetting(
+            setting_type=PrivacySettingType.PRIVACY_SETTING,
+            service_id="demo-service-id",
+            enabled=True,
+            read_only=True,
+        )
+        yield PrivacySetting(
+            setting_type=PrivacySettingType.VEHICLE_LOCATION_SHARING,
+            enabled=True,
+            read_only=True,
+        )
+        while True:
+            await asyncio.sleep(3600)
 
     async def get_climate(self) -> ClimatizationInfo:
         if self._climate_on:

@@ -29,15 +29,18 @@ from .charge_location import (
 from .common import Coordinate, DailyTime, Location, ResponseStatus, Timestamp, VehicleRequest, Weekday
 from .connectivity import ConnectivityInfo, ConnectivityStatus, NetworkType, SignalStrength
 from .dashboard import CarDashboardData, CarWarningsData, DashboardStatus
+from .errors import CommandError
 from .exterior import ExteriorStatus
 from .health import Health
 from .honkflash import HonkAndFlashRequest, HonkAndFlashResponse
 from .invocation import InvocationRequest, InvocationResponse, InvocationStatus
 from .location import LocationRequest, LocationResponse, LocationStatusUpdate
 from .locks import CarLockRequest, CarLockResponse, CarUnlockRequest, CarUnlockResponse
+from .mycars import CarPreview
 from .odometer import OdometerStatus
 from .ota import CarSoftwareInfo, Scheduler, SoftwareDescription, SoftwareState, ScheduleStatus
 from .parking_climate_timer import ParkingClimateTimer
+from .privacy import PrivacySetting, PrivacySettingType
 from .precleaning import PreCleaningErrorType, PreCleaningInfo, PreCleaningRunningStatus, PreCleaningStartReason
 from .wakeup import WakeUpRequest, WakeUpResponse, WakeUpReason
 from .weather import WeatherReport
@@ -50,6 +53,8 @@ __all__ = [
     "Battery",
     "BatteryChargeTimer",
     "CarDashboardData",
+    "CarPreview",
+    "CommandError",
     "ChargeLocation",
     "ChargeLocationDepartureTime",
     "ChargeLocationTimer",
@@ -90,6 +95,8 @@ __all__ = [
     "OptimisedChargingType",
     "ParkingClimateTimer",
     "PreCleaningErrorType",
+    "PrivacySetting",
+    "PrivacySettingType",
     "PreCleaningInfo",
     "PreCleaningRunningStatus",
     "PreCleaningStartReason",

@@ -31,13 +31,14 @@ from polestar_api.models.charging import (
 )
 from polestar_api.models.climate import ClimatizationInfo
 from polestar_api.models.climatization import HeatingIntensity
-from polestar_api.models.common import Location, ResponseStatusCode
+from polestar_api.models.common import Location, ResponseStatusCode, select_location_update
 from polestar_api.models.connectivity import ConnectivityInfo
 from polestar_api.models.dashboard import DashboardStatus
+from polestar_api.models.errors import CommandError
 from polestar_api.models.exterior import ExteriorStatus
 from polestar_api.models.health import Health
 from polestar_api.models.invocation import InvocationStatus
-from polestar_api.models.mycars import MyCarEntry
+from polestar_api.models.mycars import CarPreview, MyCarEntry
 from polestar_api.models.odometer import OdometerStatus
 from polestar_api.models.ota import CarSoftwareInfo, Scheduler, SoftwareState
 from polestar_api.models.parking_climate_timer import (
@@ -45,6 +46,7 @@ from polestar_api.models.parking_climate_timer import (
     ParkingClimateTimerSettings,
 )
 from polestar_api.models.precleaning import PreCleaningInfo
+from polestar_api.models.privacy import PrivacySetting, PrivacySettingType
 from polestar_api.models.weather import WeatherReport
 
 from .const import CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL, STREAM_MAX_RETRIES, STREAM_RETRY_DELAY
@@ -109,12 +111,19 @@ class PolestarVehicleData:
     current_charge_location: dict[str, Any] = field(default_factory=dict)
     climate_timers: list[ParkingClimateTimer] = field(default_factory=list)
     climate_timer_settings: ParkingClimateTimerSettings | None = None
+    # Stream-only: latest privacy setting per type (one setting per message).
+    privacy_settings: dict[PrivacySettingType, PrivacySetting] = field(default_factory=dict)
+    # Stream-only, unverified format: most recent command error, if any.
+    last_command_error: CommandError | None = None
+
+
+# Location attrs: ``location`` is stream-only; ``parked_location`` is polled and streamed.
+_LOCATION_ATTRS = frozenset({"location", "parked_location"})
 
 
 _FETCH_ATTRS: tuple[tuple[str, str], ...] = (
     ("battery", "get_battery"),
     ("exterior", "get_exterior"),
-    ("location", "get_location"),
     ("parked_location", "get_parked_location"),
     ("climate", "get_climate"),
     ("dashboard", "get_dashboard"),
@@ -135,6 +144,16 @@ _FETCH_ATTRS: tuple[tuple[str, str], ...] = (
     ("climate_timer_settings", "get_climate_timer_settings"),
 )
 _FETCH_ATTR_LOOKUP = dict(_FETCH_ATTRS)
+
+
+def merge_privacy_setting(
+    previous: dict[PrivacySettingType, PrivacySetting] | None,
+    setting: PrivacySetting,
+) -> dict[PrivacySettingType, PrivacySetting]:
+    """Return a new dict with *setting* stored under its type (messages carry one each)."""
+    merged = dict(previous or {})
+    merged[setting.setting_type] = setting
+    return merged
 
 
 class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
@@ -163,6 +182,8 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         self._unsupported_streams: set[str] = set()
         self._unsupported_commands: set[str] = set()
         self.charge_amp_limits: ChargeAmpLimits | None = None
+        # Fetched once at setup; used as the device model when the vehicle list has none.
+        self.car_preview: CarPreview | None = None
 
     @staticmethod
     def _command_succeeded(response: Any) -> bool:
@@ -351,6 +372,8 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
         "precleaning": "stream_precleaning",
         "odometer": "stream_odometer",
         "availability": "stream_availability",
+        "privacy_settings": "stream_privacy_settings",
+        "last_command_error": "stream_errors",
     }
 
     async def async_start_streams(self) -> None:
@@ -403,6 +426,8 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
                     consecutive_failures = 0
                     current = self.data or PolestarVehicleData()
                     merged_value = self._merge_partial_update(attr, getattr(current, attr), value)
+                    if attr in _LOCATION_ATTRS and merged_value is None:
+                        continue  # stale or unchanged location, nothing to publish
                     self._async_push_data(replace(current, **{attr: merged_value}))
             except asyncio.CancelledError:
                 raise
@@ -410,7 +435,7 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
                 _LOGGER.warning("Live %s stream auth failure for %s: %s", attr, self.vehicle.vin, err)
                 await asyncio.sleep(STREAM_RETRY_DELAY)
             except GRPCError as err:
-                if err.status == GrpcStatus.UNIMPLEMENTED:
+                if err.status in (GrpcStatus.UNIMPLEMENTED, GrpcStatus.NOT_FOUND):
                     _LOGGER.debug("Live %s stream not supported for %s, stopping", attr, self.vehicle.vin)
                     self._unsupported_streams.add(attr)
                     return
@@ -448,6 +473,10 @@ class PolestarCoordinator(DataUpdateCoordinator[PolestarVehicleData]):
             return None
         if attr == "exterior" and previous is not None:
             return result.merge(previous)
+        if attr in _LOCATION_ATTRS:
+            return select_location_update(previous, result)
+        if attr == "privacy_settings":
+            return merge_privacy_setting(previous, result)
         return result
 
     async def async_refresh_after_command(self, *attrs: str) -> None:

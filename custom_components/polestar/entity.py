@@ -59,10 +59,16 @@ class PolestarEntity(CoordinatorEntity[PolestarCoordinator]):
         super().__init__(coordinator)
         self._vehicle = coordinator.vehicle
 
+    def _preview_model_name(self) -> str | None:
+        """Model name from GetCarPreview, used when the vehicle list has none."""
+        preview = getattr(self.coordinator, "car_preview", None)
+        return (preview.vehicle_type_name or None) if preview else None
+
     @property
     def device_info(self) -> DeviceInfo:
         v = self._vehicle
-        name_parts = [_device_name_prefix(v.model_name)]
+        model = v.model_name or self._preview_model_name()
+        name_parts = [_device_name_prefix(model)]
         if v.registration_no:
             name_parts.append(f"({v.registration_no})")
         else:
@@ -72,7 +78,7 @@ class PolestarEntity(CoordinatorEntity[PolestarCoordinator]):
             identifiers={(DOMAIN, v.vin)},
             name=" ".join(name_parts),
             manufacturer="Polestar",
-            model=v.model_name,
+            model=model,
             serial_number=v.vin,
             sw_version=(
                 self.coordinator.installed_version_cache

@@ -83,6 +83,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         vehicle = Vehicle(vin=configured_vin, connection=api._connection)
 
     coordinator = PolestarCoordinator(hass, vehicle, entry)
+    if not vehicle.model_name:
+        # Vehicle list had no model (e.g. guest accounts): use GetCarPreview for the device model.
+        try:
+            coordinator.car_preview = await vehicle.get_car_preview()
+        except Exception as err:  # noqa: BLE001 - optional; fall back to current naming
+            _LOGGER.debug("Car preview unavailable: %s", err)
     try:
         # Per-car charge current range, as the app uses for its +/- control.
         coordinator.charge_amp_limits = await api.get_charge_amp_limits(vehicle.vin)

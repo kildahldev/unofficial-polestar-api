@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from enum import IntEnum
 
 from ..wire import ProtoMessage
@@ -12,6 +13,15 @@ from ..wire import ProtoMessage
 class Timestamp(ProtoMessage, schema={1: "seconds", 2: "nanos"}):
     seconds: int = 0
     nanos: int = 0
+
+    def to_datetime(self) -> datetime | None:
+        """Return the timestamp as an aware UTC datetime, or ``None`` if unset (0)."""
+        if not self.seconds and not self.nanos:
+            return None
+        try:
+            return datetime.fromtimestamp(self.seconds + self.nanos / 1e9, tz=timezone.utc)
+        except (OverflowError, OSError, ValueError):
+            return None
 
 
 @dataclass(frozen=True)
@@ -113,3 +123,36 @@ class Location(ProtoMessage, schema={
     altitude: int = 0
     heading: int = 0
     speed: int = 0
+    # Not part of the Location proto schema: set by the parser from the
+    # LastParkedLocation wrapper (field 3). ``None`` when not reported.
+    stale: bool | None = None
+
+
+def _timestamp_key(timestamp: Timestamp | None) -> tuple[int, int] | None:
+    if timestamp is None:
+        return None
+    return (timestamp.seconds, timestamp.nanos)
+
+
+def select_location_update(previous: Location | None, new: Location | None) -> Location | None:
+    """Decide whether a location update should be applied.
+
+    Returns *new* if it should replace *previous*, or ``None`` if it should be
+    ignored: it is older than the stored one, or carries identical position,
+    timestamp and staleness (so listeners aren't notified for no change).
+    """
+    if new is None:
+        return None
+    if previous is None:
+        return new
+    old_ts = _timestamp_key(previous.timestamp)
+    new_ts = _timestamp_key(new.timestamp)
+    if old_ts is not None and new_ts is not None and new_ts < old_ts:
+        return None
+    if (
+        new.coordinate == previous.coordinate
+        and new_ts == old_ts
+        and new.stale == previous.stale
+    ):
+        return None
+    return new

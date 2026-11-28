@@ -98,6 +98,18 @@ def _current_charge_location_attrs(data: PolestarVehicleData) -> dict[str, Any]:
     return attrs
 
 
+def _command_error_attrs(error) -> dict[str, Any]:
+    if error is None:
+        return {}
+    moment = error.error_time.to_datetime() if error.error_time else None
+    return {
+        "error": error.error_code,
+        "error_name": error.error_name,
+        "action": error.action_code,
+        "error_time": moment.isoformat() if moment else None,
+    }
+
+
 @dataclass(frozen=True, kw_only=True)
 class PolestarSensorDescription(SensorEntityDescription):
     """Sensor entity description with value extractor."""
@@ -572,6 +584,16 @@ SENSORS: tuple[PolestarSensorDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d: len(d.charge_locations),
         attrs_fn=lambda d: {"locations": [serialize_charge_location(location) for location in d.charge_locations]},
+    ),
+    PolestarSensorDescription(
+        key="last_command_error",
+        name="Last command error",
+        icon="mdi:alert-circle-outline",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        # Unverified against a live error; hidden by default.
+        entity_registry_enabled_default=False,
+        value_fn=lambda d: d.last_command_error.category if d.last_command_error else None,
+        attrs_fn=lambda d: _command_error_attrs(d.last_command_error),
     ),
     PolestarSensorDescription(
         key="current_charge_location",
