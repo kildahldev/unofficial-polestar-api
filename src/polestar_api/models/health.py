@@ -81,10 +81,12 @@ class Health(ProtoMessage, schema={
     8: "oil_level_warning",
     13: "washer_fluid_level_warning",
     # Tyre pressure warnings
-    9: "front_left_tyre_pressure_warning",
-    10: "front_right_tyre_pressure_warning",
-    11: "rear_left_tyre_pressure_warning",
-    12: "rear_right_tyre_pressure_warning",
+    # Wire order is rear-left, rear-right, front-left, front-right
+    # (verified against physical gauge readings).
+    9: "rear_left_tyre_pressure_warning",
+    10: "rear_right_tyre_pressure_warning",
+    11: "front_left_tyre_pressure_warning",
+    12: "front_right_tyre_pressure_warning",
     # Brake lights
     14: "brake_light_left_warning",
     15: "brake_light_center_warning",
@@ -116,10 +118,11 @@ class Health(ProtoMessage, schema={
     # 12V battery
     38: "low_voltage_battery_warning",
     # Tyre pressure values (kPa)
-    39: "front_left_tyre_pressure_kpa",
-    40: "front_right_tyre_pressure_kpa",
-    41: "rear_left_tyre_pressure_kpa",
-    42: "rear_right_tyre_pressure_kpa",
+    # Same rear-first wire order as the warnings above.
+    39: "rear_left_tyre_pressure_kpa",
+    40: "rear_right_tyre_pressure_kpa",
+    41: "front_left_tyre_pressure_kpa",
+    42: "front_right_tyre_pressure_kpa",
 }):
     timestamp: Timestamp | None = None
     # Service
