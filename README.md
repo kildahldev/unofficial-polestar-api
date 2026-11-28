@@ -6,8 +6,6 @@ Unofficial async Python client and Home Assistant integration for Polestar gRPC 
 
 This project aims to bring you as much control as possible over your car. It uses the same APIs as the official mobile app and exposes most functionality.
 
-> **Note on 12v battery impact:** This library communicates with Polestar's cloud servers, not the car directly. It polls the server every 10 minutes (default, configurable in HA) but it also keeps long lived streams open to the cloud to listen to changes (Battery, Location, Door status etc). It is unclear how much, and if this affects the 12v battery.  
-If you have the opportunity, please monitor your battery voltage and report back.
 ## Supported Cars
 
 This library implements the **C3** (Volvo Cars Cloud Connectivity) backend.
