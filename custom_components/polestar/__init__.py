@@ -82,6 +82,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         vehicle = Vehicle(vin=configured_vin, connection=api._connection)
 
+    await vehicle.async_load_model_name()
+
     coordinator = PolestarCoordinator(hass, vehicle, entry)
     try:
         # Per-car charge current range, as the app uses for its +/- control.
