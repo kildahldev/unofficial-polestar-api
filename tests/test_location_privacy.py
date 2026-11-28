@@ -161,3 +161,39 @@ def test_parse_errors_amp_limit_unwrapped_and_empty():
     err = parse_errors(encode_message(3, encode_int32(1, 1)))
     assert err.category == "amp_limit" and err.error_code == 1
     assert parse_errors(b"") is None
+
+
+async def test_privacy_get_reads_until_quiet_then_closes(monkeypatch):
+    import asyncio
+
+    connection = SimpleNamespace(backend=C3, channel=object(), get_metadata=AsyncMock(return_value={}))
+    closed = []
+
+    async def fake_stream(channel, path, request, metadata=None):
+        try:
+            yield encode_int32(1, 1) + encode_bool(3, True)
+            yield encode_int32(1, 2) + encode_bool(3, True) + encode_bool(4, True)
+            await asyncio.sleep(3600)  # server keeps the stream open
+        finally:
+            closed.append(True)
+
+    monkeypatch.setattr("polestar_api.services.privacy.grpc_call.unary_stream", fake_stream)
+    monkeypatch.setattr("polestar_api.services.privacy._IDLE_TIMEOUT", 0.05)
+    settings = await PrivacyServiceClient(connection, "VIN1").get()
+    assert set(settings) == {PrivacySettingType.PRIVACY_SETTING, PrivacySettingType.VEHICLE_LOCATION_SHARING}
+    assert settings[PrivacySettingType.VEHICLE_LOCATION_SHARING].read_only is True
+    assert closed == [True]
+
+
+async def test_privacy_get_returns_none_when_nothing_arrives(monkeypatch):
+    import asyncio
+
+    connection = SimpleNamespace(backend=C3, channel=object(), get_metadata=AsyncMock(return_value={}))
+
+    async def fake_stream(channel, path, request, metadata=None):
+        await asyncio.sleep(3600)
+        yield b""
+
+    monkeypatch.setattr("polestar_api.services.privacy.grpc_call.unary_stream", fake_stream)
+    monkeypatch.setattr("polestar_api.services.privacy._STREAM_TIMEOUT", 0.05)
+    assert await PrivacyServiceClient(connection, "VIN1").get() is None

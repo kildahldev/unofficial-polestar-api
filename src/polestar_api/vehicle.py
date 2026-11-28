@@ -29,7 +29,7 @@ from .models.honkflash import HonkFlashAction, HonkAndFlashResponse
 from .models.locks import CarLockResponse, CarUnlockResponse, LockAlarmLevel, LockFeedback, UnlockFeedback, TrunkUnlockResponse
 from .models.errors import CommandError
 from .models.mycars import CarPreview, MyCarEntry
-from .models.privacy import PrivacySetting
+from .models.privacy import PrivacySetting, PrivacySettingType
 from .models.odometer import OdometerStatus
 from .models.wakeup import WakeUpReason, WakeUpResponse
 from .models.weather import WeatherReport
@@ -373,6 +373,10 @@ class Vehicle:
         return await self._mycars.get_car_preview()
 
     # -- Privacy --
+
+    async def get_privacy_settings(self) -> dict[PrivacySettingType, PrivacySetting] | None:
+        """Current privacy settings keyed by type (one short stream read)."""
+        return await self._privacy.get()
 
     async def stream_privacy_settings(self) -> AsyncIterator[PrivacySetting]:
         """Privacy settings; each message is one setting (merge by ``setting_type``)."""

@@ -281,21 +281,21 @@ class DemoVehicle:
             speed=0,
         )
 
-    async def stream_privacy_settings(self):
-        """Stream demo privacy settings, one per message like the real service."""
-        yield PrivacySetting(
-            setting_type=PrivacySettingType.PRIVACY_SETTING,
-            service_id="demo-service-id",
-            enabled=True,
-            read_only=True,
-        )
-        yield PrivacySetting(
-            setting_type=PrivacySettingType.VEHICLE_LOCATION_SHARING,
-            enabled=True,
-            read_only=True,
-        )
-        while True:
-            await asyncio.sleep(3600)
+    async def get_privacy_settings(self):
+        """Demo privacy settings, keyed by type like the real poll."""
+        return {
+            PrivacySettingType.PRIVACY_SETTING: PrivacySetting(
+                setting_type=PrivacySettingType.PRIVACY_SETTING,
+                service_id="demo-service-id",
+                enabled=True,
+                read_only=True,
+            ),
+            PrivacySettingType.VEHICLE_LOCATION_SHARING: PrivacySetting(
+                setting_type=PrivacySettingType.VEHICLE_LOCATION_SHARING,
+                enabled=True,
+                read_only=True,
+            ),
+        }
 
     async def get_climate(self) -> ClimatizationInfo:
         if self._climate_on:
