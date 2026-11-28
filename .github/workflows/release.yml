@@ -1,0 +1,247 @@
+name: Release
+
+# Manual release for both stable and beta.
+# Actions -> Release -> Run workflow, pick the branch (main for stable,
+# v0.4.0 etc. for beta), enter the versions.
+#
+# What it does:
+#   1. bumps manifest version (+ library version and pin if given), commits, pushes
+#   2. runs the tests
+#   3. builds and publishes the library to PyPI (trusted publishing), waits until it is live
+#   4. creates a DRAFT GitHub release with a notes skeleton
+# You then edit the notes and press Publish. Publishing triggers
+# release-ha.yml, which attaches polestar.zip for HACS.
+# Re-running with the same inputs is safe: finished steps are skipped.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Integration version, e.g. 0.4.0-beta.3 or 0.4.1"
+        required: true
+      library_version:
+        description: "Library version for PyPI, e.g. 0.4.0b5. Leave empty to keep the current pin and skip PyPI."
+        required: false
+        default: ""
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      sha: ${{ steps.commit.outputs.sha }}
+      tag: ${{ steps.check.outputs.tag }}
+      prerelease: ${{ steps.check.outputs.prerelease }}
+      library_version: ${{ steps.check.outputs.library_version }}
+      publish_library: ${{ steps.check.outputs.publish_library }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check inputs
+        id: check
+        env:
+          VERSION: ${{ inputs.version }}
+          LIB: ${{ inputs.library_version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" == refs/heads/* ]] || { echo "::error::Run this from a branch"; exit 1; }
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?$ ]] \
+            || { echo "::error::version must look like 0.4.1 or 0.4.0-beta.3"; exit 1; }
+          tag="v$VERSION"
+          if gh release view "$tag" --json isDraft -q '.isDraft' 2>/dev/null | grep -q false; then
+            echo "::error::Release $tag is already published"; exit 1
+          fi
+          if [[ "$VERSION" == *-beta.* ]]; then prerelease=true; else prerelease=false; fi
+          if [[ "$prerelease" == false && "$GITHUB_REF_NAME" != main ]]; then
+            echo "::error::Stable releases must run from main (got $GITHUB_REF_NAME)"; exit 1
+          fi
+          current_lib=$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml | head -1)
+          if [[ -n "$LIB" ]]; then
+            [[ "$LIB" =~ ^[0-9]+\.[0-9]+\.[0-9]+(b[0-9]+)?$ ]] \
+              || { echo "::error::library_version must look like 0.4.1 or 0.4.0b5"; exit 1; }
+            [[ "$prerelease" == true || "$LIB" != *b* ]] \
+              || { echo "::error::A stable release cannot pin a beta library"; exit 1; }
+            lib="$LIB"; publish=true
+          else
+            lib="$current_lib"; publish=false
+          fi
+          {
+            echo "tag=$tag"
+            echo "prerelease=$prerelease"
+            echo "library_version=$lib"
+            echo "publish_library=$publish"
+          } >> "$GITHUB_OUTPUT"
+          echo "Release $tag from $GITHUB_REF_NAME, library $lib (publish: $publish)"
+
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
+
+      - name: Run tests
+        run: |
+          uv sync --all-extras --dev
+          uv run pytest -q --ignore=tests/test_live_integration.py
+          git checkout -- uv.lock
+
+      - name: Bump versions
+        env:
+          VERSION: ${{ inputs.version }}
+          LIB: ${{ steps.check.outputs.library_version }}
+        run: |
+          set -euo pipefail
+          m=custom_components/polestar/manifest.json
+          python3 - "$m" "$VERSION" "$LIB" <<'EOF'
+          import json, re, sys
+          path, version, lib = sys.argv[1:]
+          text = open(path).read()
+          # Regex keeps the file's formatting; json.loads checks the result.
+          text, a = re.subn(r'("version":\s*)"[^"]*"', rf'\g<1>"{version}"', text)
+          text, b = re.subn(r'"unofficial-polestar-api==[^"]*"', f'"unofficial-polestar-api=={lib}"', text)
+          if (a, b) != (1, 1):
+              sys.exit(f"manifest: expected one version and one pin, got {a} and {b}")
+          data = json.loads(text)
+          assert data["version"] == version and f"unofficial-polestar-api=={lib}" in data["requirements"]
+          open(path, "w").write(text)
+          EOF
+          # Library version: pyproject and only the package's own entry in uv.lock.
+          sed -i "0,/^version = \".*\"/s//version = \"$LIB\"/" pyproject.toml
+          python3 - "$LIB" <<'EOF'
+          import re, sys
+          lib = sys.argv[1]
+          text = open("uv.lock").read()
+          new, n = re.subn(r'(name = "unofficial-polestar-api"\nversion = )"[^"]*"', rf'\1"{lib}"', text)
+          if n != 1:
+              sys.exit("could not find the package entry in uv.lock")
+          open("uv.lock", "w").write(new)
+          EOF
+          git diff --stat
+
+      - name: Commit and push
+        id: commit
+        env:
+          VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add custom_components/polestar/manifest.json pyproject.toml uv.lock
+          if git diff --cached --quiet; then
+            echo "Versions already set, nothing to commit"
+          else
+            git commit -m "Release v$VERSION"
+            git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:$GITHUB_REF_NAME"
+          fi
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  pypi:
+    needs: prepare
+    if: needs.prepare.outputs.publish_library == 'true'
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
+
+      - name: Skip if already on PyPI
+        id: exists
+        env:
+          LIB: ${{ needs.prepare.outputs.library_version }}
+        run: |
+          if curl -fsS "https://pypi.org/pypi/unofficial-polestar-api/$LIB/json" >/dev/null; then
+            echo "already=true" >> "$GITHUB_OUTPUT"; echo "$LIB is already on PyPI"
+          else
+            echo "already=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build and check
+        if: steps.exists.outputs.already == 'false'
+        env:
+          LIB: ${{ needs.prepare.outputs.library_version }}
+        run: |
+          set -euo pipefail
+          uv build
+          ls dist
+          test -f "dist/unofficial_polestar_api-$LIB-py3-none-any.whl"
+          test -f "dist/unofficial_polestar_api-$LIB.tar.gz"
+          python3 -c "import zipfile,sys; n=zipfile.ZipFile(sys.argv[1]).namelist(); assert any(x.startswith('polestar_api/') for x in n), n" "dist/unofficial_polestar_api-$LIB-py3-none-any.whl"
+
+      - name: Publish
+        if: steps.exists.outputs.already == 'false'
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+
+      - name: Wait until PyPI serves it
+        env:
+          LIB: ${{ needs.prepare.outputs.library_version }}
+        run: |
+          for i in $(seq 1 30); do
+            n=$(curl -fsS "https://pypi.org/pypi/unofficial-polestar-api/$LIB/json" 2>/dev/null | python3 -c "import json,sys; print(len(json.load(sys.stdin)['urls']))" || echo 0)
+            [ "$n" -ge 2 ] && { echo "$LIB is live ($n files)"; exit 0; }
+            sleep 10
+          done
+          echo "::error::$LIB did not show up on PyPI"; exit 1
+
+  release:
+    needs: [prepare, pypi]
+    if: always() && needs.prepare.result == 'success' && (needs.pypi.result == 'success' || needs.pypi.result == 'skipped')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Check the pinned library exists on PyPI
+        env:
+          LIB: ${{ needs.prepare.outputs.library_version }}
+        run: curl -fsS "https://pypi.org/pypi/unofficial-polestar-api/$LIB/json" >/dev/null
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          SHA: ${{ needs.prepare.outputs.sha }}
+          PRERELEASE: ${{ needs.prepare.outputs.prerelease }}
+          LIB: ${{ needs.prepare.outputs.library_version }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Draft $TAG already exists, leaving it alone"; exit 0
+          fi
+          prev=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)
+          {
+            echo "TODO: one line saying what this release is."
+            echo
+            echo "<!-- Commits since ${prev:-start}, turn these into user-facing bullets and delete this block:"
+            git log --no-merges --format='- %s (%an)' ${prev:+$prev..}HEAD
+            echo "-->"
+            echo
+            echo "Everything else is unchanged from ${prev:-the previous release}."
+            echo
+            echo "Library: \`unofficial-polestar-api==$LIB\`"
+            echo
+            echo "Fixes #"
+          } > notes.md
+          flags=(--draft --title "$TAG" --target "$SHA" --notes-file notes.md)
+          if [[ "$PRERELEASE" == true ]]; then flags+=(--prerelease); else flags+=(--latest); fi
+          gh release create "$TAG" "${flags[@]}"
+          echo "Draft ready: $(gh release view "$TAG" --json url -q .url)" >> "$GITHUB_STEP_SUMMARY"
